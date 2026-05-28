@@ -18,7 +18,9 @@ const schedulerStore = useSchedulerStore()
 const deviceCount = computed(() => controllerStore.devices.length)
 const cpuUsage = ref('0%')
 const memUsage = ref('0 MB')
+const appVersion = __APP_VERSION__   // 由 Vite define 在构建时从 package.json 自动注入
 let unlistenResources: UnlistenFn | null = null
+
 
 onMounted(async () => {
   logStore.startListening()
@@ -60,7 +62,7 @@ onUnmounted(() => {
         :deviceCount="deviceCount"
         :cpuUsage="cpuUsage"
         :memUsage="memUsage"
-        version="0.1.0"
+        :version="appVersion"
       />
     </div>
     <!-- Custom Dialogs/Toasts overlays -->

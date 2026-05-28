@@ -17,7 +17,7 @@ const taskLoopCount = ref(1)
 const steps = ref<{ script_id: string; loop_count: number }[]>([])
 
 // 调度配置表单状态
-const scheduleType = ref<'once' | 'daily' | 'interval' | 'cron'>('once')
+const scheduleType = ref<'once' | 'daily' | 'interval' | 'cron' | 'manual'>('once')
 const onceDateTime = ref(new Date(Date.now() + 60000).toISOString().substring(0, 16))
 const dailyTime = ref('12:00:00')
 const intervalDuration = ref(5)
@@ -34,7 +34,7 @@ function openEditor() {
   taskName.value = ''
   taskLoopCount.value = 1
   steps.value = []
-  scheduleType.value = 'once'
+  scheduleType.value = 'manual'
   onceDateTime.value = new Date(Date.now() + 60000).toISOString().substring(0, 16)
   dailyTime.value = '12:00:00'
   intervalDuration.value = 5
@@ -378,11 +378,21 @@ async function stopSequence(taskId: string) {
               <div class="form-group">
                 <label>调度类型 (Schedule Type)</label>
                 <select v-model="scheduleType" class="select-input">
+                  <option value="manual">🖱️ 手动执行 (Manual) — 不自动触发</option>
                   <option value="once">📅 单次定时执行 (Once)</option>
                   <option value="daily">🕒 每日固定时间 (Daily)</option>
                   <option value="interval">🔁 周期循环间隔 (Interval)</option>
                   <option value="cron">⚡ 标准 Cron 表达式 (Cron)</option>
                 </select>
+              </div>
+
+              <!-- Manual (手动执行) -->
+              <div v-if="scheduleType === 'manual'" class="manual-info-box fade-in">
+                <span class="manual-info-icon">🖱️</span>
+                <div class="manual-info-text">
+                  <strong>手动执行模式</strong>
+                  <p>系统调度器不会自动触发此任务。仅在你点击任务卡片上的 <strong>▶ 运行</strong> 按钮时执行一次。</p>
+                </div>
               </div>
 
               <!-- Once (单次执行) -->
@@ -420,8 +430,8 @@ async function stopSequence(taskId: string) {
                 <span class="input-hint">例如: <code>0 12 * * *</code> (每日中午 12 点), <code>*/30 * * * *</code> (每半小时)</span>
               </div>
 
-              <!-- 任务优先级 -->
-              <div class="form-group">
+              <!-- 任务优先级 (手动模式下隐藏) -->
+              <div v-if="scheduleType !== 'manual'" class="form-group">
                 <label>调度抢占优先级 (1-100，数字越大优先级越高)</label>
                 <input v-model.number="taskPriority" type="number" min="1" max="100" class="input small" />
               </div>
@@ -1189,5 +1199,39 @@ async function stopSequence(taskId: string) {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(3px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.manual-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(67, 56, 202, 0.05) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.manual-info-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.manual-info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.manual-info-text strong {
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.manual-info-text p {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  margin: 0;
+  line-height: 1.5;
 }
 </style>

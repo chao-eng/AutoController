@@ -1,6 +1,6 @@
 [package]
 name = "autocontroller"
-version = "0.1.0"
+version = "0.2.0"
 description = "AutoController - 高性能游戏手柄宏录制与脚本化自动化工具"
 authors = ["AutoController Team"]
 edition = "2021"
