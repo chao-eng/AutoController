@@ -4,7 +4,7 @@ import { useConfigStore } from '../stores/config'
 import { useScriptStore } from '../stores/script'
 import { useUIStore } from '../stores/ui'
 import { Download, Plus, Upload, Trash2, Check, X, Gamepad, FileCode2, Minus } from '@lucide/vue'
-import type { GameProfile, OcrRegion } from '../types/config'
+import type { GameProfile } from '../types/config'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { onUnmounted } from 'vue'
@@ -46,9 +46,18 @@ onMounted(async () => {
   scriptStore.fetchScripts()
 
   try {
-    unlistenOcrRegion = await listen<OcrRegion>('ocr-region-saved', (event) => {
-      store.config.ocr_region = event.payload
-      uiStore.showToast('🎯 OCR 默认识别区标定成功！', 'success')
+    unlistenOcrRegion = await listen<any>('ocr-region-saved', (event) => {
+      const payload = event.payload
+      if (payload && payload.regions) {
+        store.config.ocr_regions = payload.regions
+        if (payload.index === 1) {
+          store.config.ocr_region = payload.region
+        }
+        uiStore.showToast(`🎯 OCR 识别区 #${payload.index} 标定成功！`, 'success')
+      } else {
+        store.config.ocr_region = event.payload
+        uiStore.showToast('🎯 OCR 默认识别区标定成功！', 'success')
+      }
     })
   } catch (e) {
     console.error('Failed to listen to ocr-region-saved event:', e)
@@ -119,21 +128,33 @@ async function handleDeleteProfile(id: string) {
 }
 
 // ── OCR 区域配置管理 ──────────────────────────────────────────
-async function startOcrCalibration() {
+async function startOcrCalibration(index?: number) {
   try {
-    await invoke('open_ocr_viewfinder')
-    uiStore.showToast('标定悬浮框已打开，请将其对准目标区域后确认', 'info')
+    // 传递给后端的 index 可以是 undefined (表示添加新标定区) 或具体的 1-based 序号
+    await invoke('open_ocr_viewfinder', { index })
+    uiStore.showToast('标定悬浮框已打开，请在屏幕上点击拖拽框选', 'info')
   } catch (err) {
-    uiStore.showAlert('启动失败', `无法打开标定视口窗口：${err}`)
+    uiStore.showAlert('启动失败', `无法打开标定工具：${err}`)
   }
 }
 
-async function clearOcrRegion() {
-  const confirmed = await uiStore.showConfirm('清除配置', '确定要清除当前标定的 OCR 默认识别区吗？')
+async function clearOcrRegion(index: number) {
+  const confirmed = await uiStore.showConfirm('清除配置', `确定要清除当前标定的 OCR 识别区 #${index} 吗？`)
   if (confirmed) {
-    store.config.ocr_region = null
-    await store.saveConfig()
-    uiStore.showToast('OCR 识别区配置已清除', 'info')
+    const regions = store.config.ocr_regions || []
+    const vecIdx = index - 1
+    if (vecIdx < regions.length) {
+      regions.splice(vecIdx, 1)
+      store.config.ocr_regions = [...regions]
+      
+      // 同步兼容单区域老字段
+      if (index === 1) {
+        store.config.ocr_region = regions.length > 0 ? regions[0] : null
+      }
+      
+      await store.saveConfig()
+      uiStore.showToast(`OCR 识别区 #${index} 配置已清除`, 'info')
+    }
   }
 }
 
@@ -309,43 +330,63 @@ function handleImport(event: Event) {
       <!-- OCR 区域标定 -->
       <section class="config-section">
         <h3>OCR 自动化配置</h3>
-        <div class="ocr-config-card">
-          <div class="ocr-status-group">
-            <div class="ocr-label-group">
-              <span class="ocr-title">默认识别区 (OCR Region)</span>
-              <span v-if="store.config.ocr_region" class="ocr-status-badge active">
-                🎯 已标定
-              </span>
-              <span v-else class="ocr-status-badge inactive">
-                ⚠️ 未标定
-              </span>
-            </div>
-            <div class="ocr-coords" v-if="store.config.ocr_region">
-              <span class="coord-tag">X: {{ store.config.ocr_region.x }}</span>
-              <span class="coord-tag">Y: {{ store.config.ocr_region.y }}</span>
-              <span class="coord-tag">W: {{ store.config.ocr_region.w }}</span>
-              <span class="coord-tag">H: {{ store.config.ocr_region.h }}</span>
-            </div>
-            <div class="ocr-coords-empty" v-else>
-              未配置默认识别区，无参 `ocr()` 脚本调用将默认返回空。
+        <div class="ocr-container-group">
+          <!-- 区域列表 -->
+          <div class="ocr-regions-list">
+            <div 
+              v-for="(region, idx) in (store.config.ocr_regions || [])" 
+              :key="idx" 
+              class="ocr-config-card"
+            >
+              <div class="ocr-status-group">
+                <div class="ocr-label-group">
+                  <span class="ocr-title">OCR 识别区 #{{ idx + 1 }}</span>
+                  <span class="ocr-status-badge active">🎯 已标定</span>
+                </div>
+                <div class="ocr-coords">
+                  <span class="coord-tag">X: {{ region.x }}</span>
+                  <span class="coord-tag">Y: {{ region.y }}</span>
+                  <span class="coord-tag">W: {{ region.w }}</span>
+                  <span class="coord-tag">H: {{ region.h }}</span>
+                </div>
+                <div class="ocr-hint-code">
+                  脚本调用: <code>ocr({{ idx + 1 }})</code>
+                </div>
+              </div>
+              
+              <div class="ocr-actions">
+                <button 
+                  class="action-btn text-btn delete-btn-simple" 
+                  @click="clearOcrRegion(idx + 1)" 
+                  title="清除此标定区域"
+                >
+                  删除
+                </button>
+                <button 
+                  class="action-btn primary-btn ocr-btn-recal" 
+                  @click="startOcrCalibration(idx + 1)" 
+                  title="重新框选此标定区"
+                >
+                  重新标定
+                </button>
+              </div>
             </div>
           </div>
-          
-          <div class="ocr-actions">
-            <button 
-              v-if="store.config.ocr_region" 
-              class="action-btn text-btn delete-btn-simple" 
-              @click="clearOcrRegion" 
-              title="清除当前标定的 OCR 区域"
-            >
-              清除配置
-            </button>
+
+          <!-- 无配置占位图 -->
+          <div v-if="!(store.config.ocr_regions && store.config.ocr_regions.length > 0)" class="ocr-empty-placeholder">
+            <span class="ocr-empty-text">⚠️ 尚未标定任何 OCR 识别区</span>
+            <span class="ocr-empty-desc">配置后即可在 Rhai 脚本中通过 <code>ocr()</code> 或 <code>ocr(序号)</code> 高效读取屏幕文字。</span>
+          </div>
+
+          <!-- 添加新区域按钮 -->
+          <div class="ocr-add-container">
             <button 
               class="action-btn primary-btn ocr-btn" 
-              @click="startOcrCalibration" 
-              title="打开屏幕悬浮标定框进行框选"
+              @click="startOcrCalibration()" 
+              title="添加一个新的屏幕框选识别区"
             >
-              🎯 标定识别区
+              ➕ 添加标定区 (#{{ (store.config.ocr_regions || []).length + 1 }})
             </button>
           </div>
         </div>
@@ -1169,6 +1210,18 @@ function handleImport(event: Event) {
 }
 
 /* OCR Config styling */
+.ocr-container-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.ocr-regions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
 .ocr-config-card {
   display: flex;
   justify-content: space-between;
@@ -1233,9 +1286,51 @@ function handleImport(event: Event) {
   font-family: var(--font-heading);
 }
 
-.ocr-coords-empty {
+.ocr-hint-code {
   font-size: 11px;
   color: var(--color-text-dim);
+  margin-top: 2px;
+}
+
+.ocr-hint-code code {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-cta);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-heading);
+}
+
+.ocr-empty-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  gap: var(--space-xs);
+}
+
+.ocr-empty-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.ocr-empty-desc {
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+.ocr-empty-desc code {
+  color: var(--color-cta);
+}
+
+.ocr-add-container {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .ocr-actions {
@@ -1265,11 +1360,28 @@ function handleImport(event: Event) {
   border: none;
   font-size: 11px;
   font-weight: 500;
-  padding: 4px 10px;
+  padding: 6px 14px;
   border-radius: var(--radius-sm);
 }
 
 .ocr-btn:hover {
   background: #1ca84f;
+}
+
+.ocr-btn-recal {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ocr-btn-recal:hover {
+  background: #22c55e;
+  color: white;
 }
 </style>

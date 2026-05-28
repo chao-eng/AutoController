@@ -26,4 +26,5 @@ export interface AppConfig {
   minimize_to_tray: boolean
   log_level: string
   ocr_region?: OcrRegion | null
+  ocr_regions?: OcrRegion[]
 }

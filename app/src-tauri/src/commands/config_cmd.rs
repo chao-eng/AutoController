@@ -26,17 +26,43 @@ pub fn config_set(
     Ok(())
 }
 
+#[derive(Clone, serde::Serialize)]
+pub struct OcrRegionSavedPayload {
+    pub index: usize,
+    pub region: crate::config::OcrRegion,
+    pub regions: Vec<crate::config::OcrRegion>,
+}
+
 #[tauri::command]
 pub fn open_ocr_viewfinder(
     app_handle: tauri::AppHandle,
     manager: tauri::State<'_, AppConfigManager>,
+    index: Option<usize>,
 ) -> Result<(), String> {
     use std::process::Command;
     use std::os::windows::process::CommandExt;
     use tauri::Emitter;
 
+    // 计算当前是要操作的 1-based 序号 (从 #1 开始)
+    let u_idx = match index {
+        Some(idx) => {
+            if idx == 0 {
+                1
+            } else {
+                idx
+            }
+        }
+        None => {
+            // 如果未指定序号，则默认追加到当前标定区域列表的末尾 (即 len + 1)
+            manager.get().ocr_regions.len() + 1
+        }
+    };
+
+    // 将 1-based 序号动态拼接到提示语中，使用户感知极为精细清晰
+    let title_text = format!("🎯 标定 OCR 识别区域 #{} (鼠标左键拖拽框选，按 ESC 取消)", u_idx);
+
     // 核心安全：将完整的 Windows Forms 极光绿框选脚本作为静态字符串嵌入 Rust
-    let script_content = r#"
+    let script_content = format!(r#"
 # select_region.ps1
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 $bounds = [System.Windows.Forms.SystemInformation]::VirtualScreen
@@ -58,7 +84,7 @@ $tip.AutoSize = $true
 $tip.ForeColor = [System.Drawing.Color]::FromArgb(34, 197, 94)
 $tip.BackColor = [System.Drawing.Color]::Transparent
 $tip.Font = New-Object System.Drawing.Font 'Microsoft YaHei', 20, ([System.Drawing.FontStyle]::Bold)
-$tip.Text = "🎯 鼠标左键点击并拖拽以框选标定 OCR 默认识别区 (按 ESC 取消)"
+$tip.Text = "{}"
 $tip.Location = New-Object System.Drawing.Point 80, 80
 $form.Controls.Add($tip)
 $liveCoord = New-Object System.Windows.Forms.Label
@@ -71,16 +97,16 @@ $form.Controls.Add($liveCoord)
 $script:startPt = $null
 $script:rect = New-Object System.Drawing.Rectangle 0, 0, 0, 0
 $script:result = $null
-$form.add_MouseDown({
+$form.add_MouseDown({{
     param($s, $e)
-    if ($e.Button -eq 'Left') {
+    if ($e.Button -eq 'Left') {{
         $script:startPt = $e.Location
         $script:rect = New-Object System.Drawing.Rectangle $e.X, $e.Y, 0, 0
-    }
-})
-$form.add_MouseMove({
+    }}
+}})
+$form.add_MouseMove({{
     param($s, $e)
-    if ($script:startPt) {
+    if ($script:startPt) {{
         $x = [Math]::Min($script:startPt.X, $e.X)
         $y = [Math]::Min($script:startPt.Y, $e.Y)
         $w = [Math]::Abs($e.X - $script:startPt.X)
@@ -90,41 +116,41 @@ $form.add_MouseMove({
         $screenY = $bounds.Top + $y
         $liveCoord.Text = "起始坐标: ($screenX, $screenY)  宽: $w px  高: $h px"
         $form.Invalidate()
-    }
-})
-$form.add_MouseUp({
+    }}
+}})
+$form.add_MouseUp({{
     param($s, $e)
-    if ($script:startPt -and $script:rect.Width -gt 10 -and $script:rect.Height -gt 10) {
+    if ($script:startPt -and $script:rect.Width -gt 10 -and $script:rect.Height -gt 10) {{
         $script:result = $script:rect
         $form.Close()
-    }
+    }}
     $script:startPt = $null
-})
-$form.add_Paint({
+}})
+$form.add_Paint({{
     param($s, $e)
-    if ($script:rect.Width -gt 0 -and $script:rect.Height -gt 0) {
+    if ($script:rect.Width -gt 0 -and $script:rect.Height -gt 0) {{
         $pen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(34, 197, 94)), 3
         $pen.DashStyle = [System.Drawing.Drawing2D.DashStyle]::Dash
         $e.Graphics.DrawRectangle($pen, $script:rect)
         $brush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(30, 34, 197, 94))
         $e.Graphics.FillRectangle($brush, $script:rect)
         $pen.Dispose(); $brush.Dispose()
-    }
-})
-$form.add_KeyDown({
+    }}
+}})
+$form.add_KeyDown({{
     param($s, $e)
-    if ($e.KeyCode -eq 'Escape') { $script:result = $null; $form.Close() }
-})
+    if ($e.KeyCode -eq 'Escape') {{ $script:result = $null; $form.Close() }}
+}})
 [void]$form.ShowDialog()
 $form.Dispose()
-if ($script:result) {
+if ($script:result) {{
     $x = $bounds.Left + $script:result.X
     $y = $bounds.Top + $script:result.Y
     Write-Output "RESULT:$x,$y,$($script:result.Width),$($script:result.Height)"
-} else {
+}} else {{
     Write-Output "CANCELLED"
-}
-"#;
+}}
+"#, title_text);
 
     // 获取 AppConfigManager 克隆以传递到后台进程
     let config_manager = manager.inner().clone();
@@ -174,20 +200,43 @@ if ($script:result) {
                         parts[2].parse::<i32>(),
                         parts[3].parse::<i32>(),
                     ) {
-                        tracing::info!("原生标定成功，收到坐标: x={}, y={}, w={}, h={}", x, y, w, h);
+                        tracing::info!("原生标定 #{} 成功，收到坐标: x={}, y={}, w={}, h={}", u_idx, x, y, w, h);
                         
                         // 1. 同步保存配置到全局 TOML 配置文件
                         let mut config = config_manager.get();
-                        config.ocr_region = Some(crate::config::OcrRegion { x, y, w, h });
-                        config_manager.set(config);
-                        tracing::info!("标定坐标已持久化保存");
+                        let vec_idx = u_idx - 1;
+                        let new_region = crate::config::OcrRegion { x, y, w, h };
+
+                        if vec_idx < config.ocr_regions.len() {
+                            // 重新标定已有区域
+                            config.ocr_regions[vec_idx] = new_region;
+                        } else {
+                            // 扩展并填充直到 vec_idx
+                            while config.ocr_regions.len() < vec_idx {
+                                // 填充占位符区域，保证数组连续性
+                                config.ocr_regions.push(crate::config::OcrRegion { x: 0, y: 0, w: 0, h: 0 });
+                            }
+                            config.ocr_regions.push(new_region);
+                        }
+
+                        // 顺便把老字段 ocr_region 同步更新为首个区域，保证完美向前兼容！
+                        if vec_idx == 0 {
+                            config.ocr_region = Some(crate::config::OcrRegion { x, y, w, h });
+                        }
+
+                        config_manager.set(config.clone());
+                        tracing::info!("标定坐标 #{} 已持久化保存", u_idx);
 
                         // 2. 发送全局事件通知前端卡片刷新与 Toast 浮现
-                        let region_payload = crate::config::OcrRegion { x, y, w, h };
+                        let region_payload = OcrRegionSavedPayload {
+                            index: u_idx,
+                            region: crate::config::OcrRegion { x, y, w, h },
+                            regions: config.ocr_regions.clone(),
+                        };
                         if let Err(e) = app_handle.emit("ocr-region-saved", region_payload) {
                             tracing::error!(error = %e, "发送 ocr-region-saved 事件失败");
                         } else {
-                            tracing::info!("ocr-region-saved 事件已成功广播");
+                            tracing::info!("ocr-region-saved 事件已成功广播，更新序号 #{}", u_idx);
                         }
                     }
                 }

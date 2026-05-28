@@ -605,20 +605,68 @@ impl ScriptRuntime {
                     use tauri::Manager;
                     let config_mgr = handle.state::<crate::config::AppConfigManager>();
                     let config = config_mgr.get();
-                    if let Some(region) = config.ocr_region {
+                    
+                    // 优先使用 ocr_regions 的第一个作为默认识别区，其次使用老字段 ocr_region 兼容
+                    let target_region = if !config.ocr_regions.is_empty() {
+                        Some(config.ocr_regions[0].clone())
+                    } else {
+                        config.ocr_region.clone()
+                    };
+
+                    if let Some(region) = target_region {
                         match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h) {
                             Ok(text) => text,
                             Err(e) => {
-                                tracing::error!(target: "script", "OCR 默认区域识别出错: {}", e);
+                                tracing::error!(target: "script", "OCR 默认区域 #1 识别出错: {}", e);
                                 String::new()
                             }
                         }
                     } else {
-                        tracing::warn!(target: "script", "OCR 默认区域尚未配置，请在前端配置或传入具体坐标参数");
+                        tracing::warn!(target: "script", "OCR 默认区域 #1 尚未配置，请在前端配置或传入坐标");
                         String::new()
                     }
                 } else {
                     tracing::warn!(target: "script", "ocr() 无参调用失败：AppHandle 尚未初始化");
+                    String::new()
+                }
+            });
+
+            let handle_ocr_idx = app_handle.clone();
+            let eid_ocr_idx = eid.clone();
+            let sid_ocr_idx = sid.clone();
+            engine.register_fn("ocr", move |context: rhai::NativeCallContext, index: i64| -> String {
+                if let Some(ref handle) = handle_ocr_idx {
+                    if let Some(line) = context.call_position().line() {
+                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                            execution_id: eid_ocr_idx.clone(),
+                            script_id: sid_ocr_idx.clone(),
+                            line,
+                        });
+                    }
+                    if index <= 0 {
+                        tracing::error!(target: "script", "ocr(index) 序号错误：序号必须从 1 开始（传入为 {}）", index);
+                        return String::new();
+                    }
+                    use tauri::Manager;
+                    let config_mgr = handle.state::<crate::config::AppConfigManager>();
+                    let config = config_mgr.get();
+                    let u_idx = (index - 1) as usize;
+                    
+                    if u_idx < config.ocr_regions.len() {
+                        let region = &config.ocr_regions[u_idx];
+                        match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h) {
+                            Ok(text) => text,
+                            Err(e) => {
+                                tracing::error!(target: "script", "OCR 区域 #{} 识别出错: {}", index, e);
+                                String::new()
+                            }
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "OCR 区域 #{} 尚未配置，当前已配置区域数: {}", index, config.ocr_regions.len());
+                        String::new()
+                    }
+                } else {
+                    tracing::warn!(target: "script", "ocr(index) 调用失败：AppHandle 尚未初始化");
                     String::new()
                 }
             });

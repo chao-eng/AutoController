@@ -36,6 +36,8 @@ pub struct AppConfig {
     pub minimize_to_tray: bool,
     pub log_level: String,
     pub ocr_region: Option<OcrRegion>,
+    #[serde(default)]
+    pub ocr_regions: Vec<OcrRegion>,
 }
 
 impl Default for AppConfig {
@@ -48,6 +50,7 @@ impl Default for AppConfig {
             minimize_to_tray: true,
             log_level: "info".to_string(),
             ocr_region: None,
+            ocr_regions: Vec::new(),
         }
     }
 }

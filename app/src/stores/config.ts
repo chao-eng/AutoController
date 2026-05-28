@@ -11,6 +11,8 @@ export const useConfigStore = defineStore('config', () => {
     auto_start: false,
     minimize_to_tray: true,
     log_level: 'info',
+    ocr_region: null,
+    ocr_regions: [],
   })
   const loading = ref(false)
   const error = ref<string | null>(null)
