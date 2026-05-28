@@ -52,6 +52,7 @@ impl Default for AppConfig {
     }
 }
 
+#[derive(Clone)]
 pub struct AppConfigManager {
     config: Arc<Mutex<AppConfig>>,
     data_dir: Arc<DataDir>,

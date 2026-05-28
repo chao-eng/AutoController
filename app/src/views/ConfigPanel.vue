@@ -4,8 +4,10 @@ import { useConfigStore } from '../stores/config'
 import { useScriptStore } from '../stores/script'
 import { useUIStore } from '../stores/ui'
 import { Download, Plus, Upload, Trash2, Check, X, Gamepad, FileCode2, Minus } from '@lucide/vue'
-import type { GameProfile } from '../types/config'
+import type { GameProfile, OcrRegion } from '../types/config'
 import { invoke } from '@tauri-apps/api/core'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { onUnmounted } from 'vue'
 import type { Script } from '../types/script'
 
 const store = useConfigStore()
@@ -37,9 +39,26 @@ const profileForm = ref({
   game_process: ''
 })
 
-onMounted(() => {
+let unlistenOcrRegion: UnlistenFn | null = null
+
+onMounted(async () => {
   store.fetchConfig()
   scriptStore.fetchScripts()
+
+  try {
+    unlistenOcrRegion = await listen<OcrRegion>('ocr-region-saved', (event) => {
+      store.config.ocr_region = event.payload
+      uiStore.showToast('🎯 OCR 默认识别区标定成功！', 'success')
+    })
+  } catch (e) {
+    console.error('Failed to listen to ocr-region-saved event:', e)
+  }
+})
+
+onUnmounted(() => {
+  if (unlistenOcrRegion) {
+    unlistenOcrRegion()
+  }
 })
 
 function openCreateModal() {
@@ -97,6 +116,25 @@ async function handleDeleteProfile(id: string) {
 
   await store.saveConfig()
   uiStore.showToast('配置删除成功', 'success')
+}
+
+// ── OCR 区域配置管理 ──────────────────────────────────────────
+async function startOcrCalibration() {
+  try {
+    await invoke('open_ocr_viewfinder')
+    uiStore.showToast('标定悬浮框已打开，请将其对准目标区域后确认', 'info')
+  } catch (err) {
+    uiStore.showAlert('启动失败', `无法打开标定视口窗口：${err}`)
+  }
+}
+
+async function clearOcrRegion() {
+  const confirmed = await uiStore.showConfirm('清除配置', '确定要清除当前标定的 OCR 默认识别区吗？')
+  if (confirmed) {
+    store.config.ocr_region = null
+    await store.saveConfig()
+    uiStore.showToast('OCR 识别区配置已清除', 'info')
+  }
 }
 
 // ── 脚本绑定管理 ────────────────────────────────────────────
@@ -265,6 +303,51 @@ function handleImport(event: Event) {
             <option value="warn">Warn</option>
             <option value="error">Error</option>
           </select>
+        </div>
+      </section>
+
+      <!-- OCR 区域标定 -->
+      <section class="config-section">
+        <h3>OCR 自动化配置</h3>
+        <div class="ocr-config-card">
+          <div class="ocr-status-group">
+            <div class="ocr-label-group">
+              <span class="ocr-title">默认识别区 (OCR Region)</span>
+              <span v-if="store.config.ocr_region" class="ocr-status-badge active">
+                🎯 已标定
+              </span>
+              <span v-else class="ocr-status-badge inactive">
+                ⚠️ 未标定
+              </span>
+            </div>
+            <div class="ocr-coords" v-if="store.config.ocr_region">
+              <span class="coord-tag">X: {{ store.config.ocr_region.x }}</span>
+              <span class="coord-tag">Y: {{ store.config.ocr_region.y }}</span>
+              <span class="coord-tag">W: {{ store.config.ocr_region.w }}</span>
+              <span class="coord-tag">H: {{ store.config.ocr_region.h }}</span>
+            </div>
+            <div class="ocr-coords-empty" v-else>
+              未配置默认识别区，无参 `ocr()` 脚本调用将默认返回空。
+            </div>
+          </div>
+          
+          <div class="ocr-actions">
+            <button 
+              v-if="store.config.ocr_region" 
+              class="action-btn text-btn delete-btn-simple" 
+              @click="clearOcrRegion" 
+              title="清除当前标定的 OCR 区域"
+            >
+              清除配置
+            </button>
+            <button 
+              class="action-btn primary-btn ocr-btn" 
+              @click="startOcrCalibration" 
+              title="打开屏幕悬浮标定框进行框选"
+            >
+              🎯 标定识别区
+            </button>
+          </div>
         </div>
       </section>
 
@@ -1083,5 +1166,110 @@ function handleImport(event: Event) {
 @keyframes slideUp {
   from { transform: translateY(12px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+/* OCR Config styling */
+.ocr-config-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.ocr-status-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.ocr-label-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.ocr-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.ocr-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.ocr-status-badge.active {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.ocr-status-badge.inactive {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.ocr-coords {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: 2px;
+}
+
+.coord-tag {
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-heading);
+}
+
+.ocr-coords-empty {
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+.ocr-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.delete-btn-simple {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.delete-btn-simple:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+.ocr-btn {
+  background: var(--color-cta);
+  border: none;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.ocr-btn:hover {
+  background: #1ca84f;
 }
 </style>

@@ -11,6 +11,13 @@ export interface GameProfile {
   scripts: string[]
 }
 
+export interface OcrRegion {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 export interface AppConfig {
   devices: DeviceConfig[]
   profiles: GameProfile[]
@@ -18,4 +25,5 @@ export interface AppConfig {
   auto_start: boolean
   minimize_to_tray: boolean
   log_level: string
+  ocr_region?: OcrRegion | null
 }

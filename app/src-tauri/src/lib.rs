@@ -172,6 +172,8 @@ pub fn run() {
             scheduler_cmd::scheduler_stop_sequence,
             config_cmd::config_get,
             config_cmd::config_set,
+            config_cmd::open_ocr_viewfinder,
+            config_cmd::save_ocr_region,
             log_cmd::log_query,
             log_cmd::log_export,
         ])

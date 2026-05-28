@@ -45,7 +45,7 @@ pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32) -> Result<String, String>
         // 创建对应大小的兼容位图
         let h_bitmap = CreateCompatibleBitmap(hdc_screen, new_w, new_h);
         if h_bitmap.is_invalid() {
-            DeleteDC(hdc_mem);
+            let _ = DeleteDC(hdc_mem);
             ReleaseDC(None, hdc_screen);
             return Err("无法创建兼容的位图 (CreateCompatibleBitmap 失败)".to_string());
         }
@@ -72,8 +72,8 @@ pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32) -> Result<String, String>
 
         if !success {
             SelectObject(hdc_mem, old_obj);
-            DeleteObject(h_bitmap);
-            DeleteDC(hdc_mem);
+            let _ = DeleteObject(h_bitmap);
+            let _ = DeleteDC(hdc_mem);
             ReleaseDC(None, hdc_screen);
             return Err("拷贝屏幕像素失败 (BitBlt/StretchBlt 失败)".to_string());
         }
@@ -111,8 +111,8 @@ pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32) -> Result<String, String>
 
         // 释放 GDI 句柄资源
         SelectObject(hdc_mem, old_obj);
-        DeleteObject(h_bitmap);
-        DeleteDC(hdc_mem);
+        let _ = DeleteObject(h_bitmap);
+        let _ = DeleteDC(hdc_mem);
         ReleaseDC(None, hdc_screen);
 
         if lines_copied == 0 {
