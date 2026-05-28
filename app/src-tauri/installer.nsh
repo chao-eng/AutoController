@@ -3,7 +3,7 @@
   
   # 1. 将驱动包释放到系统临时目录 $PLUGINSDIR
   SetOutPath "$PLUGINSDIR"
-  File "..\..\assets\ViGEmBus_1.22.0_x64_x86_arm64.exe"
+  File "D:\UGit\AutoController\assets\ViGEmBus_1.22.0_x64_x86_arm64.exe"
   
   # 2. 隐式执行静默安装，/norestart 极其重要，防止安装完驱动后 Windows 强行重启电脑
   ExecWait '"$PLUGINSDIR\ViGEmBus_1.22.0_x64_x86_arm64.exe" /quiet /norestart' $0
