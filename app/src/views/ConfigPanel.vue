@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useConfigStore } from '../stores/config'
+import { useUIStore } from '../stores/ui'
 import { Download, Plus, Upload, Trash2, Check, X, Gamepad } from '@lucide/vue'
 import type { GameProfile } from '../types/config'
 
 const store = useConfigStore()
+const uiStore = useUIStore()
 const showCreateModal = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
@@ -27,7 +29,7 @@ function openCreateModal() {
 
 async function handleCreateProfile() {
   if (!profileForm.value.name.trim() || !profileForm.value.game_process.trim()) {
-    alert('请填写完整的信息')
+    uiStore.showToast('请填写完整的信息', 'warning')
     return
   }
 
@@ -48,20 +50,24 @@ async function handleCreateProfile() {
 
   await store.saveConfig()
   showCreateModal.value = false
+  uiStore.showToast('配置成功创建', 'success')
 }
 
 async function activateProfile(id: string) {
   store.config.active_profile = id
   await store.saveConfig()
+  uiStore.showToast('配置已激活', 'success')
 }
 
 async function deactivateProfile() {
   store.config.active_profile = null
   await store.saveConfig()
+  uiStore.showToast('配置已停用', 'info')
 }
 
 async function handleDeleteProfile(id: string) {
-  if (!confirm('确定要删除这个 Profile 吗？')) {
+  const confirmed = await uiStore.showConfirm('确认删除', '确定要删除这个 Profile 吗？')
+  if (!confirmed) {
     return
   }
 
@@ -71,6 +77,7 @@ async function handleDeleteProfile(id: string) {
   }
 
   await store.saveConfig()
+  uiStore.showToast('配置删除成功', 'success')
 }
 
 function handleExportProfile(profile: GameProfile) {
@@ -81,6 +88,7 @@ function handleExportProfile(profile: GameProfile) {
   document.body.appendChild(downloadAnchor)
   downloadAnchor.click()
   downloadAnchor.remove()
+  uiStore.showToast('配置导出成功', 'success')
 }
 
 function triggerImport() {
@@ -97,7 +105,7 @@ function handleImport(event: Event) {
     try {
       const parsed = JSON.parse(e.target?.result as string)
       if (!parsed.name || !parsed.game_process) {
-        alert('导入失败：JSON 格式不正确，缺少必需的字段')
+        uiStore.showAlert('导入失败', '导入失败：JSON 格式不正确，缺少必需的字段')
         return
       }
 
@@ -115,9 +123,9 @@ function handleImport(event: Event) {
       }
 
       await store.saveConfig()
-      alert(`成功导入 Profile: ${newProfile.name}`)
+      uiStore.showToast(`成功导入 Profile: ${newProfile.name}`, 'success')
     } catch (err) {
-      alert('解析文件失败，请确保导入的是有效的 Profile JSON 文件。')
+      uiStore.showAlert('解析失败', '解析文件失败，请确保导入的是有效的 Profile JSON 文件。')
     } finally {
       input.value = '' 
     }

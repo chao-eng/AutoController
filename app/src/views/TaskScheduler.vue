@@ -2,11 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { useSchedulerStore } from '../stores/scheduler'
 import { useScriptStore } from '../stores/script'
+import { useUIStore } from '../stores/ui'
 import { Plus, ToggleLeft, ToggleRight, Trash2, Play, Square, ArrowUp, ArrowDown, X } from '@lucide/vue'
 import type { ScheduledTask } from '../types/scheduler'
 
 const store = useSchedulerStore()
 const scriptStore = useScriptStore()
+const uiStore = useUIStore()
 
 // 新建/编辑任务序列状态
 const showEditor = ref(false)
@@ -40,7 +42,7 @@ function addStep() {
       loop_count: 1,
     })
   } else {
-    alert('请先在“脚本”页面创建一些脚本后再添加步骤！')
+    uiStore.showAlert('提示', '请先在“脚本”页面创建一些脚本后再添加步骤！')
   }
 }
 
@@ -71,11 +73,11 @@ function getScriptName(scriptId: string): string {
 
 async function saveTask() {
   if (!taskName.value.trim()) {
-    alert('请输入任务序列名称')
+    uiStore.showToast('请输入任务序列名称', 'warning')
     return
   }
   if (steps.value.length === 0) {
-    alert('请至少添加一个脚本步骤')
+    uiStore.showToast('请至少添加一个脚本步骤', 'warning')
     return
   }
 
@@ -104,8 +106,9 @@ async function saveTask() {
     taskName.value = ''
     taskLoopCount.value = 1
     steps.value = []
+    uiStore.showToast('新建任务序列成功', 'success')
   } catch (e) {
-    alert(`创建任务序列失败: ${e}`)
+    uiStore.showAlert('创建失败', `创建任务序列失败: ${e}`)
   }
 }
 

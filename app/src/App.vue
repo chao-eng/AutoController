@@ -2,6 +2,7 @@
 import AppSidebar from './components/layout/AppSidebar.vue'
 import AppHeader from './components/layout/AppHeader.vue'
 import StatusBar from './components/layout/StatusBar.vue'
+import AppDialogs from './components/layout/AppDialogs.vue'
 import { useLogStore } from './stores/log'
 import { useControllerStore } from './stores/controller'
 import { useScriptStore } from './stores/script'
@@ -62,6 +63,8 @@ onUnmounted(() => {
         version="0.1.0"
       />
     </div>
+    <!-- Custom Dialogs/Toasts overlays -->
+    <AppDialogs />
   </div>
 </template>
 
