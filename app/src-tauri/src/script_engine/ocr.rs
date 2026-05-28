@@ -79,23 +79,26 @@ fn enhance_contrast_grayscale(pixels: &mut [u8]) {
         return;
     }
     
-    // 3. 执行线性对比度拉伸，并通过三次 Smoothstep S型曲线进行非线性对比度重塑与平滑去噪
-    // Smoothstep: S(x) = 3x^2 - 2x^3。此算法能够让亮部更亮（归于背景 255），暗部更暗（归于文字 0），
-    // 同时保留抗锯齿（ClearType）的亚像素渐变边缘，绝不产生硬性切分所致的笔划粘连，完美保留字体骨架
+    // 3. 执行线性对比度拉伸，并通过双重三次 Smoothstep S型曲线进行非线性对比度深度重塑
+    // 双重 Smoothstep: 先 S1 = 3x²-2x³，再 S2 = 3·S1²-2·S1³。
+    // 第二次 Smoothstep 大幅增强曲线陡度，使得文字与背景间的对比度极限拉大，
+    // 同时在 0/1 端点处保持平滑过渡，不破坏抗锯齿渐变的本质，完美兼顾"去噪"与"保边"
     for i in (0..len).step_by(4) {
         let y = grays[i / 4] as f32;
         // 线性对比度拉伸到 [0.0, 1.0]
         let norm_val = ((y - min_val as f32) / range).clamp(0.0, 1.0);
         
-        // 自动反色处理，使得输出一定是“白底黑字”（文字趋近于 0.0，背景趋近于 1.0）
+        // 自动反色处理，使得输出一定是"白底黑字"（文字趋近于 0.0，背景趋近于 1.0）
         let mapped_val = if invert {
             1.0 - norm_val
         } else {
             norm_val
         };
         
-        // 三次 Smoothstep S型滤波
-        let smooth_val = 3.0 * mapped_val * mapped_val - 2.0 * mapped_val * mapped_val * mapped_val;
+        // 第一次 Smoothstep S型滤波
+        let s1 = 3.0 * mapped_val * mapped_val - 2.0 * mapped_val * mapped_val * mapped_val;
+        // 第二次 Smoothstep S型滤波 (双重叠加，大幅增强文字与背景的对比度)
+        let smooth_val = 3.0 * s1 * s1 - 2.0 * s1 * s1 * s1;
         
         // 重新拉伸到 [0.0, 255.0]
         let final_val = (smooth_val * 255.0).clamp(0.0, 255.0) as u8;
@@ -107,11 +110,54 @@ fn enhance_contrast_grayscale(pixels: &mut [u8]) {
     }
 }
 
+/// 对灰度图像应用 3×3 反锐化蒙版 (Unsharp Mask) 边缘增强滤波。
+/// 通过计算每个像素与其 3×3 邻域均值的差值来检测并增强边缘，
+/// 使文字笔画的轮廓线条更加锐利清晰，显著提升 OCR 引擎对细小字符的辨识能力。
+fn sharpen_grayscale(pixels: &mut [u8], w: i32, h: i32) {
+    let w = w as usize;
+    let h = h as usize;
+    if w == 0 || h == 0 { return; }
+    
+    // 保留原始像素的只读副本用于采样
+    let src: Vec<u8> = pixels.to_vec();
+    let strength = 1.0f32; // 锐化强度系数
+    
+    for y in 0..h {
+        for x in 0..w {
+            let idx = (y * w + x) * 4;
+            let center = src[idx] as f32;
+            
+            // 计算 3×3 邻域均值
+            let mut sum = 0.0f32;
+            let mut count = 0.0f32;
+            for dy in -1i32..=1 {
+                for dx in -1i32..=1 {
+                    let ny = y as i32 + dy;
+                    let nx = x as i32 + dx;
+                    if ny >= 0 && ny < h as i32 && nx >= 0 && nx < w as i32 {
+                        let ni = (ny as usize * w + nx as usize) * 4;
+                        sum += src[ni] as f32;
+                        count += 1.0;
+                    }
+                }
+            }
+            let avg = sum / count;
+            
+            // 反锐化蒙版公式: sharpened = center + strength × (center - avg)
+            let sharpened = (center + strength * (center - avg)).clamp(0.0, 255.0) as u8;
+            
+            pixels[idx] = sharpened;
+            pixels[idx + 1] = sharpened;
+            pixels[idx + 2] = sharpened;
+        }
+    }
+}
+
 /// Bicubic 卷积插值三次核权重函数。
-/// 使用 a = -0.5 作为标准收敛插值参数，可提供完美的边缘锐化（Sharpening）效果，
-/// 有效强化文字边缘的轮廓线条，彻底杜绝 Bilinear 所带来的模糊和色彩晕开问题。
+/// 使用 a = -0.75 作为增强型边缘锐化参数（相比标准 -0.5 更加锐利），
+/// 在放大文字图像时可提供更强的边缘轮廓提取效果，使细小汉字笔画在超分后更加清晰可辨。
 fn cubic_weight(x: f32) -> f32 {
-    let a = -0.5f32; 
+    let a = -0.75f32; 
     let abs_x = x.abs();
     if abs_x <= 1.0 {
         (a + 2.0) * abs_x.powi(3) - (a + 3.0) * abs_x.powi(2) + 1.0
@@ -289,6 +335,9 @@ pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32) -> Result<String, String>
 
     // 2. 在 1:1 图像上执行自适应去色与对比度拉伸 (增强轮廓线条，彻底过滤彩色噪声干扰)
     enhance_contrast_grayscale(&mut original_pixels);
+
+    // 2.5 应用 3×3 反锐化蒙版 (Unsharp Mask) 边缘锐化，增强文字笔画的轮廓清晰度
+    sharpen_grayscale(&mut original_pixels, w, h);
 
     // 3. 执行高质量双三次图像卷积重采样 (仅当短边低于 1200px 时)
     let (final_w, final_h, pixel_bytes) = if scale > 1.0 {
