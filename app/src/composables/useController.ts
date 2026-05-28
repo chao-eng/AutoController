@@ -3,8 +3,8 @@ import type { DeviceInfo, ControllerState, ViGEmStatus } from '../types/controll
 import { Button, ThumbAxis, TriggerSide } from '../types/controller'
 
 export function useController() {
-  async function createDevice(controllerType: 'xbox360' | 'dual_shock4'): Promise<DeviceInfo> {
-    return invoke<DeviceInfo>('controller_create', { controllerType })
+  async function createDevice(): Promise<DeviceInfo> {
+    return invoke<DeviceInfo>('controller_create')
   }
 
   async function removeDevice(deviceId: string): Promise<void> {

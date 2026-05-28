@@ -1,20 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ControllerType {
-    Xbox360,
-    DualShock4,
-}
-
-impl std::fmt::Display for ControllerType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ControllerType::Xbox360 => write!(f, "Xbox 360"),
-            ControllerType::DualShock4 => write!(f, "DualShock 4"),
-        }
-    }
-}
+// 移除了 ControllerType，默认且仅模拟 Xbox 360 手柄
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -138,7 +124,6 @@ impl From<&ControllerState> for crate::controller::vigem::XusbReport {
 pub struct DeviceInfo {
     pub id: String,
     pub index: usize,
-    pub controller_type: ControllerType,
     pub connected: bool,
     pub state: ControllerState,
     pub vigem_connected: bool,
@@ -148,7 +133,6 @@ pub struct DeviceInfo {
 pub struct DeviceConfig {
     pub id: String,
     pub index: usize,
-    pub controller_type: ControllerType,
     pub connected: bool,
 }
 

@@ -16,14 +16,14 @@
 
 ## 📝 项目概述
 
-**AutoController** 是一款专为 Windows 平台打造的高性能、专业级虚拟手柄挂机与自动化工具。它基于 **Tauri 2.0** 框架，结合 **Vue 3 (TypeScript)** 现代化前端和 **Rust** 异步后端，底层通过 **ViGEmBus** 内核驱动实现高精度、低延迟的硬件级 Xbox 360 和 DualShock 4 手柄信号模拟。无论是长时间挂机的核心玩家，还是需要进行批量自动化测试的开发人员，AutoController 都能提供直观、强悍的解决方案。
+**AutoController** 是一款专为 Windows 平台打造的高性能、专业级虚拟手柄挂机与自动化工具。它基于 **Tauri 2.0** 框架，结合 **Vue 3 (TypeScript)** 现代化前端和 **Rust** 异步后端，底层通过 **ViGEmBus** 内核驱动实现高精度、低延迟 of 硬件级 Xbox 360 手柄信号模拟。无论是长时间挂机的核心玩家，还是需要进行批量自动化测试的开发人员，AutoController 都能提供直观、强悍的解决方案。
 
 ---
 
 ## ✨ 核心特性
 
 *   **🎮 专业级手柄模拟系统**
-    *   底层集成 **ViGEmBus** 驱动，支持 Xbox 360 和 DualShock 4 手柄。
+    *   底层集成 **ViGEmBus** 驱动，支持 Xbox 360 虚拟手柄模拟。
     *   **超低延迟**（<5ms）和**高精度**（100Hz+）输入模拟，保障极速响应。
     *   最多支持 **8 个虚拟手柄** 独立并发运行，并支持运行时热插拔管理。
     *   直观的可视化仪表盘，提供摇杆拖拽互动可视化及扳机键动态进度条。
@@ -128,14 +128,14 @@ npm run tauri build
 
 ## 📝 Project Overview
 
-**AutoController** is a professional-grade, high-performance virtual gamepad simulation and automation utility designed specifically for Windows. Powered by the **Tauri 2.0** framework, featuring a modern **Vue 3 (TypeScript)** frontend paired with an asynchronous **Rust** backend, it leverages the kernel-level **ViGEmBus** driver to deliver hardware-level, high-precision, and low-latency Xbox 360 and DualShock 4 gamepad emulation. Whether you are a core gamer looking for long-term AFK gaming or a developer running batch automated testing, AutoController offers an intuitive, sleek, and robust solution.
+**AutoController** is a professional-grade, high-performance virtual gamepad simulation and automation utility designed specifically for Windows. Powered by the **Tauri 2.0** framework, featuring a modern **Vue 3 (TypeScript)** frontend paired with an asynchronous **Rust** backend, it leverages the kernel-level **ViGEmBus** driver to deliver hardware-level, high-precision, and low-latency Xbox 360 gamepad emulation. Whether you are a core gamer looking for long-term AFK gaming or a developer running batch automated testing, AutoController offers an intuitive, sleek, and robust solution.
 
 ---
 
 ## ✨ Key Features
 
 *   **🎮 Professional Gamepad Simulation**
-    *   Kernel-level emulation for Xbox 360 and DualShock 4 controllers powered by the **ViGEmBus** driver.
+    *   Kernel-level emulation for Xbox 360 controller powered by the **ViGEmBus** driver.
     *   **Ultra-low latency** (<5ms) and **high-precision** (100Hz+) input simulation.
     *   Supports up to **8 virtual gamepads** running concurrently with dynamic hot-swapping.
     *   Intelligent visualization dashboard including interactive drag-and-drop joystick fields and dynamic trigger progress bars.

@@ -40,7 +40,6 @@ type FnConnect = unsafe extern "system" fn(PVIGEM_CLIENT) -> VIGEM_ERROR;
 type FnDisconnect = unsafe extern "system" fn(PVIGEM_CLIENT);
 type FnFree = unsafe extern "system" fn(PVIGEM_CLIENT);
 type FnTargetX360Alloc = unsafe extern "system" fn() -> PVIGEM_TARGET;
-type FnTargetDs4Alloc = unsafe extern "system" fn() -> PVIGEM_TARGET;
 type FnTargetAdd = unsafe extern "system" fn(PVIGEM_CLIENT, PVIGEM_TARGET) -> VIGEM_ERROR;
 type FnTargetRemove = unsafe extern "system" fn(PVIGEM_CLIENT, PVIGEM_TARGET) -> VIGEM_ERROR;
 type FnTargetFree = unsafe extern "system" fn(PVIGEM_TARGET);
@@ -54,7 +53,6 @@ pub struct ViGEmBindings {
     pub vigem_disconnect: FnDisconnect,
     pub vigem_free: FnFree,
     pub vigem_target_x360_alloc: FnTargetX360Alloc,
-    pub vigem_target_ds4_alloc: FnTargetDs4Alloc,
     pub vigem_target_add: FnTargetAdd,
     pub vigem_target_remove: FnTargetRemove,
     pub vigem_target_free: FnTargetFree,
@@ -87,8 +85,6 @@ impl ViGEmBindings {
             let vigem_free = Self::load_sym::<FnFree>(&dll, b"vigem_free\0")?;
             let vigem_target_x360_alloc =
                 Self::load_sym::<FnTargetX360Alloc>(&dll, b"vigem_target_x360_alloc\0")?;
-            let vigem_target_ds4_alloc =
-                Self::load_sym::<FnTargetDs4Alloc>(&dll, b"vigem_target_ds4_alloc\0")?;
             let vigem_target_add = Self::load_sym::<FnTargetAdd>(&dll, b"vigem_target_add\0")?;
             let vigem_target_remove =
                 Self::load_sym::<FnTargetRemove>(&dll, b"vigem_target_remove\0")?;
@@ -106,7 +102,6 @@ impl ViGEmBindings {
                 vigem_disconnect,
                 vigem_free,
                 vigem_target_x360_alloc,
-                vigem_target_ds4_alloc,
                 vigem_target_add,
                 vigem_target_remove,
                 vigem_target_free,
@@ -202,23 +197,6 @@ impl ViGEmClient {
         Ok(target)
     }
 
-    pub fn create_ds4_target(&self) -> Result<PVIGEM_TARGET, String> {
-        let target = unsafe { (self.bindings.vigem_target_ds4_alloc)() };
-        if target.is_null() {
-            return Err("vigem_target_ds4_alloc 返回空指针".to_string());
-        }
-
-        let error = unsafe { (self.bindings.vigem_target_add)(self.client, target) };
-        if !vigem_success(error) {
-            unsafe { (self.bindings.vigem_target_free)(target) };
-            return Err(format!("vigem_target_add 失败，错误码: {} (0x{:08X})", error, error));
-        }
-
-        let index = unsafe { (self.bindings.vigem_target_get_index)(target) };
-        tracing::info!(user_index = index, "DualShock 4 虚拟手柄已创建并连接");
-
-        Ok(target)
-    }
 
     pub fn remove_target(&self, target: PVIGEM_TARGET) -> Result<(), String> {
         let error = unsafe { (self.bindings.vigem_target_remove)(self.client, target) };

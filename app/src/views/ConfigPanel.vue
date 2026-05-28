@@ -10,8 +10,7 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 const profileForm = ref({
   name: '',
-  game_process: '',
-  controller_type: 'xbox360' as 'xbox360' | 'dual_shock4'
+  game_process: ''
 })
 
 onMounted(() => {
@@ -21,8 +20,7 @@ onMounted(() => {
 function openCreateModal() {
   profileForm.value = {
     name: '',
-    game_process: '',
-    controller_type: 'xbox360'
+    game_process: ''
   }
   showCreateModal.value = true
 }
@@ -37,7 +35,6 @@ async function handleCreateProfile() {
     id: 'p_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
     name: profileForm.value.name.trim(),
     game_process: profileForm.value.game_process.trim(),
-    controller_type: profileForm.value.controller_type,
     macros: [],
     scripts: []
   }
@@ -99,7 +96,7 @@ function handleImport(event: Event) {
   reader.onload = async (e) => {
     try {
       const parsed = JSON.parse(e.target?.result as string)
-      if (!parsed.name || !parsed.game_process || !parsed.controller_type) {
+      if (!parsed.name || !parsed.game_process) {
         alert('导入失败：JSON 格式不正确，缺少必需的字段')
         return
       }
@@ -108,7 +105,6 @@ function handleImport(event: Event) {
         id: 'p_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
         name: parsed.name,
         game_process: parsed.game_process,
-        controller_type: parsed.controller_type === 'dual_shock4' ? 'dual_shock4' : 'xbox360',
         macros: Array.isArray(parsed.macros) ? parsed.macros : [],
         scripts: Array.isArray(parsed.scripts) ? parsed.scripts : []
       }
@@ -193,9 +189,7 @@ function handleImport(event: Event) {
             <div class="profile-main">
               <div class="profile-title">
                 <h4>{{ profile.name }}</h4>
-                <span class="controller-badge" :class="profile.controller_type">
-                  {{ profile.controller_type === 'xbox360' ? 'Xbox 360' : 'DS4' }}
-                </span>
+                <span class="controller-badge xbox360">Xbox 360</span>
                 <span v-if="store.config.active_profile === profile.id" class="active-badge">
                   <Check :size="11" /> 已激活
                 </span>
@@ -271,13 +265,7 @@ function handleImport(event: Event) {
             />
           </div>
           
-          <div class="form-group">
-            <label>模拟手柄类型</label>
-            <select v-model="profileForm.controller_type" class="form-select">
-              <option value="xbox360">Xbox 360 (推荐，XInput 兼容性广)</option>
-              <option value="dual_shock4">DualShock 4 (PlayStation 4 模式)</option>
-            </select>
-          </div>
+          <!-- 默认且仅模拟 Xbox 360 手柄 -->
         </div>
         
         <div class="modal-footer">
@@ -471,10 +459,7 @@ function handleImport(event: Event) {
   color: #22c55e;
 }
 
-.controller-badge.dual_shock4 {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-}
+
 
 .active-badge {
   display: inline-flex;

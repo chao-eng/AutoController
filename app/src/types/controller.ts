@@ -1,6 +1,4 @@
-export interface ControllerType {
-  _type: 'xbox_360' | 'dual_shock_4'
-}
+// 已移除 ControllerType 类型定义，仅模拟 Xbox 360 手柄
 
 export enum Button {
   A = 'A',
@@ -47,7 +45,6 @@ export interface ControllerState {
 export interface DeviceInfo {
   id: string
   index: number
-  controller_type: 'xbox360' | 'dual_shock4'
   connected: boolean
   state: ControllerState
   vigem_connected: boolean

@@ -19,7 +19,7 @@ onUnmounted(() => {
 })
 
 async function addDevice() {
-  await store.createDevice('xbox360')
+  await store.createDevice()
 }
 
 function selectDevice(id: string) {

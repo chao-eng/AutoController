@@ -3,12 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::persistence::DataDir;
-use crate::controller::types::ControllerType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceConfig {
     pub id: String,
-    pub controller_type: ControllerType,
     pub enabled: bool,
 }
 
@@ -17,7 +15,6 @@ pub struct GameProfile {
     pub id: String,
     pub name: String,
     pub game_process: String,
-    pub controller_type: ControllerType,
     pub macros: Vec<String>,
     pub scripts: Vec<String>,
 }

@@ -16,7 +16,7 @@ const emit = defineEmits<{
   <div class="device-card" :class="{ offline: !device.connected }">
     <div class="card-header">
       <div class="card-title">
-        <span class="device-type">{{ device.controller_type === 'xbox360' ? 'Xbox 360' : 'DualShock 4' }}</span>
+        <span class="device-type">Xbox 360</span>
         <span class="device-index">#{{ device.index }}</span>
       </div>
       <div class="card-actions">

@@ -1,11 +1,10 @@
-use crate::controller::{ControllerManager, ControllerType, Button, ThumbAxis, TriggerSide, DeviceInfo, ControllerState, ViGEmStatus};
+use crate::controller::{ControllerManager, Button, ThumbAxis, TriggerSide, DeviceInfo, ControllerState, ViGEmStatus};
 
 #[tauri::command]
 pub fn controller_create(
     manager: tauri::State<'_, ControllerManager>,
-    controller_type: ControllerType,
 ) -> Result<DeviceInfo, String> {
-    manager.create_device(controller_type)
+    manager.create_device()
 }
 
 #[tauri::command]

@@ -62,7 +62,7 @@ AutoController - 专业级游戏手柄模拟挂机工具
 ┌─────────────────────┐
 │   ViGEmBus Driver   │
 │  (Kernel Level)     │
-│  Xbox 360 / DS4     │
+│  Xbox 360           │
 └─────────────────────┘
 ```
 
@@ -115,10 +115,7 @@ Dedicated Threads:
 
 ```rust
 // 核心枚举定义
-enum ControllerType {
-    Xbox360,
-    DualShock4,
-}
+// 移除了 ControllerType，仅支持 Xbox 360
 
 struct ControllerState {
     buttons: u16,           // 按键位图
@@ -144,7 +141,7 @@ enum Button {
 
 - 使用 `vigem-client` Rust crate 与 ViGEmBus 驱动通信
 - 每个虚拟设备通过 `VigemClient::create()` 创建
-- 输入报告通过 `X360Report` / `Ds4Report` 提交
+- 输入报告通过 `X360Report` 提交
 - 100Hz输入循环：10ms间隔定时提交报告
 - 延迟优化：使用 `spin_loop` 提示和精确定时器
 
@@ -324,7 +321,6 @@ struct GameProfile {
     id: String,
     name: String,
     game_process: String,           // 游戏进程名
-    controller_type: ControllerType,
     controller_config: ControllerConfig,
     macros: Vec<Macro>,
     scripts: Vec<Script>,
@@ -381,7 +377,7 @@ struct AppConfig {
 │ 设备│                                                     │
 │    │   ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐             │
 │ 🎮 │   │设备1 │ │设备2 │ │设备3 │ │ + 添加│             │
-│ 宏  │   │Xbox  │ │DS4   │ │空闲  │ │      │             │
+│ 宏  │   │Xbox  │ │Xbox  │ │空闲  │ │      │             │
 │    │   │● 运行 │ │● 录制│ │○ 离线│ │      │             │
 │ 📝 │   └──────┘ └──────┘ └──────┘ └──────┘             │
 │ 脚本│                                                     │

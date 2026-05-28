@@ -92,9 +92,9 @@ export const useControllerStore = defineStore('controller', () => {
     }
   }
 
-  async function createDevice(type: 'xbox360' | 'dual_shock4' = 'xbox360') {
+  async function createDevice() {
     try {
-      const device = await controller.createDevice(type)
+      const device = await controller.createDevice()
       devices.value.push(device)
       devices.value.sort((a, b) => a.index - b.index)
       return device

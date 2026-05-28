@@ -130,10 +130,7 @@ impl ControllerManager {
         for config in configs {
             let target = if config.connected {
                 if let Some(ref client) = *vigem {
-                    match config.controller_type {
-                        ControllerType::Xbox360 => client.create_x360_target().ok(),
-                        ControllerType::DualShock4 => client.create_ds4_target().ok(),
-                    }
+                    client.create_x360_target().ok()
                 } else {
                     None
                 }
@@ -146,7 +143,6 @@ impl ControllerManager {
                 info: DeviceInfo {
                     id: config.id.clone(),
                     index: config.index,
-                    controller_type: config.controller_type,
                     connected: config.connected,
                     state: ControllerState::default(),
                     vigem_connected,
@@ -171,7 +167,6 @@ impl ControllerManager {
             .map(|d| DeviceConfig {
                 id: d.info.id.clone(),
                 index: d.info.index,
-                controller_type: d.info.controller_type,
                 connected: d.info.connected,
             })
             .collect();
@@ -182,7 +177,7 @@ impl ControllerManager {
         }
     }
 
-    pub fn create_device(&self, controller_type: ControllerType) -> Result<DeviceInfo, String> {
+    pub fn create_device(&self) -> Result<DeviceInfo, String> {
         let mut devices = self.devices.lock();
         let mut next_index = self.next_index.lock();
 
@@ -197,10 +192,7 @@ impl ControllerManager {
         let target = {
             let vigem = self.vigem.lock();
             if let Some(ref client) = *vigem {
-                match controller_type {
-                    ControllerType::Xbox360 => client.create_x360_target().ok(),
-                    ControllerType::DualShock4 => client.create_ds4_target().ok(),
-                }
+                client.create_x360_target().ok()
             } else {
                 None
             }
@@ -211,7 +203,6 @@ impl ControllerManager {
             info: DeviceInfo {
                 id: id.clone(),
                 index,
-                controller_type,
                 connected: true,
                 state: ControllerState::default(),
                 vigem_connected,
@@ -229,14 +220,12 @@ impl ControllerManager {
             tracing::info!(
                 device_id = %id,
                 index = index,
-                controller_type = %controller_type,
                 "虚拟手柄已创建并连接到 ViGEmBus（系统可识别）"
             );
         } else {
             tracing::info!(
                 device_id = %id,
                 index = index,
-                controller_type = %controller_type,
                 "虚拟手柄已创建（模拟模式，ViGEmBus 不可用）"
             );
         }
@@ -286,10 +275,7 @@ impl ControllerManager {
                 let target = {
                     let vigem = self.vigem.lock();
                     if let Some(ref client) = *vigem {
-                        match device.info.controller_type {
-                            ControllerType::Xbox360 => client.create_x360_target().ok(),
-                            ControllerType::DualShock4 => client.create_ds4_target().ok(),
-                        }
+                        client.create_x360_target().ok()
                     } else {
                         None
                     }
