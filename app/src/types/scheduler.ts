@@ -3,6 +3,7 @@ export type ScheduleType =
   | { daily: { time: string } }
   | { interval: { duration_ms: number } }
   | { cron: { expression: string } }
+  | 'manual'
 
 export interface ScriptStep {
   script_id: string

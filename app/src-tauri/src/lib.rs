@@ -66,6 +66,9 @@ pub fn run() {
             let script_runtime = app.state::<ScriptRuntime>();
             script_runtime.set_app_handle(handle.clone());
 
+            // 启动后台定时任务调度引擎心跳循环
+            scheduler::queue::start_scheduler_loop(handle.clone());
+
             *log_handle.lock() = Some(handle.clone());
 
             // 启动后台 CPU 和内存资源监控线程 (每 2 秒采集一次并通过 Tauri 事件推送给前端)

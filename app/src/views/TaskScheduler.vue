@@ -16,6 +16,15 @@ const taskName = ref('')
 const taskLoopCount = ref(1)
 const steps = ref<{ script_id: string; loop_count: number }[]>([])
 
+// 调度配置表单状态
+const scheduleType = ref<'once' | 'daily' | 'interval' | 'cron'>('once')
+const onceDateTime = ref(new Date(Date.now() + 60000).toISOString().substring(0, 16))
+const dailyTime = ref('12:00:00')
+const intervalDuration = ref(5)
+const intervalUnit = ref<'seconds' | 'minutes' | 'hours'>('minutes')
+const cronExpression = ref('*/5 * * * *')
+const taskPriority = ref(1)
+
 onMounted(async () => {
   store.fetchTasks()
   scriptStore.fetchScripts()
@@ -25,6 +34,13 @@ function openEditor() {
   taskName.value = ''
   taskLoopCount.value = 1
   steps.value = []
+  scheduleType.value = 'once'
+  onceDateTime.value = new Date(Date.now() + 60000).toISOString().substring(0, 16)
+  dailyTime.value = '12:00:00'
+  intervalDuration.value = 5
+  intervalUnit.value = 'minutes'
+  cronExpression.value = '*/5 * * * *'
+  taskPriority.value = 1
   if (scriptStore.scripts.length > 0) {
     // 默认添加一个步骤方便操作
     steps.value.push({
@@ -81,10 +97,34 @@ async function saveTask() {
     return
   }
 
+  // 根据选定类型动态构造 schedule 对象
+  let schedule: any;
+  if (scheduleType.value === 'once') {
+    schedule = { once: new Date(onceDateTime.value).toISOString() };
+  } else if (scheduleType.value === 'daily') {
+    let time = dailyTime.value;
+    if (time.split(':').length === 2) {
+      time = `${time}:00`;
+    }
+    schedule = { daily: { time } };
+  } else if (scheduleType.value === 'interval') {
+    let ms = intervalDuration.value * 1000;
+    if (intervalUnit.value === 'minutes') {
+      ms *= 60;
+    } else if (intervalUnit.value === 'hours') {
+      ms *= 3600;
+    }
+    schedule = { interval: { duration_ms: ms } };
+  } else if (scheduleType.value === 'cron') {
+    schedule = { cron: { expression: cronExpression.value } };
+  } else {
+    schedule = 'manual'; // 手动执行类型直接对应 Rust 序列化后的 'manual' 字符串
+  }
+
   const newTask: ScheduledTask = {
     id: uuidv4(),
     name: taskName.value,
-    schedule: { once: new Date().toISOString() }, // 默认为单次（支持手动串联执行）
+    schedule,
     action: {
       execute_sequence: {
         steps: steps.value.map((s) => ({
@@ -94,7 +134,7 @@ async function saveTask() {
         task_loop_count: taskLoopCount.value,
       },
     },
-    priority: 1,
+    priority: taskPriority.value,
     enabled: true,
     last_run: null,
     next_run: null,
@@ -106,7 +146,7 @@ async function saveTask() {
     taskName.value = ''
     taskLoopCount.value = 1
     steps.value = []
-    uiStore.showToast('新建任务序列成功', 'success')
+    uiStore.showToast('新建任务序列与调度成功', 'success')
   } catch (e) {
     uiStore.showAlert('创建失败', `创建任务序列失败: ${e}`)
   }
@@ -121,11 +161,20 @@ function uuidv4() {
 }
 
 function getScheduleLabel(schedule: any): string {
-  if (schedule.once) return `顺序串联任务`
-  if (schedule.daily) return `每日: ${schedule.daily.time}`
-  if (schedule.interval) return `间隔: ${schedule.interval.duration_ms}ms`
-  if (schedule.cron) return `Cron: ${schedule.cron.expression}`
-  return '未知'
+  if (schedule === 'manual') return '🖱️ 手动执行 (不自动触发)';
+  if (schedule.once) {
+    const date = new Date(schedule.once);
+    return `单次定时: ${date.toLocaleString()}`;
+  }
+  if (schedule.daily) return `每日定时: ${schedule.daily.time}`;
+  if (schedule.interval) {
+    const ms = schedule.interval.duration_ms;
+    if (ms >= 3600000) return `循环间隔: ${ms / 3600000} 小时`;
+    if (ms >= 60000) return `循环间隔: ${ms / 60000} 分钟`;
+    return `循环间隔: ${ms / 1000} 秒`;
+  }
+  if (schedule.cron) return `Cron: ${schedule.cron.expression}`;
+  return '未知';
 }
 
 function getActionLabel(action: any): string {
@@ -320,6 +369,62 @@ async function stopSequence(taskId: string) {
             <div class="form-group">
               <label>整个任务的执行轮数 (Loop Count)</label>
               <input v-model.number="taskLoopCount" type="number" min="1" max="999" class="input small" />
+            </div>
+
+            <!-- 任务调度策略配置 -->
+            <div class="scheduler-config-box">
+              <h4 class="scheduler-config-title">⏰ 任务调度配置</h4>
+              
+              <div class="form-group">
+                <label>调度类型 (Schedule Type)</label>
+                <select v-model="scheduleType" class="select-input">
+                  <option value="once">📅 单次定时执行 (Once)</option>
+                  <option value="daily">🕒 每日固定时间 (Daily)</option>
+                  <option value="interval">🔁 周期循环间隔 (Interval)</option>
+                  <option value="cron">⚡ 标准 Cron 表达式 (Cron)</option>
+                </select>
+              </div>
+
+              <!-- Once (单次执行) -->
+              <div v-if="scheduleType === 'once'" class="form-group fade-in">
+                <label>执行时间</label>
+                <input v-model="onceDateTime" type="datetime-local" class="input" />
+              </div>
+
+              <!-- Daily (每日定时) -->
+              <div v-if="scheduleType === 'daily'" class="form-group fade-in">
+                <label>每日固定时间 (时:分:秒)</label>
+                <input v-model="dailyTime" type="time" step="1" class="input" />
+              </div>
+
+              <!-- Interval (周期循环) -->
+              <div v-if="scheduleType === 'interval'" class="form-group row-group fade-in">
+                <div class="field-item">
+                  <label>执行间隔</label>
+                  <input v-model.number="intervalDuration" type="number" min="1" class="input" />
+                </div>
+                <div class="field-item">
+                  <label>时间单位</label>
+                  <select v-model="intervalUnit" class="select-input">
+                    <option value="seconds">秒 (Seconds)</option>
+                    <option value="minutes">分钟 (Minutes)</option>
+                    <option value="hours">小时 (Hours)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Cron (Cron 表达式) -->
+              <div v-if="scheduleType === 'cron'" class="form-group fade-in">
+                <label>标准 Cron 表达式 (5字段: 分 时 日 月 周)</label>
+                <input v-model="cronExpression" class="input" placeholder="*/5 * * * * (每 5 分钟)" />
+                <span class="input-hint">例如: <code>0 12 * * *</code> (每日中午 12 点), <code>*/30 * * * *</code> (每半小时)</span>
+              </div>
+
+              <!-- 任务优先级 -->
+              <div class="form-group">
+                <label>调度抢占优先级 (1-100，数字越大优先级越高)</label>
+                <input v-model.number="taskPriority" type="number" min="1" max="100" class="input small" />
+              </div>
             </div>
 
             <div class="steps-container">
@@ -1032,5 +1137,57 @@ async function stopSequence(taskId: string) {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.scheduler-config-box {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.scheduler-config-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--color-cta);
+}
+
+.row-group {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.row-group .field-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.input-hint {
+  font-size: 10px;
+  color: var(--color-text-dim);
+  margin-top: 2px;
+}
+
+.input-hint code {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--color-cta);
+}
+
+.fade-in {
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

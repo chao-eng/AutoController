@@ -8,6 +8,7 @@ pub enum ScheduleType {
     Daily { time: String },
     Interval { duration_ms: u64 },
     Cron { expression: String },
+    Manual,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

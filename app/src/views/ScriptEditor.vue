@@ -392,6 +392,24 @@ async function saveScriptName(scriptId: string) {
           <code>side: Left Right</code>
         </div>
         <div class="api-section">
+          <h5>OCR 屏幕文本识别</h5>
+          <code>ocr() // 默认标定区 #1 识别</code>
+          <code>ocr(index) // 读取标定区序号并识别</code>
+          <code>ocr(x, y, w, h) // 指定屏幕区域识别</code>
+          <code>// 亚像素 ClearType 级别高清对齐</code>
+          <code>// 深色模式智能自适应反色</code>
+          <code>// 自动过滤空格/换行，方便字符判定</code>
+        </div>
+        <div class="api-section">
+          <h5>字符串模糊判断与匹配</h5>
+          <code>let text = ocr(1);</code>
+          <code>text.contains("确定") // 模糊匹配</code>
+          <code>text.is_empty() // 是否为空字串</code>
+          <code>text == "开始游戏" // 精确相等比较</code>
+          <code>text.len // 获取识别字数 (属性)</code>
+          <code>log("结果: " + text); // 拼接输出</code>
+        </div>
+        <div class="api-section">
           <h5>延时与日志</h5>
           <code>sleep(ms);</code>
           <code>log("message");</code>
