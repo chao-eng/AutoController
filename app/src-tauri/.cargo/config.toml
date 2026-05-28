@@ -7,3 +7,6 @@ registry = "sparse+https://rsproxy.cn/index/"
 [net]
 git-fetch-with-cli = true
 retry = 5
+
+[http]
+check-revoke = false

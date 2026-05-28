@@ -20,6 +20,14 @@ pub struct GameProfile {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OcrRegion {
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub devices: Vec<DeviceConfig>,
     pub profiles: Vec<GameProfile>,
@@ -27,6 +35,7 @@ pub struct AppConfig {
     pub auto_start: bool,
     pub minimize_to_tray: bool,
     pub log_level: String,
+    pub ocr_region: Option<OcrRegion>,
 }
 
 impl Default for AppConfig {
@@ -38,6 +47,7 @@ impl Default for AppConfig {
             auto_start: false,
             minimize_to_tray: true,
             log_level: "info".to_string(),
+            ocr_region: None,
         }
     }
 }

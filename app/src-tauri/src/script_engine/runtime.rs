@@ -568,6 +568,61 @@ impl ScriptRuntime {
                 tracing::info!(target: "script", "[脚本] {}", msg);
             });
 
+            let handle_ocr_params = app_handle.clone();
+            let eid_ocr_params = eid.clone();
+            let sid_ocr_params = sid.clone();
+            engine.register_fn("ocr", move |context: rhai::NativeCallContext, x: i64, y: i64, w: i64, h: i64| -> String {
+                if let Some(ref handle) = handle_ocr_params {
+                    if let Some(line) = context.call_position().line() {
+                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                            execution_id: eid_ocr_params.clone(),
+                            script_id: sid_ocr_params.clone(),
+                            line,
+                        });
+                    }
+                }
+                match crate::script_engine::ocr::ocr_region_sync(x as i32, y as i32, w as i32, h as i32) {
+                    Ok(text) => text,
+                    Err(e) => {
+                        tracing::error!(target: "script", "OCR 识别出错: {}", e);
+                        String::new()
+                    }
+                }
+            });
+
+            let handle_ocr_def = app_handle.clone();
+            let eid_ocr_def = eid.clone();
+            let sid_ocr_def = sid.clone();
+            engine.register_fn("ocr", move |context: rhai::NativeCallContext| -> String {
+                if let Some(ref handle) = handle_ocr_def {
+                    if let Some(line) = context.call_position().line() {
+                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                            execution_id: eid_ocr_def.clone(),
+                            script_id: sid_ocr_def.clone(),
+                            line,
+                        });
+                    }
+                    use tauri::Manager;
+                    let config_mgr = handle.state::<crate::config::AppConfigManager>();
+                    let config = config_mgr.get();
+                    if let Some(region) = config.ocr_region {
+                        match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h) {
+                            Ok(text) => text,
+                            Err(e) => {
+                                tracing::error!(target: "script", "OCR 默认区域识别出错: {}", e);
+                                String::new()
+                            }
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "OCR 默认区域尚未配置，请在前端配置或传入具体坐标参数");
+                        String::new()
+                    }
+                } else {
+                    tracing::warn!(target: "script", "ocr() 无参调用失败：AppHandle 尚未初始化");
+                    String::new()
+                }
+            });
+
             let wrapped_code = Self::wrap_script(&code);
 
             match engine.eval::<()>(&wrapped_code) {
