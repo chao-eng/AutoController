@@ -184,7 +184,7 @@ pub fn trigger_task_notification(
     let status_str = status.to_string();
     let msg_str = message.to_string();
 
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         // 1. 获取 TaskQueue 并读取任务的 notification_channels
         let task_channels = {
             if let Some(queue) = handle.try_state::<crate::scheduler::TaskQueue>() {

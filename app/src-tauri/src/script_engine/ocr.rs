@@ -16,13 +16,12 @@ fn enhance_contrast_grayscale(pixels: &mut [u8]) {
     let len = pixels.len();
     if len == 0 { return; }
     
-    let mut min_val = 255u8;
-    let mut max_val = 0u8;
     let mut sum_brightness = 0.0f64;
     let num_pixels = (len / 4) as f64;
     
     // 1. 创建灰度缓冲，使用平等的 1/3 加权公式（即平均值）以兼容 ClearType 边缘并充分提取彩色字符
     let mut grays = vec![0u8; len / 4];
+    let mut hist = [0u32; 256];
     for i in (0..len).step_by(4) {
         let b = pixels[i] as f64;
         let g = pixels[i+1] as f64;
@@ -32,15 +31,40 @@ fn enhance_contrast_grayscale(pixels: &mut [u8]) {
         sum_brightness += y;
         let y_u8 = y.clamp(0.0, 255.0) as u8;
         grays[i / 4] = y_u8;
-        
-        if y_u8 < min_val { min_val = y_u8; }
-        if y_u8 > max_val { max_val = y_u8; }
+        hist[y_u8 as usize] += 1;
     }
     
     let avg_brightness = sum_brightness / num_pixels;
-    let range = max_val as f32 - min_val as f32;
-    // 如果平均亮度小于 128，判定为深色背景 (如深色编辑器/游戏界面)，激活自适应反色
+    // 如果平均亮度小于 128，判定为深色背景 (如游戏暗色 UI / 悬浮窗)，激活自适应反色
     let invert = avg_brightness < 128.0;
+    
+    // 2. 利用双端 2% 分位数 (Percentiles) 来自动计算极具鲁棒性的 min_val 与 max_val
+    // 能够百分百过滤单点噪声点/极致高光的影响，准确提取实际字符与背景的对比范围
+    let total_pixels_count = (len / 4) as u32;
+    let low_limit = (total_pixels_count as f32 * 0.02) as u32;
+    let high_limit = (total_pixels_count as f32 * 0.98) as u32;
+    
+    let mut accum = 0u32;
+    let mut min_val = 0u8;
+    for idx in 0..256 {
+        accum += hist[idx];
+        if accum >= low_limit {
+            min_val = idx as u8;
+            break;
+        }
+    }
+    
+    let mut accum = 0u32;
+    let mut max_val = 255u8;
+    for idx in (0..256).rev() {
+        accum += hist[idx];
+        if accum >= (total_pixels_count - high_limit) {
+            max_val = idx as u8;
+            break;
+        }
+    }
+    
+    let range = max_val as f32 - min_val as f32;
     
     if range < 20.0 {
         // 对比度过于暗淡时，仅做常规去色及自适应反色，同时确保 Alpha 设为 255
@@ -55,17 +79,26 @@ fn enhance_contrast_grayscale(pixels: &mut [u8]) {
         return;
     }
     
-    // 2. 线性映射拉伸，使背景更为纯净，笔画更为锐利
+    // 3. 执行线性对比度拉伸，并通过三次 Smoothstep S型曲线进行非线性对比度重塑与平滑去噪
+    // Smoothstep: S(x) = 3x^2 - 2x^3。此算法能够让亮部更亮（归于背景 255），暗部更暗（归于文字 0），
+    // 同时保留抗锯齿（ClearType）的亚像素渐变边缘，绝不产生硬性切分所致的笔划粘连，完美保留字体骨架
     for i in (0..len).step_by(4) {
         let y = grays[i / 4] as f32;
-        let stretched = ((y - min_val as f32) / range * 255.0).clamp(0.0, 255.0);
+        // 线性对比度拉伸到 [0.0, 1.0]
+        let norm_val = ((y - min_val as f32) / range).clamp(0.0, 1.0);
         
-        // 如果是深色背景，拉伸后进行反色，使得背景变为 255 (纯白)，文字变为 0 (纯黑/深色)
-        let final_val = if invert {
-            (255.0 - stretched).clamp(0.0, 255.0) as u8
+        // 自动反色处理，使得输出一定是“白底黑字”（文字趋近于 0.0，背景趋近于 1.0）
+        let mapped_val = if invert {
+            1.0 - norm_val
         } else {
-            stretched as u8
+            norm_val
         };
+        
+        // 三次 Smoothstep S型滤波
+        let smooth_val = 3.0 * mapped_val * mapped_val - 2.0 * mapped_val * mapped_val * mapped_val;
+        
+        // 重新拉伸到 [0.0, 255.0]
+        let final_val = (smooth_val * 255.0).clamp(0.0, 255.0) as u8;
         
         pixels[i] = final_val;
         pixels[i+1] = final_val;
@@ -158,13 +191,13 @@ pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32) -> Result<String, String>
         return Err("识别区域的宽度和高度必须大于 0".to_string());
     }
 
-    // 1. 计算缩放因子。如果短边小于 600 像素，自动进行双三次超分辨率重采样，最高放大 5 倍
+    // 1. 计算缩放因子。如果短边小于 1200 像素，自动进行双三次超分辨率重采样，最高放大 4 倍以适配中大区域细小文字
     let short_side = min(w, h);
     let mut scale = 1.0;
-    if short_side < 600 {
-        scale = 600.0 / short_side as f64;
-        if scale > 5.0 {
-            scale = 5.0;
+    if short_side < 1200 {
+        scale = 1200.0 / short_side as f64;
+        if scale > 4.0 {
+            scale = 4.0;
         }
     }
 
@@ -257,7 +290,7 @@ pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32) -> Result<String, String>
     // 2. 在 1:1 图像上执行自适应去色与对比度拉伸 (增强轮廓线条，彻底过滤彩色噪声干扰)
     enhance_contrast_grayscale(&mut original_pixels);
 
-    // 3. 执行高质量双三次图像卷积重采样 (仅当短边低于 600px 时)
+    // 3. 执行高质量双三次图像卷积重采样 (仅当短边低于 1200px 时)
     let (final_w, final_h, pixel_bytes) = if scale > 1.0 {
         let resized = bicubic_resize(&original_pixels, w, h, new_w, new_h);
         (new_w, new_h, resized)

@@ -44,6 +44,8 @@ struct ScriptLineChangeEvent {
 
 struct Execution {
     running: bool,
+    success: bool,
+    error: Option<String>,
 }
 
 pub struct ScriptRuntime {
@@ -181,7 +183,11 @@ impl ScriptRuntime {
 
         {
             let mut executions = self.executions.lock();
-            executions.insert(execution_id.clone(), Execution { running: true });
+            executions.insert(execution_id.clone(), Execution {
+                running: true,
+                success: false,
+                error: None,
+            });
         }
 
         let controller = self.controller.clone();
@@ -705,7 +711,7 @@ impl ScriptRuntime {
 
             let wrapped_code = Self::wrap_script(&code);
 
-            match engine.eval::<()>(&wrapped_code) {
+            let (success, err_msg) = match engine.eval::<()>(&wrapped_code) {
                 Ok(()) => {
                     tracing::info!(execution_id = %eid, script_id = %sid, "脚本执行完成");
                     {
@@ -719,6 +725,7 @@ impl ScriptRuntime {
                             });
                         }
                     }
+                    (true, None)
                 }
                 Err(e) => {
                     let is_terminated = match &*e {
@@ -730,6 +737,7 @@ impl ScriptRuntime {
 
                     if is_terminated {
                         tracing::info!(execution_id = %eid, script_id = %sid, "脚本执行被用户手动停止");
+                        (true, None)
                     } else {
                         tracing::error!(execution_id = %eid, script_id = %sid, error = %e, "脚本执行出错");
                         {
@@ -743,9 +751,10 @@ impl ScriptRuntime {
                                 });
                             }
                         }
+                        (false, Some(e.to_string()))
                     }
                 }
-            }
+            };
 
             // 脚本执行结束（正常完成、报错或中断），自动重置所有受控手柄的状态，防止物理按键卡死
             controller.reset_all_devices();
@@ -764,6 +773,8 @@ impl ScriptRuntime {
             let mut executions = executions.lock();
             if let Some(exec) = executions.get_mut(&eid) {
                 exec.running = false;
+                exec.success = success;
+                exec.error = err_msg;
             }
         });
 
@@ -792,17 +803,18 @@ impl ScriptRuntime {
             
             let total_steps = steps.len();
             let mut cancelled = false;
+            let mut sequence_error: Option<String> = None;
 
             // Define overall loops (if 0 or 1, run once)
             let loops = if total_task_loops == 0 { 1 } else { total_task_loops };
 
             for task_loop in 1..=loops {
-                if cancelled {
+                if cancelled || sequence_error.is_some() {
                     break;
                 }
 
                 for (step_idx, step) in steps.iter().enumerate() {
-                    if cancelled {
+                    if cancelled || sequence_error.is_some() {
                         break;
                     }
 
@@ -848,6 +860,7 @@ impl ScriptRuntime {
                             Ok(id) => id,
                             Err(e) => {
                                 tracing::error!(task_id = %task_id_str, error = %e, "步骤脚本启动失败");
+                                sequence_error = Some(format!("脚本启动失败: {}", e));
                                 break;
                             }
                         };
@@ -873,6 +886,27 @@ impl ScriptRuntime {
                         }
 
                         if cancelled {
+                            break;
+                        }
+
+                        // Check if the script execution succeeded
+                        let script_failed = {
+                            let executions = runtime.executions.lock();
+                            if let Some(exec) = executions.get(&exec_id) {
+                                !exec.success
+                            } else {
+                                false
+                            }
+                        };
+
+                        if script_failed {
+                            let err_msg = {
+                                let executions = runtime.executions.lock();
+                                executions.get(&exec_id)
+                                    .and_then(|exec| exec.error.clone())
+                                    .unwrap_or_else(|| "步骤脚本执行出错".to_string())
+                            };
+                            sequence_error = Some(err_msg);
                             break;
                         }
                     }
@@ -911,7 +945,9 @@ impl ScriptRuntime {
                         "未知任务".to_string()
                     };
 
-                    let (status, msg) = if cancelled {
+                    let (status, msg) = if let Some(ref err) = sequence_error {
+                        ("interrupted", err.as_str())
+                    } else if cancelled {
                         ("interrupted", "任务序列在执行过程中被用户手动停止或中断")
                     } else {
                         ("completed", "任务序列已成功执行完毕所有步骤与循环！")

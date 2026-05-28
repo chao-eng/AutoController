@@ -216,7 +216,8 @@ onMounted(async () => {
       tabSize: 2,
       cursorBlinking: 'smooth',
       smoothScrolling: true,
-      padding: { top: 12, bottom: 12 }
+      padding: { top: 12, bottom: 12 },
+      hover: { enabled: false }
     })
 
     // Listen to changes to emit update to parent
@@ -322,5 +323,14 @@ watch(
 :deep(.active-execution-line-margin) {
   background: rgba(34, 197, 94, 0.2) !important;
   font-weight: bold;
+}
+
+:deep(.monaco-hover),
+:deep(.monaco-editor-hover),
+:deep(.find-widget .button .monaco-hover),
+:deep(.find-widget .monaco-hover) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 </style>
