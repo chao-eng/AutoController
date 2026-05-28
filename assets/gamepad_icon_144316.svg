@@ -1,8 +1,135 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <path fill="var(--ci-primary-color, currentColor)" d="M368,168H272V104H448a24.027,24.027,0,0,0,24-24V16H440V72H264a24.027,24.027,0,0,0-24,24v72H144A128.145,128.145,0,0,0,16,296V396.953A91.15,91.15,0,0,0,107.047,488h1.8A90.807,90.807,0,0,0,178.8,455.24l52.7-63.24h48.628l52.666,68.465A91.046,91.046,0,0,0,496,404.953V296A128.145,128.145,0,0,0,368,168Zm96,236.953a59.047,59.047,0,0,1-105.849,36L295.878,360H216.506l-62.294,74.754A58.893,58.893,0,0,1,108.85,456h-1.8A59.113,59.113,0,0,1,48,396.953V296a96.108,96.108,0,0,1,96-96H368a96.108,96.108,0,0,1,96,96Z" class="ci-primary"/>
-  <rect width="32" height="32" x="360" y="248" fill="var(--ci-primary-color, currentColor)" class="ci-primary"/>
-  <rect width="32" height="32" x="360" y="328" fill="var(--ci-primary-color, currentColor)" class="ci-primary"/>
-  <rect width="32" height="32" x="320" y="288" fill="var(--ci-primary-color, currentColor)" class="ci-primary"/>
-  <rect width="32" height="32" x="400" y="288" fill="var(--ci-primary-color, currentColor)" class="ci-primary"/>
-  <polygon fill="var(--ci-primary-color, currentColor)" points="152 248 120 248 120 288 80 288 80 320 120 320 120 360 152 360 152 320 192 320 192 288 152 288 152 248" class="ci-primary"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- 极高质感的钛金白/白金渐变色 (用于手柄外壳主体) -->
+    <linearGradient id="titanium-shell" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="35%" stop-color="#F4F4F5" />
+      <stop offset="70%" stop-color="#E4E4E7" />
+      <stop offset="100%" stop-color="#D4D4D8" />
+    </linearGradient>
+
+    <!-- 电磁荧光蓝渐变 (用于所有高光、指示灯与刻度线) -->
+    <linearGradient id="electric-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#60A5FA" />
+    </linearGradient>
+
+    <!-- 深邃黑曜石/深空灰碳素材料 (用于手柄中盖、按键底槽及握把撞色) -->
+    <linearGradient id="deep-slate" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#27272A" />
+      <stop offset="100%" stop-color="#09090B" />
+    </linearGradient>
+    
+    <!-- 摇杆金属环渐变 -->
+    <linearGradient id="metal-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A1A1AA" />
+      <stop offset="100%" stop-color="#52525B" />
+    </linearGradient>
+
+    <!-- 立体多层重度投影 -->
+    <filter id="premium-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.75"/>
+    </filter>
+  </defs>
+
+  <!-- 外围深邃太空黑科技底衬护盾 (Launcher Icon Background) -->
+  <rect width="512" height="512" rx="120" fill="#09090B" stroke="#1E293B" stroke-width="10" filter="url(#premium-shadow)"/>
+  
+  <!-- 精细测控标定网格 (Cool Gray 科技感参考线) -->
+  <path stroke="#18181B" stroke-width="2" d="M256 30 v452 M30 256 h452"/>
+  <path stroke="#27272A" stroke-width="1.5" stroke-dasharray="16 16" d="M256 50 v412 M50 256 h412"/>
+  <circle cx="256" cy="256" r="185" stroke="#27272A" stroke-width="1.5" stroke-dasharray="8 8"/>
+  <circle cx="256" cy="256" r="120" stroke="#18181B" stroke-width="1" />
+
+  <!-- 1. 手柄后盖与底部握把撞色层 (黑曜石碳素) -->
+  <path fill="url(#deep-slate)" d="
+    M 256,132
+    C 190,132 115,142 85,172 
+    C 55,202 35,285 43,345 
+    C 51,405 85,446 140,436 
+    C 190,426 215,360 256,360 
+    C 297,360 317,426 367,436 
+    C 422,446 456,405 464,345 
+    C 472,285 452,202 422,172 
+    C 392,142 317,132 256,132 Z
+  "/>
+
+  <!-- 2. 手柄正面装甲盖板 (高贵钛金白) -->
+  <path fill="url(#titanium-shell)" stroke="#E4E4E7" stroke-width="2" d="
+    M 256,140
+    C 210,140 160,150 120,180
+    C 90,202 75,260 76,310
+    C 77,355 105,395 136,395
+    C 170,395 195,335 256,335
+    C 317,335 342,395 376,395
+    C 407,395 435,355 436,310
+    C 437,260 422,202 392,180
+    C 352,150 302,140 256,140 Z
+  " filter="url(#premium-shadow)"/>
+
+  <!-- 3. 顶端肩键与扳机流线型发光缝隙 (电磁蓝) -->
+  <path stroke="url(#electric-glow)" stroke-width="6" stroke-linecap="round" d="M 124,152 Q 190,138 256,138" />
+  <path stroke="url(#electric-glow)" stroke-width="6" stroke-linecap="round" d="M 388,152 Q 322,138 256,138" />
+
+  <!-- 4. 左摇杆 (黑钢底座 + 钛金白防滑圈 + 准星电光蓝) -->
+  <circle cx="164" cy="236" r="46" fill="url(#deep-slate)" stroke="url(#metal-ring)" stroke-width="4"/>
+  <circle cx="164" cy="236" r="30" fill="#09090B"/>
+  <circle cx="164" cy="236" r="10" fill="url(#electric-glow)"/>
+  <!-- 摇杆中心高精度靶向刻度线 -->
+  <path stroke="url(#electric-glow)" stroke-width="2.5" stroke-linecap="round" d="M164 196 v8 M164 264 v8 M124 236 h8 M196 236 h8"/>
+
+  <!-- 5. 右摇杆 (与左摇杆呼应) -->
+  <circle cx="304" cy="304" r="46" fill="url(#deep-slate)" stroke="url(#metal-ring)" stroke-width="4"/>
+  <circle cx="304" cy="304" r="30" fill="#09090B"/>
+  <circle cx="304" cy="304" r="10" fill="url(#electric-glow)"/>
+  <path stroke="url(#electric-glow)" stroke-width="2.5" stroke-linecap="round" d="M304 264 v8 M304 332 v8 M264 304 h8 M332 304 h8"/>
+
+  <!-- 6. D-PAD 十字方向键 (黑钢切边 + 电光蓝浮雕) -->
+  <g transform="translate(112, 280)">
+    <circle cx="40" cy="40" r="36" fill="#09090B" stroke="url(#metal-ring)" stroke-width="3"/>
+    <path fill="url(#electric-glow)" d="
+      M 33,12 
+      H 47 
+      V 29 
+      H 64 
+      V 43 
+      H 47 
+      V 60 
+      H 33 
+      V 43 
+      H 16 
+      V 29 
+      H 33 
+      Z
+    " stroke="#09090B" stroke-width="1.5" stroke-linejoin="round"/>
+  </g>
+
+  <!-- 7. ABXY 冰蓝背光按键组 (曜石底座 + 冰蓝发光字体) -->
+  <g transform="translate(320, 172)">
+    <!-- Y Button -->
+    <circle cx="40" cy="15" r="18" fill="#09090B" stroke="url(#metal-ring)" stroke-width="3"/>
+    <text x="40" y="21" fill="url(#electric-glow)" font-family="system-ui, -apple-system, sans-serif" font-size="17" font-weight="900" text-anchor="middle">Y</text>
+    
+    <!-- X Button -->
+    <circle cx="15" cy="40" r="18" fill="#09090B" stroke="url(#metal-ring)" stroke-width="3"/>
+    <text x="15" y="46" fill="url(#electric-glow)" font-family="system-ui, -apple-system, sans-serif" font-size="17" font-weight="900" text-anchor="middle">X</text>
+    
+    <!-- B Button -->
+    <circle cx="65" cy="40" r="18" fill="#09090B" stroke="url(#metal-ring)" stroke-width="3"/>
+    <text x="65" y="46" fill="url(#electric-glow)" font-family="system-ui, -apple-system, sans-serif" font-size="17" font-weight="900" text-anchor="middle">B</text>
+    
+    <!-- A Button -->
+    <circle cx="40" cy="65" r="18" fill="#09090B" stroke="url(#metal-ring)" stroke-width="3"/>
+    <text x="40" y="71" fill="url(#electric-glow)" font-family="system-ui, -apple-system, sans-serif" font-size="17" font-weight="900" text-anchor="middle">A</text>
+  </g>
+
+  <!-- 8. 中央 Guide 导航功能环 (电磁蓝呼吸圈) -->
+  <circle cx="256" cy="196" r="24" fill="#09090B" stroke="url(#electric-glow)" stroke-width="5"/>
+  <circle cx="256" cy="196" r="16" fill="#18181B"/>
+  <circle cx="256" cy="196" r="7" fill="url(#electric-glow)" />
+
+  <!-- 9. 扁平精致的电光蓝金属 View 与 Menu 按钮 -->
+  <rect x="206" y="232" width="18" height="9" rx="3" fill="url(#electric-glow)" stroke="#18181B" stroke-width="1.5"/>
+  <rect x="288" y="232" width="18" height="9" rx="3" fill="url(#electric-glow)" stroke="#18181B" stroke-width="1.5"/>
+
 </svg>
