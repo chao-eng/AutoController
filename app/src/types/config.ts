@@ -18,6 +18,20 @@ export interface OcrRegion {
   h: number
 }
 
+export interface NotificationChannel {
+  id: string
+  name: string
+  config: {
+    type: 'feishu' | 'serverchan' | 'serverchan3' | 'telegram'
+    webhook_url?: string
+    secret?: string
+    uid?: string
+    send_key?: string
+    bot_token?: string
+    chat_id?: string
+  }
+}
+
 export interface AppConfig {
   devices: DeviceConfig[]
   profiles: GameProfile[]
@@ -27,4 +41,6 @@ export interface AppConfig {
   log_level: string
   ocr_region?: OcrRegion | null
   ocr_regions?: OcrRegion[]
+  notification_channels?: NotificationChannel[]
 }
+

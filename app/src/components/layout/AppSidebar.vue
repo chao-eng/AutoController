@@ -7,6 +7,7 @@ import {
   Settings,
   CalendarClock,
   ScrollText,
+  Bell,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -17,8 +18,10 @@ const navItems = [
   { icon: FileCode2, label: '脚本', path: '/scripts' },
   { icon: Settings, label: '配置', path: '/config' },
   { icon: CalendarClock, label: '任务', path: '/scheduler' },
+  { icon: Bell, label: '通知', path: '/notifications' },
   { icon: ScrollText, label: '日志', path: '/logs' },
 ]
+
 
 const activePath = computed(() => route.path)
 

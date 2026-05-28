@@ -13,7 +13,9 @@ export const useConfigStore = defineStore('config', () => {
     log_level: 'info',
     ocr_region: null,
     ocr_regions: [],
+    notification_channels: [],
   })
+
   const loading = ref(false)
   const error = ref<string | null>(null)
 

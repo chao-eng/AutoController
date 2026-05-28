@@ -9,6 +9,8 @@ mod config;
 mod logger;
 mod system;
 mod commands;
+pub mod notify;
+
 
 use tauri::Manager;
 use commands::*;
@@ -179,7 +181,9 @@ pub fn run() {
             config_cmd::save_ocr_region,
             log_cmd::log_query,
             log_cmd::log_export,
+            notify::send_aggregated_notification,
         ])
+
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -27,6 +27,22 @@ pub struct OcrRegion {
     pub h: i32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum ChannelConfig {
+    Feishu { webhook_url: String, secret: Option<String> },
+    ServerChan { send_key: String },
+    ServerChan3 { uid: String, send_key: String },
+    Telegram { bot_token: String, chat_id: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NotificationChannel {
+    pub id: String,
+    pub name: String,
+    pub config: ChannelConfig,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub devices: Vec<DeviceConfig>,
@@ -38,6 +54,8 @@ pub struct AppConfig {
     pub ocr_region: Option<OcrRegion>,
     #[serde(default)]
     pub ocr_regions: Vec<OcrRegion>,
+    #[serde(default)]
+    pub notification_channels: Vec<NotificationChannel>,
 }
 
 impl Default for AppConfig {
@@ -51,9 +69,11 @@ impl Default for AppConfig {
             log_level: "info".to_string(),
             ocr_region: None,
             ocr_regions: Vec::new(),
+            notification_channels: Vec::new(),
         }
     }
 }
+
 
 #[derive(Clone)]
 pub struct AppConfigManager {

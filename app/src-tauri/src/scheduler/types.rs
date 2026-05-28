@@ -38,4 +38,7 @@ pub struct ScheduledTask {
     pub enabled: bool,
     pub last_run: Option<DateTime<Utc>>,
     pub next_run: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub notification_channels: Vec<String>,
 }
+

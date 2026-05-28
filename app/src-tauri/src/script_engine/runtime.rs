@@ -3,7 +3,7 @@ use rhai::Engine;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use super::types::*;
 use crate::controller::ControllerManager;
@@ -903,10 +903,26 @@ impl ScriptRuntime {
                         current_script_name: String::new(),
                     };
                     let _ = handle.emit("sequence-execution-progress", &progress);
+
+                    // 异步触发通知
+                    let task_name = if let Some(queue) = handle.try_state::<crate::scheduler::TaskQueue>() {
+                        queue.get_task(&task_id_str).map(|t| t.name.clone()).unwrap_or_else(|| "未知任务".to_string())
+                    } else {
+                        "未知任务".to_string()
+                    };
+
+                    let (status, msg) = if cancelled {
+                        ("interrupted", "任务序列在执行过程中被用户手动停止或中断")
+                    } else {
+                        ("completed", "任务序列已成功执行完毕所有步骤与循环！")
+                    };
+
+                    crate::notify::trigger_task_notification(handle, &task_id_str, &task_name, status, msg);
                 }
             }
 
             tracing::info!(task_id = %task_id_str, cancelled, "顺序执行任务序列已结束");
+
         });
 
         Ok(())

@@ -24,4 +24,6 @@ export interface ScheduledTask {
   enabled: boolean
   last_run: string | null
   next_run: string | null
+  notification_channels?: string[]
 }
+

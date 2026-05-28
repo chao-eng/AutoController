@@ -3,18 +3,21 @@ import { ref, onMounted } from 'vue'
 import { useSchedulerStore } from '../stores/scheduler'
 import { useScriptStore } from '../stores/script'
 import { useUIStore } from '../stores/ui'
+import { useConfigStore } from '../stores/config'
 import { Plus, ToggleLeft, ToggleRight, Trash2, Play, Square, ArrowUp, ArrowDown, X } from '@lucide/vue'
 import type { ScheduledTask } from '../types/scheduler'
 
 const store = useSchedulerStore()
 const scriptStore = useScriptStore()
 const uiStore = useUIStore()
+const configStore = useConfigStore()
 
 // 新建/编辑任务序列状态
 const showEditor = ref(false)
 const taskName = ref('')
 const taskLoopCount = ref(1)
 const steps = ref<{ script_id: string; loop_count: number }[]>([])
+const selectedNotificationChannels = ref<string[]>([])
 
 // 调度配置表单状态
 const scheduleType = ref<'once' | 'daily' | 'interval' | 'cron' | 'manual'>('once')
@@ -28,12 +31,24 @@ const taskPriority = ref(1)
 onMounted(async () => {
   store.fetchTasks()
   scriptStore.fetchScripts()
+  configStore.fetchConfig()
 })
+
+function getTypeName(type: string): string {
+  switch (type) {
+    case 'feishu': return '飞书'
+    case 'serverchan': return 'Server酱'
+    case 'serverchan3': return 'Server酱³'
+    case 'telegram': return 'Telegram'
+    default: return type
+  }
+}
 
 function openEditor() {
   taskName.value = ''
   taskLoopCount.value = 1
   steps.value = []
+  selectedNotificationChannels.value = []
   scheduleType.value = 'manual'
   onceDateTime.value = new Date(Date.now() + 60000).toISOString().substring(0, 16)
   dailyTime.value = '12:00:00'
@@ -50,6 +65,7 @@ function openEditor() {
   }
   showEditor.value = true
 }
+
 
 function addStep() {
   if (scriptStore.scripts.length > 0) {
@@ -138,6 +154,7 @@ async function saveTask() {
     enabled: true,
     last_run: null,
     next_run: null,
+    notification_channels: [...selectedNotificationChannels.value],
   }
 
   try {
@@ -146,10 +163,12 @@ async function saveTask() {
     taskName.value = ''
     taskLoopCount.value = 1
     steps.value = []
+    selectedNotificationChannels.value = []
     uiStore.showToast('新建任务序列与调度成功', 'success')
   } catch (e) {
     uiStore.showAlert('创建失败', `创建任务序列失败: ${e}`)
   }
+
 }
 
 function uuidv4() {
@@ -437,7 +456,30 @@ async function stopSequence(taskId: string) {
               </div>
             </div>
 
+            <!-- 聚合通知配置 -->
+            <div class="scheduler-config-box">
+              <h4 class="scheduler-config-title">🔔 任务通知配置</h4>
+              <div class="form-group">
+                <label>选择通知通道 (任务完成或中断时发送通知)</label>
+                <div v-if="!configStore.config.notification_channels || configStore.config.notification_channels.length === 0" class="notify-empty-hint">
+                  暂无配置好的通知通道。你可以先去“通知配置”页面添加。
+                </div>
+                <div v-else class="notify-checkbox-list">
+                  <label v-for="ch in configStore.config.notification_channels" :key="ch.id" class="notify-checkbox-item">
+                    <input 
+                      type="checkbox" 
+                      :value="ch.id" 
+                      v-model="selectedNotificationChannels" 
+                    />
+                    <span class="notify-ch-name">{{ ch.name }}</span>
+                    <span class="notify-ch-type">({{ getTypeName(ch.config.type) }})</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <div class="steps-container">
+
               <div class="steps-header">
                 <h4>串联执行步骤顺序 (顺序从上到下)</h4>
                 <button class="btn-add-step" @click="addStep">
@@ -1234,4 +1276,47 @@ async function stopSequence(taskId: string) {
   margin: 0;
   line-height: 1.5;
 }
+
+.notify-empty-hint {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  padding: var(--space-xs) 0;
+}
+
+.notify-checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+  max-height: 120px;
+  overflow-y: auto;
+  margin-top: var(--space-xs);
+}
+
+.notify-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.notify-checkbox-item input {
+  cursor: pointer;
+}
+
+.notify-ch-name {
+  font-weight: 500;
+}
+
+.notify-ch-type {
+  color: var(--color-text-dim);
+  font-size: 11px;
+}
 </style>
+

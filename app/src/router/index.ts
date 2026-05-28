@@ -29,6 +29,11 @@ const router = createRouter({
       component: () => import('../views/TaskScheduler.vue'),
     },
     {
+      path: '/notifications',
+      name: 'notifications',
+      component: () => import('../views/NotificationConfig.vue'),
+    },
+    {
       path: '/logs',
       name: 'logs',
       component: () => import('../views/LogViewer.vue'),
