@@ -64,6 +64,20 @@ pub fn open_ocr_viewfinder(
     // 核心安全：将完整的 Windows Forms 极光绿框选脚本作为静态字符串嵌入 Rust
     let script_content = format!(r#"
 # select_region.ps1
+
+# 强制开启 DPI 感知以获取物理 1:1 坐标，彻底杜绝高分屏缩放下的定位坐标偏移问题
+try {{
+    Add-Type -TypeDefinition @"
+    using System;
+    using System.Runtime.InteropServices;
+    public class DpiUtil {{
+        [DllImport("user32.dll")]
+        public static extern bool SetProcessDPIAware();
+    }}
+"@
+    [DpiUtil]::SetProcessDPIAware()
+}} catch {{}}
+
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 $bounds = [System.Windows.Forms.SystemInformation]::VirtualScreen
 $form = New-Object System.Windows.Forms.Form
