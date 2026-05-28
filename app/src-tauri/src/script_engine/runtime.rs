@@ -52,7 +52,7 @@ pub struct ScriptRuntime {
     sequence_executions: Arc<Mutex<HashMap<String, SequenceExecution>>>,
     data_dir: Arc<DataDir>,
     controller: Arc<ControllerManager>,
-    app_handle: Option<AppHandle>,
+    app_handle: Arc<Mutex<Option<AppHandle>>>,
 }
 
 unsafe impl Send for ScriptRuntime {}
@@ -86,7 +86,7 @@ impl ScriptRuntime {
             sequence_executions: Arc::new(Mutex::new(HashMap::new())),
             data_dir,
             controller,
-            app_handle: None,
+            app_handle: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -103,15 +103,13 @@ impl ScriptRuntime {
             sequence_executions: Arc::new(Mutex::new(HashMap::new())),
             data_dir,
             controller: Arc::new(controller),
-            app_handle: None,
+            app_handle: Arc::new(Mutex::new(None)),
         }
     }
 
     pub fn set_app_handle(&self, handle: AppHandle) {
-        let self_ptr = self as *const Self as *mut Self;
-        unsafe {
-            (*self_ptr).app_handle = Some(handle);
-        }
+        let mut app_handle = self.app_handle.lock();
+        *app_handle = Some(handle);
     }
 
     fn persist(&self) {
@@ -190,13 +188,16 @@ impl ScriptRuntime {
         let executions = self.executions.clone();
         let app_handle = self.app_handle.clone();
 
-        if let Some(ref handle) = app_handle {
-            let _ = handle.emit("script-execution", ScriptExecutionEvent {
-                execution_id: execution_id.clone(),
-                script_id: script_id.to_string(),
-                status: "started".to_string(),
-                message: Some(format!("脚本 '{}' 开始执行", name)),
-            });
+        {
+            let app_handle_guard = app_handle.lock();
+            if let Some(ref handle) = *app_handle_guard {
+                let _ = handle.emit("script-execution", ScriptExecutionEvent {
+                    execution_id: execution_id.clone(),
+                    script_id: script_id.to_string(),
+                    status: "started".to_string(),
+                    message: Some(format!("脚本 '{}' 开始执行", name)),
+                });
+            }
         }
 
         std::thread::spawn(move || {
@@ -252,13 +253,16 @@ impl ScriptRuntime {
             let eid_press = eid.clone();
             let sid_press = sid.clone();
             engine.register_fn("press", move |context: rhai::NativeCallContext, btn: &str| {
-                if let Some(ref handle) = handle_press {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_press.clone(),
-                            script_id: sid_press.clone(),
-                            line,
-                        });
+                {
+                    let handle_guard = handle_press.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_press.clone(),
+                                script_id: sid_press.clone(),
+                                line,
+                            });
+                        }
                     }
                 }
                 let dev = def_device.lock().clone();
@@ -300,13 +304,16 @@ impl ScriptRuntime {
             let eid_release = eid.clone();
             let sid_release = sid.clone();
             engine.register_fn("release", move |context: rhai::NativeCallContext, btn: &str| {
-                if let Some(ref handle) = handle_release {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_release.clone(),
-                            script_id: sid_release.clone(),
-                            line,
-                        });
+                {
+                    let handle_guard = handle_release.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_release.clone(),
+                                script_id: sid_release.clone(),
+                                line,
+                            });
+                        }
                     }
                 }
                 let dev = def_device.lock().clone();
@@ -370,13 +377,16 @@ impl ScriptRuntime {
             let eid_thumb_f = eid.clone();
             let sid_thumb_f = sid.clone();
             engine.register_fn("set_thumb", move |context: rhai::NativeCallContext, axis: &str, val: f64| {
-                if let Some(ref handle) = handle_thumb_f {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_thumb_f.clone(),
-                            script_id: sid_thumb_f.clone(),
-                            line,
-                        });
+                {
+                    let handle_guard = handle_thumb_f.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_thumb_f.clone(),
+                                script_id: sid_thumb_f.clone(),
+                                line,
+                            });
+                        }
                     }
                 }
                 let dev = def_device.lock().clone();
@@ -395,13 +405,16 @@ impl ScriptRuntime {
             let eid_thumb_i = eid.clone();
             let sid_thumb_i = sid.clone();
             engine.register_fn("set_thumb", move |context: rhai::NativeCallContext, axis: &str, val: i64| {
-                if let Some(ref handle) = handle_thumb_i {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_thumb_i.clone(),
-                            script_id: sid_thumb_i.clone(),
-                            line,
-                        });
+                {
+                    let handle_guard = handle_thumb_i.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_thumb_i.clone(),
+                                script_id: sid_thumb_i.clone(),
+                                line,
+                            });
+                        }
                     }
                 }
                 let dev = def_device.lock().clone();
@@ -465,13 +478,16 @@ impl ScriptRuntime {
             let eid_trig_f = eid.clone();
             let sid_trig_f = sid.clone();
             engine.register_fn("set_trigger", move |context: rhai::NativeCallContext, side: &str, val: f64| {
-                if let Some(ref handle) = handle_trig_f {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_trig_f.clone(),
-                            script_id: sid_trig_f.clone(),
-                            line,
-                        });
+                {
+                    let handle_guard = handle_trig_f.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_trig_f.clone(),
+                                script_id: sid_trig_f.clone(),
+                                line,
+                            });
+                        }
                     }
                 }
                 let dev = def_device.lock().clone();
@@ -490,13 +506,16 @@ impl ScriptRuntime {
             let eid_trig_i = eid.clone();
             let sid_trig_i = sid.clone();
             engine.register_fn("set_trigger", move |context: rhai::NativeCallContext, side: &str, val: i64| {
-                if let Some(ref handle) = handle_trig_i {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_trig_i.clone(),
-                            script_id: sid_trig_i.clone(),
-                            line,
-                        });
+                {
+                    let handle_guard = handle_trig_i.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_trig_i.clone(),
+                                script_id: sid_trig_i.clone(),
+                                line,
+                            });
+                        }
                     }
                 }
                 let dev = def_device.lock().clone();
@@ -526,13 +545,16 @@ impl ScriptRuntime {
             let eid_sleep = eid.clone();
             let sid_sleep = sid.clone();
             engine.register_fn("sleep", move |context: rhai::NativeCallContext, ms: i64| {
-                if let Some(ref handle) = handle_sleep {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_sleep.clone(),
-                            script_id: sid_sleep.clone(),
-                            line,
-                        });
+                {
+                    let handle_guard = handle_sleep.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_sleep.clone(),
+                                script_id: sid_sleep.clone(),
+                                line,
+                            });
+                        }
                     }
                 }
                 let total = ms as u64;
@@ -556,13 +578,16 @@ impl ScriptRuntime {
             let eid_log = eid.clone();
             let sid_log = sid.clone();
             engine.register_fn("log", move |context: rhai::NativeCallContext, msg: &str| {
-                if let Some(ref handle) = handle_log {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_log.clone(),
-                            script_id: sid_log.clone(),
-                            line,
-                        });
+                {
+                    let handle_guard = handle_log.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_log.clone(),
+                                script_id: sid_log.clone(),
+                                line,
+                            });
+                        }
                     }
                 }
                 tracing::info!(target: "script", "[脚本] {}", msg);
@@ -572,13 +597,16 @@ impl ScriptRuntime {
             let eid_ocr_params = eid.clone();
             let sid_ocr_params = sid.clone();
             engine.register_fn("ocr", move |context: rhai::NativeCallContext, x: i64, y: i64, w: i64, h: i64| -> String {
-                if let Some(ref handle) = handle_ocr_params {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_ocr_params.clone(),
-                            script_id: sid_ocr_params.clone(),
-                            line,
-                        });
+                {
+                    let handle_guard = handle_ocr_params.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_ocr_params.clone(),
+                                script_id: sid_ocr_params.clone(),
+                                line,
+                            });
+                        }
                     }
                 }
                 match crate::script_engine::ocr::ocr_region_sync(x as i32, y as i32, w as i32, h as i32) {
@@ -594,81 +622,85 @@ impl ScriptRuntime {
             let eid_ocr_def = eid.clone();
             let sid_ocr_def = sid.clone();
             engine.register_fn("ocr", move |context: rhai::NativeCallContext| -> String {
-                if let Some(ref handle) = handle_ocr_def {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_ocr_def.clone(),
-                            script_id: sid_ocr_def.clone(),
-                            line,
-                        });
-                    }
-                    use tauri::Manager;
-                    let config_mgr = handle.state::<crate::config::AppConfigManager>();
-                    let config = config_mgr.get();
-                    
-                    // 优先使用 ocr_regions 的第一个作为默认识别区，其次使用老字段 ocr_region 兼容
-                    let target_region = if !config.ocr_regions.is_empty() {
-                        Some(config.ocr_regions[0].clone())
-                    } else {
-                        config.ocr_region.clone()
-                    };
-
-                    if let Some(region) = target_region {
-                        match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h) {
-                            Ok(text) => text,
-                            Err(e) => {
-                                tracing::error!(target: "script", "OCR 默认区域 #1 识别出错: {}", e);
-                                String::new()
-                            }
+                {
+                    let handle_guard = handle_ocr_def.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_ocr_def.clone(),
+                                script_id: sid_ocr_def.clone(),
+                                line,
+                            });
                         }
-                    } else {
-                        tracing::warn!(target: "script", "OCR 默认区域 #1 尚未配置，请在前端配置或传入坐标");
-                        String::new()
+                        use tauri::Manager;
+                        let config_mgr = handle.state::<crate::config::AppConfigManager>();
+                        let config = config_mgr.get();
+                        
+                        // 优先使用 ocr_regions 的第一个作为默认识别区，其次使用老字段 ocr_region 兼容
+                        let target_region = if !config.ocr_regions.is_empty() {
+                            Some(config.ocr_regions[0].clone())
+                        } else {
+                            config.ocr_region.clone()
+                        };
+
+                        if let Some(region) = target_region {
+                            return match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h) {
+                                Ok(text) => text,
+                                Err(e) => {
+                                    tracing::error!(target: "script", "OCR 默认区域 #1 识别出错: {}", e);
+                                    String::new()
+                                }
+                            };
+                        } else {
+                            tracing::warn!(target: "script", "OCR 默认区域 #1 尚未配置，请在前端配置或传入坐标");
+                            return String::new();
+                        }
                     }
-                } else {
-                    tracing::warn!(target: "script", "ocr() 无参调用失败：AppHandle 尚未初始化");
-                    String::new()
                 }
+                tracing::warn!(target: "script", "ocr() 无参调用失败：AppHandle 尚未初始化");
+                String::new()
             });
 
             let handle_ocr_idx = app_handle.clone();
             let eid_ocr_idx = eid.clone();
             let sid_ocr_idx = sid.clone();
             engine.register_fn("ocr", move |context: rhai::NativeCallContext, index: i64| -> String {
-                if let Some(ref handle) = handle_ocr_idx {
-                    if let Some(line) = context.call_position().line() {
-                        let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                            execution_id: eid_ocr_idx.clone(),
-                            script_id: sid_ocr_idx.clone(),
-                            line,
-                        });
-                    }
-                    if index <= 0 {
-                        tracing::error!(target: "script", "ocr(index) 序号错误：序号必须从 1 开始（传入为 {}）", index);
-                        return String::new();
-                    }
-                    use tauri::Manager;
-                    let config_mgr = handle.state::<crate::config::AppConfigManager>();
-                    let config = config_mgr.get();
-                    let u_idx = (index - 1) as usize;
-                    
-                    if u_idx < config.ocr_regions.len() {
-                        let region = &config.ocr_regions[u_idx];
-                        match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h) {
-                            Ok(text) => text,
-                            Err(e) => {
-                                tracing::error!(target: "script", "OCR 区域 #{} 识别出错: {}", index, e);
-                                String::new()
-                            }
+                {
+                    let handle_guard = handle_ocr_idx.lock();
+                    if let Some(ref handle) = *handle_guard {
+                        if let Some(line) = context.call_position().line() {
+                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                                execution_id: eid_ocr_idx.clone(),
+                                script_id: sid_ocr_idx.clone(),
+                                line,
+                            });
                         }
-                    } else {
-                        tracing::warn!(target: "script", "OCR 区域 #{} 尚未配置，当前已配置区域数: {}", index, config.ocr_regions.len());
-                        String::new()
+                        if index <= 0 {
+                            tracing::error!(target: "script", "ocr(index) 序号错误：序号必须从 1 开始（传入为 {}）", index);
+                            return String::new();
+                        }
+                        use tauri::Manager;
+                        let config_mgr = handle.state::<crate::config::AppConfigManager>();
+                        let config = config_mgr.get();
+                        let u_idx = (index - 1) as usize;
+                        
+                        if u_idx < config.ocr_regions.len() {
+                            let region = &config.ocr_regions[u_idx];
+                            return match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h) {
+                                Ok(text) => text,
+                                Err(e) => {
+                                    tracing::error!(target: "script", "OCR 区域 #{} 识别出错: {}", index, e);
+                                    String::new()
+                                }
+                            };
+                        } else {
+                            tracing::warn!(target: "script", "OCR 区域 #{} 尚未配置，当前已配置区域数: {}", index, config.ocr_regions.len());
+                            return String::new();
+                        }
                     }
-                } else {
-                    tracing::warn!(target: "script", "ocr(index) 调用失败：AppHandle 尚未初始化");
-                    String::new()
                 }
+                tracing::warn!(target: "script", "ocr(index) 调用失败：AppHandle 尚未初始化");
+                String::new()
             });
 
             let wrapped_code = Self::wrap_script(&code);
@@ -676,13 +708,16 @@ impl ScriptRuntime {
             match engine.eval::<()>(&wrapped_code) {
                 Ok(()) => {
                     tracing::info!(execution_id = %eid, script_id = %sid, "脚本执行完成");
-                    if let Some(ref handle) = app_handle {
-                        let _ = handle.emit("script-execution", ScriptExecutionEvent {
-                            execution_id: eid.clone(),
-                            script_id: sid.clone(),
-                            status: "completed".to_string(),
-                            message: Some("脚本执行完成".to_string()),
-                        });
+                    {
+                        let handle_guard = app_handle.lock();
+                        if let Some(ref handle) = *handle_guard {
+                            let _ = handle.emit("script-execution", ScriptExecutionEvent {
+                                execution_id: eid.clone(),
+                                script_id: sid.clone(),
+                                status: "completed".to_string(),
+                                message: Some("脚本执行完成".to_string()),
+                            });
+                        }
                     }
                 }
                 Err(e) => {
@@ -697,13 +732,16 @@ impl ScriptRuntime {
                         tracing::info!(execution_id = %eid, script_id = %sid, "脚本执行被用户手动停止");
                     } else {
                         tracing::error!(execution_id = %eid, script_id = %sid, error = %e, "脚本执行出错");
-                        if let Some(ref handle) = app_handle {
-                            let _ = handle.emit("script-execution", ScriptExecutionEvent {
-                                execution_id: eid.clone(),
-                                script_id: sid.clone(),
-                                status: "error".to_string(),
-                                message: Some(format!("脚本执行出错: {}", e)),
-                            });
+                        {
+                            let handle_guard = app_handle.lock();
+                            if let Some(ref handle) = *handle_guard {
+                                let _ = handle.emit("script-execution", ScriptExecutionEvent {
+                                    execution_id: eid.clone(),
+                                    script_id: sid.clone(),
+                                    status: "error".to_string(),
+                                    message: Some(format!("脚本执行出错: {}", e)),
+                                });
+                            }
                         }
                     }
                 }
@@ -712,12 +750,15 @@ impl ScriptRuntime {
             // 脚本执行结束（正常完成、报错或中断），自动重置所有受控手柄的状态，防止物理按键卡死
             controller.reset_all_devices();
 
-            if let Some(ref handle) = app_handle {
-                let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                    execution_id: eid.clone(),
-                    script_id: sid.clone(),
-                    line: 0,
-                });
+            {
+                let handle_guard = app_handle.lock();
+                if let Some(ref handle) = *handle_guard {
+                    let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
+                        execution_id: eid.clone(),
+                        script_id: sid.clone(),
+                        line: 0,
+                    });
+                }
             }
 
             let mut executions = executions.lock();
@@ -784,19 +825,22 @@ impl ScriptRuntime {
                         }
 
                         // Emit progress to frontend
-                        if let Some(ref handle) = app_handle {
-                            let progress = SequenceProgress {
-                                task_id: task_id_str.clone(),
-                                running: true,
-                                current_task_loop: task_loop,
-                                total_task_loops: loops,
-                                current_step_index: step_idx,
-                                total_steps,
-                                current_step_loop: step_loop,
-                                total_step_loops: step_loops,
-                                current_script_name: script_name.clone(),
-                            };
-                            let _ = handle.emit("sequence-execution-progress", &progress);
+                        {
+                            let handle_guard = app_handle.lock();
+                            if let Some(ref handle) = *handle_guard {
+                                let progress = SequenceProgress {
+                                    task_id: task_id_str.clone(),
+                                    running: true,
+                                    current_task_loop: task_loop,
+                                    total_task_loops: loops,
+                                    current_step_index: step_idx,
+                                    total_steps,
+                                    current_step_loop: step_loop,
+                                    total_step_loops: step_loops,
+                                    current_script_name: script_name.clone(),
+                                };
+                                let _ = handle.emit("sequence-execution-progress", &progress);
+                            }
                         }
 
                         // Start single script execution
@@ -844,19 +888,22 @@ impl ScriptRuntime {
             // Ensure virtual gamepad is reset
             runtime.controller.reset_all_devices();
 
-            if let Some(ref handle) = app_handle {
-                let progress = SequenceProgress {
-                    task_id: task_id_str.clone(),
-                    running: false,
-                    current_task_loop: 0,
-                    total_task_loops: 0,
-                    current_step_index: 0,
-                    total_steps: 0,
-                    current_step_loop: 0,
-                    total_step_loops: 0,
-                    current_script_name: String::new(),
-                };
-                let _ = handle.emit("sequence-execution-progress", &progress);
+            {
+                let handle_guard = app_handle.lock();
+                if let Some(ref handle) = *handle_guard {
+                    let progress = SequenceProgress {
+                        task_id: task_id_str.clone(),
+                        running: false,
+                        current_task_loop: 0,
+                        total_task_loops: 0,
+                        current_step_index: 0,
+                        total_steps: 0,
+                        current_step_loop: 0,
+                        total_step_loops: 0,
+                        current_script_name: String::new(),
+                    };
+                    let _ = handle.emit("sequence-execution-progress", &progress);
+                }
             }
 
             tracing::info!(task_id = %task_id_str, cancelled, "顺序执行任务序列已结束");
