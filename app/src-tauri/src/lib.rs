@@ -79,9 +79,12 @@ pub fn run() {
 
                     #[cfg(target_os = "windows")]
                     {
+                        use std::os::windows::process::CommandExt;
+
                         // 获取当前进程的内存 WorkingSetSize
                         let mem_output = std::process::Command::new("wmic")
                             .args(["process", "where", &format!("processid={}", pid), "get", "WorkingSetSize", "/format:value"])
+                            .creation_flags(0x08000000)
                             .output();
                         if let Ok(output) = mem_output {
                             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -97,6 +100,7 @@ pub fn run() {
                         // 获取当前进程的 CPU PercentProcessorTime
                         let cpu_output = std::process::Command::new("wmic")
                             .args(["path", "Win32_PerfFormattedData_PerfProc_Process", "where", &format!("IDProcess={}", pid), "get", "PercentProcessorTime", "/format:value"])
+                            .creation_flags(0x08000000)
                             .output();
                         if let Ok(output) = cpu_output {
                             let stdout = String::from_utf8_lossy(&output.stdout);

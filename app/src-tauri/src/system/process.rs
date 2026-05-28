@@ -29,8 +29,10 @@ impl ProcessMonitor {
         #[cfg(target_os = "windows")]
         {
             use std::process::Command;
+            use std::os::windows::process::CommandExt;
             let output = Command::new("tasklist")
                 .args(["/FI", &format!("IMAGENAME eq {}", process_name), "/NH"])
+                .creation_flags(0x08000000)
                 .output();
             if let Ok(output) = output {
                 let stdout = String::from_utf8_lossy(&output.stdout);

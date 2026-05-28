@@ -13,4 +13,8 @@
   
   # 4. 删除临时文件
   Delete "$PLUGINSDIR\ViGEmBus_1.22.0_x64_x86_arm64.exe"
+
+  # 5. 将 ViGEmClient.dll 释放到安装目录，使生产环境下的软件能顺利与内核驱动进行动态连接
+  SetOutPath "$INSTDIR"
+  File "D:\UGit\AutoController\app\src-tauri\ViGEmClient.dll"
 !macroend

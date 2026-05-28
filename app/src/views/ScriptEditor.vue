@@ -2,13 +2,17 @@
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useScriptStore } from '../stores/script'
 import { useMacroStore } from '../stores/macro'
+import { useUIStore } from '../stores/ui'
 import { Play, Plus, Trash2, Save, Circle, Square, Edit2 } from '@lucide/vue'
 import CodeEditor from '../components/script/CodeEditor.vue'
 
 const store = useScriptStore()
 const macroStore = useMacroStore()
+const uiStore = useUIStore()
+
 const newScriptName = ref('')
-const editorCode = ref('// 在此编写脚本\n//\n// 指定默认手柄 (首选):\n//   set_default_device(0);\n//\n// 按键操作:\n//   press("A");         - 按下按键\n//   release("A");       - 释放按键\n//\n// 摇杆与扳机:\n//   set_thumb("LeftX", 0.5);    - 设置摇杆 (-1.0 ~ 1.0)\n//   set_trigger("Left", 0.8);   - 设置扳机 (0.0 ~ 1.0)\n//\n// 延时与日志:\n//   sleep(1000);         - 等待毫秒\n//   log("hello");        - 输出日志\n')
+const DEFAULT_TEMPLATE = '// 在此编写脚本\n//\n// 指定默认手柄 (首选):\n//   set_default_device(0);\n//\n// 按键操作:\n//   press("A");         - 按下按键\n//   release("A");       - 释放按键\n//\n// 摇杆与扳机:\n//   set_thumb("LeftX", 0.5);    - 设置摇杆 (-1.0 ~ 1.0)\n//   set_trigger("Left", 0.8);   - 设置扳机 (0.0 ~ 1.0)\n//\n// 延时与日志:\n//   sleep(1000);         - 等待毫秒\n//   log("hello");        - 输出日志\n'
+const editorCode = ref(DEFAULT_TEMPLATE)
 
 let statusTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -79,14 +83,17 @@ watch(() => store.executionStatus, (newVal) => {
 
 async function createNewScript() {
   if (!newScriptName.value.trim()) {
-    store.executionStatus = 'error'
-    store.executionMessage = '请输入脚本名称后再点击新建'
-    clearStatusAfterDelay()
+    uiStore.showToast('请输入脚本名称后再点击新建', 'warning')
     return
   }
-  const script = await store.createScript(newScriptName.value, editorCode.value)
-  newScriptName.value = ''
-  await store.getScript(script.id)
+  try {
+    const script = await store.createScript(newScriptName.value, DEFAULT_TEMPLATE)
+    newScriptName.value = ''
+    await selectScript(script.id)
+    uiStore.showToast('脚本新建成功', 'success')
+  } catch (e) {
+    uiStore.showAlert('创建失败', `新建脚本失败: ${e}`)
+  }
 }
 
 async function selectScript(id: string) {
@@ -98,7 +105,12 @@ async function selectScript(id: string) {
 
 async function saveScript() {
   if (store.currentScript) {
-    await store.updateScript(store.currentScript.id, editorCode.value)
+    try {
+      await store.updateScript(store.currentScript.id, editorCode.value)
+      uiStore.showToast('脚本保存成功', 'success')
+    } catch (e) {
+      uiStore.showAlert('保存失败', `保存脚本失败: ${e}`)
+    }
   }
 }
 
@@ -117,7 +129,19 @@ async function runScript() {
 }
 
 async function deleteScript(id: string) {
-  await store.deleteScript(id)
+  const confirmed = await uiStore.showConfirm('确认删除', '确定要删除这个脚本吗？')
+  if (!confirmed) return
+
+  try {
+    await store.deleteScript(id)
+    uiStore.showToast('脚本删除成功', 'success')
+    if (store.currentScript?.id === id) {
+      store.currentScript = null
+      editorCode.value = DEFAULT_TEMPLATE
+    }
+  } catch (e) {
+    uiStore.showAlert('删除失败', `删除脚本失败: ${e}`)
+  }
 }
 
 const editingScriptId = ref<string | null>(null)
@@ -144,8 +168,9 @@ async function saveScriptName(scriptId: string) {
   
   try {
     await store.renameScript(scriptId, name)
+    uiStore.showToast('重命名成功', 'success')
   } catch (e) {
-    console.error('重命名失败:', e)
+    uiStore.showAlert('重命名失败', `脚本重命名失败: ${e}`)
   } finally {
     editingScriptId.value = null
   }
