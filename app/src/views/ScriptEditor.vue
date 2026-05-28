@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import { useScriptStore } from '../stores/script'
 import { useMacroStore } from '../stores/macro'
 import { useUIStore } from '../stores/ui'
-import { Play, Plus, Trash2, Save, Circle, Square, Edit2 } from '@lucide/vue'
+import { useConfigStore } from '../stores/config'
+import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link } from '@lucide/vue'
 import CodeEditor from '../components/script/CodeEditor.vue'
 
 const store = useScriptStore()
 const macroStore = useMacroStore()
 const uiStore = useUIStore()
+const configStore = useConfigStore()
 
 const newScriptName = ref('')
 const DEFAULT_TEMPLATE = '// 在此编写脚本\n//\n// 指定默认手柄 (首选):\n//   set_default_device(0);\n//\n// 按键操作:\n//   press("A");         - 按下按键\n//   release("A");       - 释放按键\n//\n// 摇杆与扳机:\n//   set_thumb("LeftX", 0.5);    - 设置摇杆 (-1.0 ~ 1.0)\n//   set_trigger("Left", 0.8);   - 设置扳机 (0.0 ~ 1.0)\n//\n// 延时与日志:\n//   sleep(1000);         - 等待毫秒\n//   log("hello");        - 输出日志\n'
@@ -16,8 +18,57 @@ const editorCode = ref(DEFAULT_TEMPLATE)
 
 let statusTimer: ReturnType<typeof setTimeout> | null = null
 
+// profile filter
+const profileFilter = ref<string>('') // '' = 全部
+
+// scriptId → 绑定的 profile 名称列表
+const scriptProfileMap = computed(() => {
+  const map: Record<string, string[]> = {}
+  for (const profile of configStore.config.profiles) {
+    for (const sid of profile.scripts) {
+      if (!map[sid]) map[sid] = []
+      map[sid].push(profile.name)
+    }
+  }
+  return map
+})
+
+// 过滤后的脚本列表
+const filteredScripts = computed(() => {
+  if (!profileFilter.value) return store.scripts
+  if (profileFilter.value === '__unbound__') {
+    return store.scripts.filter(s => !scriptProfileMap.value[s.id])
+  }
+  const profile = configStore.config.profiles.find(p => p.id === profileFilter.value)
+  if (!profile) return store.scripts
+  return store.scripts.filter(s => profile.scripts.includes(s.id))
+})
+
+// 浮动 Tooltip 状态
+const tooltipVisible = ref(false)
+const tooltipText = ref('')
+const tooltipX = ref(0)
+const tooltipY = ref(0)
+
+function showTooltip(e: MouseEvent, text: string) {
+  tooltipText.value = text
+  tooltipX.value = e.clientX + 12
+  tooltipY.value = e.clientY - 10
+  tooltipVisible.value = true
+}
+
+function moveTooltip(e: MouseEvent) {
+  tooltipX.value = e.clientX + 12
+  tooltipY.value = e.clientY - 10
+}
+
+function hideTooltip() {
+  tooltipVisible.value = false
+}
+
 onMounted(async () => {
   store.fetchScripts()
+  configStore.fetchConfig()
 })
 
 onUnmounted(() => {
@@ -236,12 +287,36 @@ async function saveScriptName(scriptId: string) {
           placeholder="脚本名称"
           :disabled="macroStore.isRecording"
         />
+
+        <!-- Profile 分类过滤 -->
+        <div class="profile-filter">
+          <button
+            class="filter-pill"
+            :class="{ active: profileFilter === '' }"
+            @click="profileFilter = ''"
+          >全部</button>
+          <button
+            v-for="profile in configStore.config.profiles"
+            :key="profile.id"
+            class="filter-pill"
+            :class="{ active: profileFilter === profile.id }"
+            @click="profileFilter = profile.id"
+            :title="profile.name"
+          >{{ profile.name }}</button>
+          <button
+            class="filter-pill unbound"
+            :class="{ active: profileFilter === '__unbound__' }"
+            @click="profileFilter = '__unbound__'"
+          >未绑定</button>
+        </div>
+
         <div class="script-list">
+          <div v-if="filteredScripts.length === 0" class="list-empty">无匹配脚本</div>
           <div
-            v-for="script in store.scripts"
+            v-for="script in filteredScripts"
             :key="script.id"
             class="script-item"
-            :class="{ active: store.currentScript?.id === script.id, disabled: macroStore.isRecording }"
+            :class="{ active: store.currentScript?.id === script.id, disabled: macroStore.isRecording, bound: !!scriptProfileMap[script.id] }"
             @click="!macroStore.isRecording && selectScript(script.id)"
           >
             <template v-if="editingScriptId === script.id">
@@ -255,7 +330,19 @@ async function saveScriptName(scriptId: string) {
               />
             </template>
             <template v-else>
-              <span class="script-name" @dblclick="!macroStore.isRecording && startRename(script)">{{ script.name }}</span>
+              <div class="script-name-row">
+                <span class="script-name" @dblclick="!macroStore.isRecording && startRename(script)">{{ script.name }}</span>
+                <!-- 已绑定徽章 + 浮动 Tooltip -->
+                <span
+                  v-if="scriptProfileMap[script.id]"
+                  class="bound-badge"
+                  @mouseenter="showTooltip($event, '绑定于: ' + scriptProfileMap[script.id].join(', '))"
+                  @mousemove="moveTooltip"
+                  @mouseleave="hideTooltip"
+                >
+                  <Link :size="9" />
+                </span>
+              </div>
               <div class="script-item-actions">
                 <button class="icon-btn" @click.stop="!macroStore.isRecording && startRename(script)" :disabled="macroStore.isRecording" title="重命名">
                   <Edit2 :size="12" />
@@ -349,6 +436,15 @@ async function saveScriptName(scriptId: string) {
         </div>
       </div>
     </div>
+
+    <!-- 浮动 Tooltip 层，挂在根元素内，不受 overflow:hidden 影响 -->
+    <teleport to="body">
+      <div
+        v-if="tooltipVisible"
+        class="floating-tooltip"
+        :style="{ left: tooltipX + 'px', top: tooltipY + 'px' }"
+      >{{ tooltipText }}</div>
+    </teleport>
   </div>
 </template>
 
@@ -501,7 +597,8 @@ async function saveScriptName(scriptId: string) {
 }
 
 .script-list-panel {
-  width: 200px;
+  width: 210px;
+  min-width: 210px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -509,6 +606,7 @@ async function saveScriptName(scriptId: string) {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  overflow: hidden;
 }
 
 .input {
@@ -518,10 +616,59 @@ async function saveScriptName(scriptId: string) {
   border-radius: var(--radius-md);
   color: var(--color-text);
   font-size: 12px;
+  flex-shrink: 0;
 }
 
 .input:focus {
   border-color: var(--color-cta);
+}
+
+/* Profile 分类过滤 */
+.profile-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.filter-pill {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-dim);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-pill:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-dim);
+}
+
+.filter-pill.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--color-cta);
+  color: var(--color-cta);
+}
+
+.filter-pill.unbound.active {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.list-empty {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  text-align: center;
+  padding: var(--space-md);
 }
 
 .script-list {
@@ -529,6 +676,8 @@ async function saveScriptName(scriptId: string) {
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .script-item {
@@ -539,12 +688,14 @@ async function saveScriptName(scriptId: string) {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background var(--transition-fast);
+  position: relative;
 }
 
 .script-item-actions {
   display: flex;
   align-items: center;
   gap: 2px;
+  flex-shrink: 0;
 }
 
 .edit-name-input {
@@ -568,13 +719,42 @@ async function saveScriptName(scriptId: string) {
   color: var(--color-cta);
 }
 
+.script-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .script-name {
   font-size: 12px;
   color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .script-item.active .script-name {
   color: var(--color-cta);
+}
+
+/* 已绑定徽章 + Tooltip */
+.bound-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--color-cta);
+  flex-shrink: 0;
+  position: relative;
+  cursor: default;
 }
 
 .icon-btn {
@@ -721,5 +901,31 @@ async function saveScriptName(scriptId: string) {
 .script-editor-page.is-recording .api-panel {
   opacity: 0.6;
   pointer-events: none;
+}
+</style>
+
+<!-- 全局样式：teleport 层不受 scoped 应用，必须单独一个非 scoped 块 -->
+<style>
+.floating-tooltip {
+  position: fixed;
+  z-index: 99999;
+  pointer-events: none;
+  background: #1e2130;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-family: 'Inter', 'Outfit', system-ui, sans-serif;
+  padding: 5px 10px;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  max-width: 260px;
+  word-break: break-all;
+  line-height: 1.5;
+  animation: tooltipFadeIn 0.12s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 </style>

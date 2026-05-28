@@ -1,14 +1,36 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useConfigStore } from '../stores/config'
+import { useScriptStore } from '../stores/script'
 import { useUIStore } from '../stores/ui'
-import { Download, Plus, Upload, Trash2, Check, X, Gamepad } from '@lucide/vue'
+import { Download, Plus, Upload, Trash2, Check, X, Gamepad, FileCode2, Minus } from '@lucide/vue'
 import type { GameProfile } from '../types/config'
+import { invoke } from '@tauri-apps/api/core'
+import type { Script } from '../types/script'
 
 const store = useConfigStore()
+const scriptStore = useScriptStore()
 const uiStore = useUIStore()
 const showCreateModal = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+
+// 脚本绑定 Modal
+const showScriptModal = ref(false)
+const editingProfileId = ref<string | null>(null)
+
+const editingProfile = computed(() =>
+  store.config.profiles.find(p => p.id === editingProfileId.value) ?? null
+)
+
+const boundScripts = computed(() => {
+  if (!editingProfile.value) return []
+  return scriptStore.scripts.filter(s => editingProfile.value!.scripts.includes(s.id))
+})
+
+const unboundScripts = computed(() => {
+  if (!editingProfile.value) return []
+  return scriptStore.scripts.filter(s => !editingProfile.value!.scripts.includes(s.id))
+})
 
 const profileForm = ref({
   name: '',
@@ -17,6 +39,7 @@ const profileForm = ref({
 
 onMounted(() => {
   store.fetchConfig()
+  scriptStore.fetchScripts()
 })
 
 function openCreateModal() {
@@ -28,8 +51,8 @@ function openCreateModal() {
 }
 
 async function handleCreateProfile() {
-  if (!profileForm.value.name.trim() || !profileForm.value.game_process.trim()) {
-    uiStore.showToast('请填写完整的信息', 'warning')
+  if (!profileForm.value.name.trim()) {
+    uiStore.showToast('请填写 Profile 名称', 'warning')
     return
   }
 
@@ -43,10 +66,6 @@ async function handleCreateProfile() {
 
   store.config.profiles.push(newProfile)
   
-  // 如果当前没有激活的 Profile，则自动激活它
-  if (!store.config.active_profile) {
-    store.config.active_profile = newProfile.id
-  }
 
   await store.saveConfig()
   showCreateModal.value = false
@@ -80,17 +99,76 @@ async function handleDeleteProfile(id: string) {
   uiStore.showToast('配置删除成功', 'success')
 }
 
-function handleExportProfile(profile: GameProfile) {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(profile, null, 2))
-  const downloadAnchor = document.createElement('a')
-  downloadAnchor.setAttribute("href", dataStr)
-  downloadAnchor.setAttribute("download", `${profile.name.replace(/\s+/g, '_')}_profile.json`)
-  document.body.appendChild(downloadAnchor)
-  downloadAnchor.click()
-  downloadAnchor.remove()
-  uiStore.showToast('配置导出成功', 'success')
+// ── 脚本绑定管理 ────────────────────────────────────────────
+function openScriptModal(profile: GameProfile) {
+  editingProfileId.value = profile.id
+  showScriptModal.value = true
 }
 
+function closeScriptModal() {
+  showScriptModal.value = false
+  editingProfileId.value = null
+}
+
+async function addScriptToProfile(scriptId: string) {
+  const profile = editingProfile.value
+  if (!profile) return
+  if (!profile.scripts.includes(scriptId)) {
+    profile.scripts.push(scriptId)
+    await store.saveConfig()
+  }
+}
+
+async function removeScriptFromProfile(scriptId: string) {
+  const profile = editingProfile.value
+  if (!profile) return
+  profile.scripts = profile.scripts.filter(id => id !== scriptId)
+  await store.saveConfig()
+}
+
+// ── 导出（含脚本数据）───────────────────────────────────────
+async function handleExportProfile(profile: GameProfile) {
+  try {
+    // 批量获取绑定脚本的完整内容
+    const scriptsData: Array<{ id: string; name: string; code: string }> = []
+    for (const scriptId of profile.scripts) {
+      try {
+        const script = await invoke<Script>('script_get', { scriptId })
+        scriptsData.push({ id: script.id, name: script.name, code: script.code })
+      } catch {
+        // 脚本可能已删除，跳过
+      }
+    }
+
+    const exportPayload = {
+      name: profile.name,
+      game_process: profile.game_process,
+      macros: profile.macros,
+      scripts: profile.scripts,
+      scripts_data: scriptsData
+    }
+
+    const fileName = `${profile.name.replace(/\s+/g, '_')}_profile.json`
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2))
+    const downloadAnchor = document.createElement('a')
+    downloadAnchor.setAttribute("href", dataStr)
+    downloadAnchor.setAttribute("download", fileName)
+    document.body.appendChild(downloadAnchor)
+    downloadAnchor.click()
+    downloadAnchor.remove()
+
+    const scriptCount = scriptsData.length
+    const scriptNote = scriptCount > 0 ? `\n\n📎 已内嵌 ${scriptCount} 个脚本，导入时将自动还原。` : ''
+    uiStore.showAlert(
+      '导出成功',
+      `文件已保存到系统默认下载目录\n\n📄 ${fileName}${scriptNote}`
+    )
+  } catch (err) {
+    uiStore.showAlert('导出失败', `导出时发生错误：${err}`)
+  }
+}
+
+// ── 导入（自动还原脚本）─────────────────────────────────────
 function triggerImport() {
   fileInput.value?.click()
 }
@@ -109,12 +187,34 @@ function handleImport(event: Event) {
         return
       }
 
+      // 还原脚本并建立旧 ID → 新 ID 的映射
+      const idMap: Record<string, string> = {}
+      let restoredCount = 0
+
+      if (Array.isArray(parsed.scripts_data) && parsed.scripts_data.length > 0) {
+        for (const sd of parsed.scripts_data) {
+          if (!sd.name || typeof sd.code !== 'string') continue
+          try {
+            const created = await scriptStore.createScript(sd.name, sd.code)
+            if (sd.id) idMap[sd.id] = created.id
+            restoredCount++
+          } catch {
+            // 忽略单个脚本创建失败，继续
+          }
+        }
+      }
+
+      // 将旧 scripts 数组中的 ID 映射为新 ID（如果未在 scripts_data 中，保留原 ID）
+      const remappedScripts: string[] = Array.isArray(parsed.scripts)
+        ? parsed.scripts.map((id: string) => idMap[id] ?? id)
+        : []
+
       const newProfile: GameProfile = {
         id: 'p_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
         name: parsed.name,
         game_process: parsed.game_process,
         macros: Array.isArray(parsed.macros) ? parsed.macros : [],
-        scripts: Array.isArray(parsed.scripts) ? parsed.scripts : []
+        scripts: remappedScripts
       }
 
       store.config.profiles.push(newProfile)
@@ -123,7 +223,11 @@ function handleImport(event: Event) {
       }
 
       await store.saveConfig()
-      uiStore.showToast(`成功导入 Profile: ${newProfile.name}`, 'success')
+
+      const msg = restoredCount > 0
+        ? `成功导入 Profile: ${newProfile.name}（已还原 ${restoredCount} 个脚本）`
+        : `成功导入 Profile: ${newProfile.name}`
+      uiStore.showToast(msg, 'success')
     } catch (err) {
       uiStore.showAlert('解析失败', '解析文件失败，请确保导入的是有效的 Profile JSON 文件。')
     } finally {
@@ -202,13 +306,21 @@ function handleImport(event: Event) {
                   <Check :size="11" /> 已激活
                 </span>
               </div>
-              <p class="profile-process">{{ profile.game_process }}</p>
+              <div class="profile-meta">
+                <p class="profile-process">{{ profile.game_process }}</p>
+                <span v-if="profile.scripts.length > 0" class="script-badge">
+                  <FileCode2 :size="10" /> 脚本 ×{{ profile.scripts.length }}
+                </span>
+              </div>
             </div>
 
             <div class="profile-actions">
               <button 
                 v-if="store.config.active_profile !== profile.id" 
                 class="btn-activate" 
+                :class="{ 'btn-activate-disabled': !profile.game_process.trim() }"
+                :disabled="!profile.game_process.trim()"
+                :title="!profile.game_process.trim() ? '请先填写游戏进程名称才可激活' : '激活此 Profile'"
                 @click="activateProfile(profile.id)"
               >
                 激活
@@ -219,6 +331,13 @@ function handleImport(event: Event) {
                 @click="deactivateProfile"
               >
                 取消激活
+              </button>
+              <button 
+                class="icon-btn script-btn" 
+                title="管理绑定脚本" 
+                @click="openScriptModal(profile)"
+              >
+                <FileCode2 :size="14" />
               </button>
               <button 
                 class="icon-btn" 
@@ -240,7 +359,7 @@ function handleImport(event: Event) {
       </section>
     </div>
 
-    <!-- 创建 Profile 弹窗 (Modal) -->
+    <!-- 创建 Profile 弹窗 -->
     <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
       <div class="modal-card">
         <div class="modal-header">
@@ -263,22 +382,83 @@ function handleImport(event: Event) {
           </div>
           
           <div class="form-group">
-            <label>游戏进程名称 (Game Process)</label>
+            <label>游戏进程名称 (Game Process) <span class="label-optional">可选</span></label>
             <input 
               type="text" 
               v-model="profileForm.game_process" 
-              placeholder="例如: ForzaHorizon5.exe" 
+              placeholder="例如: ForzaHorizon5.exe（可空留，但填写后才可激活）" 
               class="form-input" 
-              required 
             />
           </div>
-          
-          <!-- 默认且仅模拟 Xbox 360 手柄 -->
         </div>
         
         <div class="modal-footer">
           <button class="btn-cancel" @click="showCreateModal = false">取消</button>
           <button class="btn-submit" @click="handleCreateProfile">创建</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 脚本绑定 Modal -->
+    <div v-if="showScriptModal && editingProfile" class="modal-overlay" @click.self="closeScriptModal">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h3>管理脚本绑定</h3>
+            <span class="modal-subtitle">{{ editingProfile.name }}</span>
+          </div>
+          <button class="close-btn" @click="closeScriptModal">
+            <X :size="16" />
+          </button>
+        </div>
+
+        <div class="modal-body script-modal-body">
+          <!-- 已绑定脚本 -->
+          <div class="script-section">
+            <div class="script-section-label">
+              <FileCode2 :size="13" />
+              已绑定脚本
+              <span class="count-badge">{{ boundScripts.length }}</span>
+            </div>
+            <div v-if="boundScripts.length === 0" class="script-empty">
+              暂未绑定任何脚本
+            </div>
+            <div v-else class="script-list">
+              <div v-for="script in boundScripts" :key="script.id" class="script-row bound">
+                <span class="script-row-name">{{ script.name }}</span>
+                <button class="script-row-btn remove-btn" @click="removeScriptFromProfile(script.id)" title="移除绑定">
+                  <Minus :size="12" /> 移除
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="script-divider"></div>
+
+          <!-- 可添加脚本 -->
+          <div class="script-section">
+            <div class="script-section-label">
+              从脚本库添加
+            </div>
+            <div v-if="scriptStore.scripts.length === 0" class="script-empty">
+              脚本库为空，请先在脚本编辑器中创建脚本
+            </div>
+            <div v-else-if="unboundScripts.length === 0" class="script-empty">
+              所有脚本已全部绑定
+            </div>
+            <div v-else class="script-list">
+              <div v-for="script in unboundScripts" :key="script.id" class="script-row unbound">
+                <span class="script-row-name">{{ script.name }}</span>
+                <button class="script-row-btn add-btn" @click="addScriptToProfile(script.id)" title="添加绑定">
+                  <Plus :size="12" /> 添加
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-submit" @click="closeScriptModal">完成</button>
         </div>
       </div>
     </div>
@@ -430,6 +610,7 @@ function handleImport(event: Event) {
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
   margin-right: var(--space-md);
+  flex-shrink: 0;
 }
 
 .profile-card.active .profile-icon {
@@ -439,13 +620,14 @@ function handleImport(event: Event) {
 
 .profile-main {
   flex-grow: 1;
+  min-width: 0;
 }
 
 .profile-title {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .profile-title h4 {
@@ -467,8 +649,6 @@ function handleImport(event: Event) {
   color: #22c55e;
 }
 
-
-
 .active-badge {
   display: inline-flex;
   align-items: center;
@@ -481,6 +661,12 @@ function handleImport(event: Event) {
   font-weight: 600;
 }
 
+.profile-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 .profile-process {
   font-size: 11px;
   color: var(--color-text-dim);
@@ -488,10 +674,23 @@ function handleImport(event: Event) {
   margin: 0;
 }
 
+.script-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--color-cta);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
 .profile-actions {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
+  flex-shrink: 0;
 }
 
 /* Action Buttons */
@@ -582,6 +781,11 @@ function handleImport(event: Event) {
   color: var(--color-text);
 }
 
+.script-btn:hover {
+  color: var(--color-cta) !important;
+  background: rgba(99, 102, 241, 0.08) !important;
+}
+
 .delete-btn:hover {
   color: #ef4444 !important;
   background: rgba(239, 68, 68, 0.1) !important;
@@ -614,6 +818,10 @@ function handleImport(event: Event) {
   animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.modal-wide {
+  max-width: 520px;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -622,11 +830,22 @@ function handleImport(event: Event) {
   border-bottom: 1px solid var(--color-border);
 }
 
+.modal-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .modal-header h3 {
   font-size: 15px;
   font-weight: 600;
   color: var(--color-text);
   margin: 0;
+}
+
+.modal-subtitle {
+  font-size: 11px;
+  color: var(--color-text-dim);
 }
 
 .close-btn {
@@ -655,6 +874,134 @@ function handleImport(event: Event) {
   gap: var(--space-md);
 }
 
+/* Script Modal */
+.script-modal-body {
+  gap: 0;
+  padding: 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.script-section {
+  padding: var(--space-md) var(--space-lg);
+}
+
+.script-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-sm);
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--color-cta);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 9px;
+}
+
+.script-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0 var(--space-lg);
+}
+
+.script-empty {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  text-align: center;
+  padding: var(--space-md);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.script-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.script-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
+}
+
+.script-row.bound {
+  background: rgba(99, 102, 241, 0.05);
+  border-color: rgba(99, 102, 241, 0.15);
+}
+
+.script-row.unbound {
+  background: var(--color-surface-elevated);
+}
+
+.script-row.unbound:hover {
+  border-color: var(--color-text-dim);
+}
+
+.script-row-name {
+  font-size: 12px;
+  color: var(--color-text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.script-row-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  margin-left: var(--space-sm);
+}
+
+.remove-btn {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.remove-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.add-btn {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: var(--color-cta);
+}
+
+.add-btn:hover {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+/* Form */
 .form-group {
   display: flex;
   flex-direction: column;
