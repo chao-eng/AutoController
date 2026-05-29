@@ -45,6 +45,14 @@
 *   **⚙️ 配置文件 & 级联日志**
     *   采用 TOML 格式存储应用配置，按游戏独立保存 Profile。
     *   基于 Rust `tracing` 库实现的**异步级联日志系统**，支持日志轮转，并可一键导出为 JSON / CSV 格式。
+*   **🔍 智能屏幕文字识别 (OCR) 系统**
+    *   **原生/外部双引擎架构**：支持 **Windows 原生 (WinRT OCR)** 零依赖、高速度离线文字识别，以及 **外部 PaddleOCR (HTTP API)** 双模式运行。
+    *   **PaddleOCR 容器化部署**：提供高度优化的 PaddleOCR Windows 容器镜像：`crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest`，支持一键运行本地 HTTP OCR 服务。
+    *   **多区域标定与脚本 API**：支持在 UI 界面多区域框选标定，脚本中通过 `ocr()`、`ocr(序号)` 或 `ocr(x,y,w,h)` 灵活读取。
+    *   **自适应高保真增强**：短边小于 600px 时自动采用 GDI HALFTONE 差值算法智能高清晰度放大，保障极高字亲和性与识别率。
+*   **🔔 多通道智能消息通知系统**
+    *   深度集成 **飞书 Webhook (Feishu)**、**Server酱 (ServerChan)**、**Server酱三代 (ServerChan3)** 及 **Telegram Bot** 消息通道。
+    *   支持脚本运行成功、出错、结束时以及自定义节点进行自动化远程消息推送，挂机动态了如指掌。
 
 ---
 
@@ -157,6 +165,14 @@ npm run tauri build
 *   **⚙️ Profiles & Structured Logging**
     *   Saves game-specific profiles independently using user-friendly TOML files.
     *   Asynchronous logging powered by Rust's `tracing` library with log-rotation, reloadable filters, and CSV/JSON exports.
+*   **🔍 Intelligent Screen OCR Text Recognition**
+    *   **Dual-Engine Architecture**: Seamlessly switch between zero-dependency, ultra-fast **Windows Native (WinRT OCR)** and high-precision **External PaddleOCR (HTTP API)**.
+    *   **PaddleOCR Container Deployment**: Highly optimized container image is available at `crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest` for one-click setup of local HTTP OCR service.
+    *   **Multi-Region Calibration & Scripting APIs**: Frame and select multiple target regions on the UI, and query screen text instantly via `ocr()`, `ocr(index)`, or `ocr(x,y,w,h)` scripts.
+    *   **Adaptive Image Enhancing**: Automatically scales smaller bounding boxes (<600px) using GDI HALFTONE interpolation to guarantee outstanding text clarity and accuracy.
+*   **🔔 Multi-Channel Notification Dispatcher**
+    *   Out-of-the-box integration with **Feishu Webhook**, **ServerChan**, **ServerChan3**, and **Telegram Bot**.
+    *   Automates remote message pushes on script status changes (started, success, warning, error) or manually triggered checkpoints.
 
 ---
 

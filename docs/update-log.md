@@ -1,5 +1,25 @@
 # AutoController 更新日志
 
+## v0.3.0 — 2026-05-29
+
+### 🆕 新功能
+
+#### 智能屏幕 OCR 双引擎系统与配置集成
+- **PaddleOCR (HTTP API) 引擎支持**：重构了 OCR 执行底座，新增对外部 PaddleOCR HTTP 接口调用支持。
+- **极速内存 PNG 编码转换** (`src-tauri/src/script_engine/ocr.rs`)：深度使用 Windows 原生 WinRT `BitmapEncoder` 和 `InMemoryRandomAccessStream` 实现内存中 `SoftwareBitmap` 到标准 PNG 字节流的高性能转码，实现**零三方依赖、零临时文件读写**，避免因引入庞大三方图像处理库造成打包体积剧增。
+- **HTTP Multipart 上传与结果聚合**：引入 `reqwest` 同步 `multipart` 文件表单流分发机制，并对多行识别结果进行高效整合与去空字符过滤，保证不同引擎在 Rhai 脚本层 API 行为的完美一致。
+- **OCR 自动化配置面板升级** (`src/views/ConfigPanel.vue`)：前端“OCR 自动化配置”页面重构。新增 OCR 引擎下拉框切换及 PaddleOCR URL 地址输入功能，集成了平滑过渡动效、Pinia 全局状态响应式绑定及秒级后台持久化写入。
+- **PaddleOCR Docker 容器部署镜像**：额外为用户提供了高度精炼的 Windows 下 PaddleOCR x86 容器镜像以支持一键部署本地 OCR 服务：
+  ```bash
+  crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest
+  ```
+
+#### 多通道智能消息通知系统
+- **四种主流通知通道集成**：新增消息通知参数配置板块，深度集成 **飞书 Webhook (Feishu)**、**Server酱 (ServerChan)**、**Server酱三代 (ServerChan3)** 及 **Telegram Bot**。
+- 支持在脚本启动、运行成功、异常出错、停止或者任意自定义脚本节点执行高可靠的消息远程分发通知，挂机进度与设备状态完全掌控。
+
+---
+
 ## v0.2.0 — 2026-05-28
 
 ### 🆕 新功能
