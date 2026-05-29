@@ -226,6 +226,59 @@ async function saveScriptName(scriptId: string) {
     editingScriptId.value = null
   }
 }
+
+// ── 拖拽与排序控制 ──────────────────────────────────────────
+const draggedIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
+function handleDragStart(index: number, event: DragEvent) {
+  if (macroStore.isRecording) return
+  draggedIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', index.toString())
+  }
+}
+
+function handleDragEnter(index: number, event: DragEvent) {
+  dragOverIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function handleDragOver(index: number, event: DragEvent) {
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function handleDragLeave() {
+  dragOverIndex.value = null
+}
+
+async function handleDrop(targetIndex: number) {
+  dragOverIndex.value = null
+  if (draggedIndex.value === null || draggedIndex.value === targetIndex || macroStore.isRecording) return
+  
+  const orderedList = [...filteredScripts.value]
+  const [removed] = orderedList.splice(draggedIndex.value, 1)
+  orderedList.splice(targetIndex, 0, removed)
+  
+  const otherScripts = store.scripts.filter(s => !orderedList.find(o => o.id === s.id))
+  store.scripts = [...orderedList, ...otherScripts]
+  
+  saveScriptOrder(store.scripts)
+  draggedIndex.value = null
+}
+
+
+
+function saveScriptOrder(orderedScripts: any[]) {
+  const ids = orderedScripts.map(s => s.id)
+  localStorage.setItem('script_order', JSON.stringify(ids))
+}
+
 </script>
 
 <template>
@@ -310,13 +363,19 @@ async function saveScriptName(scriptId: string) {
           >未绑定</button>
         </div>
 
-        <div class="script-list">
+        <div class="script-list" @dragover.prevent>
           <div v-if="filteredScripts.length === 0" class="list-empty">无匹配脚本</div>
           <div
-            v-for="script in filteredScripts"
+            v-for="(script, index) in filteredScripts"
             :key="script.id"
             class="script-item"
-            :class="{ active: store.currentScript?.id === script.id, disabled: macroStore.isRecording, bound: !!scriptProfileMap[script.id] }"
+            :class="{ active: store.currentScript?.id === script.id, disabled: macroStore.isRecording, bound: !!scriptProfileMap[script.id], 'drag-over': dragOverIndex === index }"
+            draggable="true"
+            @dragstart="handleDragStart(index, $event)"
+            @dragover.prevent="handleDragOver(index, $event)"
+            @dragenter.prevent="handleDragEnter(index, $event)"
+            @dragleave="handleDragLeave"
+            @drop.prevent="handleDrop(index)"
             @click="!macroStore.isRecording && selectScript(script.id)"
           >
             <template v-if="editingScriptId === script.id">
@@ -330,8 +389,9 @@ async function saveScriptName(scriptId: string) {
               />
             </template>
             <template v-else>
-              <div class="script-name-row">
-                <span class="script-name" @dblclick="!macroStore.isRecording && startRename(script)">{{ script.name }}</span>
+              <div class="script-name-row" draggable="false">
+                <span class="drag-handle" title="按住拖拽排序" draggable="false">☰</span>
+                <span class="script-name" @dblclick="!macroStore.isRecording && startRename(script)" draggable="false">{{ script.name }}</span>
                 <!-- 已绑定徽章 + 浮动 Tooltip -->
                 <span
                   v-if="scriptProfileMap[script.id]"
@@ -339,6 +399,7 @@ async function saveScriptName(scriptId: string) {
                   @mouseenter="showTooltip($event, '绑定于: ' + scriptProfileMap[script.id].join(', '))"
                   @mousemove="moveTooltip"
                   @mouseleave="hideTooltip"
+                  draggable="false"
                 >
                   <Link :size="9" />
                 </span>
@@ -615,8 +676,8 @@ async function saveScriptName(scriptId: string) {
 }
 
 .script-list-panel {
-  width: 210px;
-  min-width: 210px;
+  width: 260px;
+  min-width: 260px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -707,13 +768,18 @@ async function saveScriptName(scriptId: string) {
   cursor: pointer;
   transition: background var(--transition-fast);
   position: relative;
+  user-select: none; /* 防止文本选择干扰拖拽 */
 }
 
 .script-item-actions {
-  display: flex;
+  display: none; /* 默认隐藏，让脚本名称铺满整行 */
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+}
+
+.script-item:hover .script-item-actions {
+  display: flex; /* 悬浮时显示操作按钮 */
 }
 
 .edit-name-input {
@@ -784,12 +850,13 @@ async function saveScriptName(scriptId: string) {
   border-radius: var(--radius-sm);
   color: var(--color-text-dim);
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.7; /* 默认轻微半透明 */
   transition: all var(--transition-fast);
 }
 
-.script-item:hover .icon-btn {
+.icon-btn:hover {
   opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .icon-btn.danger:hover {
@@ -920,6 +987,33 @@ async function saveScriptName(scriptId: string) {
   opacity: 0.6;
   pointer-events: none;
 }
+
+.script-item {
+  cursor: pointer;
+}
+
+.script-item.active {
+  cursor: pointer;
+}
+
+.script-item.drag-over {
+  border: 1px dashed var(--color-cta) !important;
+  background: rgba(34, 197, 94, 0.05) !important;
+}
+
+.drag-handle {
+  color: var(--color-text-dim);
+  cursor: grab;
+  font-size: 13px;
+  user-select: none;
+  padding-right: 4px;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+
 </style>
 
 <!-- 全局样式：teleport 层不受 scoped 应用，必须单独一个非 scoped 块 -->

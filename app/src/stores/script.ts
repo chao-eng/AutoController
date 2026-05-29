@@ -29,7 +29,19 @@ export const useScriptStore = defineStore('script', () => {
   async function fetchScripts() {
     loading.value = true
     try {
-      scripts.value = await invoke<ScriptMeta[]>('script_list')
+      const fetched = await invoke<ScriptMeta[]>('script_list')
+      const savedOrder = localStorage.getItem('script_order')
+      if (savedOrder) {
+        const orderedIds: string[] = JSON.parse(savedOrder)
+        fetched.sort((a, b) => {
+          let idxA = orderedIds.indexOf(a.id)
+          let idxB = orderedIds.indexOf(b.id)
+          if (idxA === -1) idxA = 99999
+          if (idxB === -1) idxB = 99999
+          return idxA - idxB
+        })
+      }
+      scripts.value = fetched
     } catch (e) {
       error.value = String(e)
     } finally {

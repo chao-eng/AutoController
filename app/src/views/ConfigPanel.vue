@@ -26,13 +26,61 @@ const editingProfile = computed(() =>
 
 const boundScripts = computed(() => {
   if (!editingProfile.value) return []
-  return scriptStore.scripts.filter(s => editingProfile.value!.scripts.includes(s.id))
+  return editingProfile.value.scripts
+    .map(id => scriptStore.scripts.find(s => s.id === id))
+    .filter((s): s is Script => !!s)
 })
 
 const unboundScripts = computed(() => {
   if (!editingProfile.value) return []
   return scriptStore.scripts.filter(s => !editingProfile.value!.scripts.includes(s.id))
 })
+
+const draggedIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
+function handleDragStart(index: number, event: DragEvent) {
+  draggedIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', index.toString())
+  }
+}
+
+function handleDragEnter(index: number) {
+  dragOverIndex.value = index
+}
+
+function handleDragLeave() {
+  dragOverIndex.value = null
+}
+
+async function handleDrop(targetIndex: number) {
+  dragOverIndex.value = null
+  if (draggedIndex.value === null || draggedIndex.value === targetIndex || !editingProfile.value) return
+  
+  const scripts = [...editingProfile.value.scripts]
+  const [removed] = scripts.splice(draggedIndex.value, 1)
+  scripts.splice(targetIndex, 0, removed)
+  
+  editingProfile.value.scripts = scripts
+  await store.saveConfig()
+  
+  draggedIndex.value = null
+}
+
+async function moveScript(index: number, direction: number) {
+  if (!editingProfile.value) return
+  const targetIndex = index + direction
+  if (targetIndex < 0 || targetIndex >= editingProfile.value.scripts.length) return
+  
+  const scripts = [...editingProfile.value.scripts]
+  const [moved] = scripts.splice(index, 1)
+  scripts.splice(targetIndex, 0, moved)
+  
+  editingProfile.value.scripts = scripts
+  await store.saveConfig()
+}
 
 const profileForm = ref({
   name: '',
@@ -100,17 +148,7 @@ async function handleCreateProfile() {
   uiStore.showToast('配置成功创建', 'success')
 }
 
-async function activateProfile(id: string) {
-  store.config.active_profile = id
-  await store.saveConfig()
-  uiStore.showToast('配置已激活', 'success')
-}
 
-async function deactivateProfile() {
-  store.config.active_profile = null
-  await store.saveConfig()
-  uiStore.showToast('配置已停用', 'info')
-}
 
 async function handleDeleteProfile(id: string) {
   const confirmed = await uiStore.showConfirm('确认删除', '确定要删除这个 Profile 吗？')
@@ -277,9 +315,7 @@ function handleImport(event: Event) {
       }
 
       store.config.profiles.push(newProfile)
-      if (!store.config.active_profile) {
-        store.config.active_profile = newProfile.id
-      }
+
 
       await store.saveConfig()
 
@@ -431,7 +467,6 @@ function handleImport(event: Event) {
             v-for="profile in store.config.profiles" 
             :key="profile.id" 
             class="profile-card" 
-            :class="{ active: store.config.active_profile === profile.id }"
           >
             <div class="profile-icon">
               <Gamepad :size="18" />
@@ -441,9 +476,6 @@ function handleImport(event: Event) {
               <div class="profile-title">
                 <h4>{{ profile.name }}</h4>
                 <span class="controller-badge xbox360">Xbox 360</span>
-                <span v-if="store.config.active_profile === profile.id" class="active-badge">
-                  <Check :size="11" /> 已激活
-                </span>
               </div>
               <div class="profile-meta">
                 <p class="profile-process">{{ profile.game_process }}</p>
@@ -454,23 +486,6 @@ function handleImport(event: Event) {
             </div>
 
             <div class="profile-actions">
-              <button 
-                v-if="store.config.active_profile !== profile.id" 
-                class="btn-activate" 
-                :class="{ 'btn-activate-disabled': !profile.game_process.trim() }"
-                :disabled="!profile.game_process.trim()"
-                :title="!profile.game_process.trim() ? '请先填写游戏进程名称才可激活' : '激活此 Profile'"
-                @click="activateProfile(profile.id)"
-              >
-                激活
-              </button>
-              <button 
-                v-else 
-                class="btn-deactivate" 
-                @click="deactivateProfile"
-              >
-                取消激活
-              </button>
               <button 
                 class="icon-btn script-btn" 
                 title="管理绑定脚本" 
@@ -525,7 +540,7 @@ function handleImport(event: Event) {
             <input 
               type="text" 
               v-model="profileForm.game_process" 
-              placeholder="例如: ForzaHorizon5.exe（可空留，但填写后才可激活）" 
+              placeholder="例如: ForzaHorizon5.exe (可空留)" 
               class="form-input" 
             />
           </div>
@@ -562,12 +577,47 @@ function handleImport(event: Event) {
             <div v-if="boundScripts.length === 0" class="script-empty">
               暂未绑定任何脚本
             </div>
-            <div v-else class="script-list">
-              <div v-for="script in boundScripts" :key="script.id" class="script-row bound">
-                <span class="script-row-name">{{ script.name }}</span>
-                <button class="script-row-btn remove-btn" @click="removeScriptFromProfile(script.id)" title="移除绑定">
-                  <Minus :size="12" /> 移除
-                </button>
+            <div v-else class="script-list" @dragover.prevent>
+              <div 
+                v-for="(script, index) in boundScripts" 
+                :key="script.id" 
+                class="script-row bound"
+                :class="{ 'drag-over': dragOverIndex === index }"
+                draggable="true"
+                @dragstart="handleDragStart(index, $event)"
+                @dragover.prevent
+                @dragenter.prevent="handleDragEnter(index)"
+                @dragleave="handleDragLeave"
+                @drop.prevent="handleDrop(index)"
+              >
+                <div class="script-row-left">
+                  <span class="drag-handle" title="按住拖拽排序">☰</span>
+                  <span class="script-row-name">{{ script.name }}</span>
+                </div>
+                
+                <div class="script-row-right">
+                  <div class="seq-sort-buttons">
+                    <button 
+                      class="seq-sort-btn" 
+                      :disabled="index === 0" 
+                      @click.stop="moveScript(index, -1)"
+                      title="上移"
+                    >
+                      ▲
+                    </button>
+                    <button 
+                      class="seq-sort-btn" 
+                      :disabled="index === boundScripts.length - 1" 
+                      @click.stop="moveScript(index, 1)"
+                      title="下移"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                  <button class="script-row-btn remove-btn" @click="removeScriptFromProfile(script.id)" title="移除绑定">
+                    <Minus :size="12" /> 移除
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1412,5 +1462,70 @@ function handleImport(event: Event) {
 .url-input {
   width: 280px;
   cursor: text;
+}
+
+.script-row.bound {
+  cursor: grab;
+  user-select: none;
+  transition: background-color var(--transition-fast);
+}
+
+.script-row.bound:active {
+  cursor: grabbing;
+}
+
+.script-row.bound.drag-over {
+  border: 1px dashed var(--color-cta);
+  background: rgba(34, 197, 94, 0.05) !important;
+}
+
+.script-row-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  pointer-events: none; /* 让点击穿透子节点以激活父级原生拖拽 */
+}
+
+.drag-handle {
+  color: var(--color-text-dim);
+  cursor: grab;
+  font-size: 13px;
+  user-select: none;
+  padding-right: 4px;
+}
+
+.script-row-right {
+  display: flex;
+  align-items: center;
+}
+
+.seq-sort-buttons {
+  display: flex;
+  gap: 2px;
+  margin-right: 4px;
+}
+
+.seq-sort-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-dim);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.seq-sort-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text);
+  border-color: var(--color-text-dim);
+}
+
+.seq-sort-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 </style>
