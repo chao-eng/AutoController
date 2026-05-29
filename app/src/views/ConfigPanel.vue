@@ -330,6 +330,21 @@ function handleImport(event: Event) {
       <!-- OCR 区域标定 -->
       <section class="config-section">
         <h3>OCR 自动化配置</h3>
+        
+        <div class="ocr-engine-selector">
+          <div class="config-item">
+            <label>OCR 识别引擎</label>
+            <select v-model="store.config.ocr_engine" class="input">
+              <option value="winocr">Windows 原生 (WinRT OCR)</option>
+              <option value="paddleocr">外部 PaddleOCR (HTTP)</option>
+            </select>
+          </div>
+          <div v-if="store.config.ocr_engine === 'paddleocr'" class="config-item">
+            <label>PaddleOCR URL 地址</label>
+            <input type="text" v-model="store.config.paddleocr_url" class="input url-input" placeholder="http://127.0.0.1:8050/ocr" />
+          </div>
+        </div>
+
         <div class="ocr-container-group">
           <!-- 区域列表 -->
           <div class="ocr-regions-list">
@@ -1383,5 +1398,19 @@ function handleImport(event: Event) {
 .ocr-btn-recal:hover {
   background: #22c55e;
   color: white;
+}
+
+.ocr-engine-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--space-md);
+  border-bottom: 1px dashed var(--color-border);
+  padding-bottom: var(--space-md);
+}
+
+.url-input {
+  width: 280px;
+  cursor: text;
 }
 </style>

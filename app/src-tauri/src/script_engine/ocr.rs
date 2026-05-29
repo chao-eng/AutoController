@@ -1,12 +1,106 @@
 use std::cmp::min;
 use windows::core::HSTRING;
 use windows::Globalization::Language;
-use windows::Graphics::Imaging::{BitmapPixelFormat, SoftwareBitmap};
+use windows::Graphics::Imaging::{BitmapPixelFormat, SoftwareBitmap, BitmapEncoder};
 use windows::Media::Ocr::OcrEngine;
-use windows::Storage::Streams::DataWriter;
+use windows::Storage::Streams::{DataWriter, InMemoryRandomAccessStream, DataReader};
 use windows::Win32::Graphics::Gdi::*;
 
-/// 截取屏幕上的指定矩形区域，并使用 Windows 原生 WinRT OCR 引擎进行高精度文字识别。
+/// 使用 WinRT BitmapEncoder 将 SoftwareBitmap 编码为标准的 PNG 二进制字节流，零额外第三方库依赖。
+fn encode_software_bitmap_to_png_bytes(bitmap: &SoftwareBitmap) -> Result<Vec<u8>, String> {
+    let stream = InMemoryRandomAccessStream::new()
+        .map_err(|e| format!("无法创建内存流: {}", e))?;
+
+    let encoder_guid = BitmapEncoder::PngEncoderId()
+        .map_err(|e| format!("无法获取 PngEncoderId: {}", e))?;
+
+    let encoder = BitmapEncoder::CreateAsync(encoder_guid, &stream)
+        .map_err(|e| format!("无法创建 Png 编码器: {}", e))?
+        .get()
+        .map_err(|e| format!("无法初始化 Png 编码器: {}", e))?;
+
+    encoder.SetSoftwareBitmap(bitmap)
+        .map_err(|e| format!("无法设置 SoftwareBitmap 到编码器: {}", e))?;
+
+    encoder.FlushAsync()
+        .map_err(|e| format!("Flush 编码器失败: {}", e))?
+        .get()
+        .map_err(|e| format!("获取 Flush 编码器结果失败: {}", e))?;
+
+    let size = stream.Size().map_err(|e| format!("无法获取内存流大小: {}", e))? as u32;
+    stream.Seek(0).map_err(|e| format!("内存流 Seek 失败: {}", e))?;
+
+    let reader = DataReader::CreateDataReader(&stream)
+        .map_err(|e| format!("无法创建 DataReader: {}", e))?;
+
+    reader.LoadAsync(size)
+        .map_err(|e| format!("加载数据流失败: {}", e))?
+        .get()
+        .map_err(|e| format!("获取加载数据流结果失败: {}", e))?;
+
+    let mut bytes = vec![0u8; size as usize];
+    reader.ReadBytes(&mut bytes)
+        .map_err(|e| format!("从 DataReader 读取字节失败: {}", e))?;
+
+    Ok(bytes)
+}
+
+/// 发送截屏 PNG 图片到外部 PaddleOCR HTTP 接口。
+fn call_paddleocr_http(bitmap: &SoftwareBitmap, paddleocr_url: &str) -> Result<String, String> {
+    let png_bytes = encode_software_bitmap_to_png_bytes(bitmap)?;
+
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("无法创建 HTTP 客户端: {}", e))?;
+
+    let part = reqwest::blocking::multipart::Part::bytes(png_bytes)
+        .file_name("screenshot.png")
+        .mime_str("image/png")
+        .map_err(|e| format!("创建 multipart Part 失败: {}", e))?;
+
+    let form = reqwest::blocking::multipart::Form::new()
+        .part("file", part);
+
+    let resp = client.post(paddleocr_url)
+        .multipart(form)
+        .send()
+        .map_err(|e| format!("发送 PaddleOCR HTTP 请求失败: {}", e))?;
+
+    let status = resp.status();
+    if !status.is_success() {
+        return Err(format!("PaddleOCR 接口返回 HTTP 状态错误: {}", status));
+    }
+
+    #[derive(serde::Deserialize)]
+    struct PaddleOcrResultItem {
+        text: String,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct PaddleOcrResponse {
+        status: String,
+        results: Option<Vec<PaddleOcrResultItem>>,
+    }
+
+    let ocr_resp: PaddleOcrResponse = resp.json()
+        .map_err(|e| format!("解析 PaddleOCR 响应 JSON 失败: {}", e))?;
+
+    if ocr_resp.status != "success" {
+        return Err(format!("PaddleOCR 识别失败，接口返回状态: {}", ocr_resp.status));
+    }
+
+    let mut recognized_text = String::new();
+    if let Some(items) = ocr_resp.results {
+        for item in items {
+            recognized_text.push_str(&item.text);
+        }
+    }
+
+    Ok(recognized_text)
+}
+
+/// 截取屏幕上的指定矩形区域，并使用指定的 OCR 引擎（Windows 原生或外部 PaddleOCR）进行识别。
 /// 
 /// 优化特性 (对齐 AutoDrive_ocr 项目的最小边长 = 600 以及最多 5 倍放大规则)：
 /// 1. 原生 GDI 像素级极速屏幕截图；
@@ -14,7 +108,7 @@ use windows::Win32::Graphics::Gdi::*;
 /// 3. 如果识别区域短边小于 600 像素，自动使用 GDI StretchBlt (HALFTONE 插值) 进行高清晰度放大，最高放大 5 倍；
 /// 4. 无其他多余的对比度拉伸或锐化滤波，保持图像原始色彩；
 /// 5. 过滤所有空白字符，输出干净统一的文案以方便做包含匹配。
-pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32) -> Result<String, String> {
+pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32, ocr_engine: &str, paddleocr_url: &str) -> Result<String, String> {
     if w <= 0 || h <= 0 {
         return Err("识别区域的宽度和高度必须大于 0".to_string());
     }
@@ -137,33 +231,40 @@ pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32) -> Result<String, String>
         new_h
     ).map_err(|e| format!("创建 SoftwareBitmap 失败: {}", e))?;
 
-    // 6. 初始化本地 OcrEngine 进行识别
-    let lang = Language::CreateLanguage(&HSTRING::from("zh-Hans-CN"))
-        .map_err(|e| format!("创建语言包（zh-Hans-CN）失败: {}", e))?;
-
-    let engine = if OcrEngine::IsLanguageSupported(&lang).unwrap_or(false) {
-        OcrEngine::TryCreateFromLanguage(&lang)
-            .map_err(|e| format!("利用 zh-Hans-CN 初始化 OcrEngine 失败: {}", e))?
+    let recognized_text = if ocr_engine == "paddleocr" {
+        // 调用外部 PaddleOCR API
+        call_paddleocr_http(&software_bitmap, paddleocr_url)?
     } else {
-        // 回退尝试使用系统用户默认语言
-        OcrEngine::TryCreateFromUserProfileLanguages()
-            .map_err(|e| format!("无法创建用户默认语言 of OcrEngine: {}", e))?
+        // 6. 初始化本地 OcrEngine 进行识别
+        let lang = Language::CreateLanguage(&HSTRING::from("zh-Hans-CN"))
+            .map_err(|e| format!("创建语言包（zh-Hans-CN）失败: {}", e))?;
+
+        let engine = if OcrEngine::IsLanguageSupported(&lang).unwrap_or(false) {
+            OcrEngine::TryCreateFromLanguage(&lang)
+                .map_err(|e| format!("利用 zh-Hans-CN 初始化 OcrEngine 失败: {}", e))?
+        } else {
+            // 回退尝试使用系统用户默认语言
+            OcrEngine::TryCreateFromUserProfileLanguages()
+                .map_err(|e| format!("无法创建用户默认语言 of OcrEngine: {}", e))?
+        };
+
+        // 异步识别并在当前后台执行线程中同步等待结果 (Rhai 执行器运行在 thread 中)
+        let ocr_result = engine.RecognizeAsync(&software_bitmap)
+            .map_err(|e| format!("发起 OCR 识别任务失败: {}", e))?
+            .get()
+            .map_err(|e| format!("等待 OCR 结果超时或出错: {}", e))?;
+
+        // 7. 解析识别文本，拼接所有文本行
+        let mut text = String::new();
+        for line in ocr_result.Lines().map_err(|e| format!("解析 OCR 行失败: {}", e))? {
+            let line_text = line.Text().map_err(|e| format!("读取 OCR 文本失败: {}", e))?;
+            text.push_str(&line_text.to_string());
+        }
+        text
     };
-
-    // 异步识别并在当前后台执行线程中同步等待结果 (Rhai 执行器运行在 thread 中)
-    let ocr_result = engine.RecognizeAsync(&software_bitmap)
-        .map_err(|e| format!("发起 OCR 识别任务失败: {}", e))?
-        .get()
-        .map_err(|e| format!("等待 OCR 结果超时或出错: {}", e))?;
-
-    // 7. 解析识别文本，拼接所有文本行，并过滤空白符
-    let mut recognized_text = String::new();
-    for line in ocr_result.Lines().map_err(|e| format!("解析 OCR 行失败: {}", e))? {
-        let line_text = line.Text().map_err(|e| format!("读取 OCR 文本失败: {}", e))?;
-        recognized_text.push_str(&line_text.to_string());
-    }
 
     // 过滤掉所有空格、换行、制表符等空白字符，输出干净统一的文案以方便做包含匹配
     let clean_text: String = recognized_text.chars().filter(|c| !c.is_whitespace()).collect();
     Ok(clean_text)
 }
+

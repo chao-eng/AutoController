@@ -14,6 +14,8 @@ export const useConfigStore = defineStore('config', () => {
     ocr_region: null,
     ocr_regions: [],
     notification_channels: [],
+    ocr_engine: 'winocr',
+    paddleocr_url: 'http://127.0.0.1:8050/ocr',
   })
 
   const loading = ref(false)

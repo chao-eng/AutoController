@@ -43,6 +43,14 @@ pub struct NotificationChannel {
     pub config: ChannelConfig,
 }
 
+fn default_ocr_engine() -> String {
+    "winocr".to_string()
+}
+
+fn default_paddleocr_url() -> String {
+    "http://127.0.0.1:8050/ocr".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub devices: Vec<DeviceConfig>,
@@ -56,6 +64,10 @@ pub struct AppConfig {
     pub ocr_regions: Vec<OcrRegion>,
     #[serde(default)]
     pub notification_channels: Vec<NotificationChannel>,
+    #[serde(default = "default_ocr_engine")]
+    pub ocr_engine: String,
+    #[serde(default = "default_paddleocr_url")]
+    pub paddleocr_url: String,
 }
 
 impl Default for AppConfig {
@@ -70,9 +82,12 @@ impl Default for AppConfig {
             ocr_region: None,
             ocr_regions: Vec::new(),
             notification_channels: Vec::new(),
+            ocr_engine: default_ocr_engine(),
+            paddleocr_url: default_paddleocr_url(),
         }
     }
 }
+
 
 
 #[derive(Clone)]
