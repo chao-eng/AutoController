@@ -4,7 +4,7 @@ import { useScriptStore } from '../stores/script'
 import { useMacroStore } from '../stores/macro'
 import { useUIStore } from '../stores/ui'
 import { useConfigStore } from '../stores/config'
-import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link } from '@lucide/vue'
+import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link, BookOpen, ChevronLeft, ChevronRight } from '@lucide/vue'
 import CodeEditor from '../components/script/CodeEditor.vue'
 
 const store = useScriptStore()
@@ -50,6 +50,30 @@ const tooltipText = ref('')
 const tooltipX = ref(0)
 const tooltipY = ref(0)
 
+// API参考栏折叠状态
+let collapsedDefault = false
+try {
+  collapsedDefault = localStorage.getItem('api_panel_collapsed') === 'true'
+} catch (e) {
+  console.warn('Unable to access localStorage:', e)
+}
+const apiPanelCollapsed = ref(collapsedDefault)
+
+function toggleApiPanel() {
+  apiPanelCollapsed.value = !apiPanelCollapsed.value
+  try {
+    localStorage.setItem('api_panel_collapsed', String(apiPanelCollapsed.value))
+  } catch (e) {
+    console.warn('Unable to write to localStorage:', e)
+  }
+}
+
+function handleApiPanelClick() {
+  if (apiPanelCollapsed.value) {
+    toggleApiPanel()
+  }
+}
+
 function showTooltip(e: MouseEvent, text: string) {
   tooltipText.value = text
   tooltipX.value = e.clientX + 12
@@ -66,13 +90,22 @@ function hideTooltip() {
   tooltipVisible.value = false
 }
 
+function handleKeyDown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault()
+    saveScript()
+  }
+}
+
 onMounted(async () => {
   store.fetchScripts()
   configStore.fetchConfig()
+  window.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
   if (statusTimer) clearTimeout(statusTimer)
+  window.removeEventListener('keydown', handleKeyDown)
 })
 
 function clearStatusAfterDelay() {
@@ -247,7 +280,7 @@ function handleDragEnter(index: number, event: DragEvent) {
   }
 }
 
-function handleDragOver(index: number, event: DragEvent) {
+function handleDragOver(_index: number, event: DragEvent) {
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = 'move'
   }
@@ -418,100 +451,113 @@ function saveScriptOrder(orderedScripts: any[]) {
       </div>
 
       <div class="editor-panel">
-        <CodeEditor v-model="editorCode" :activeLine="store.activeLine" />
+        <CodeEditor v-model="editorCode" :activeLine="store.activeLine" @save="saveScript" />
       </div>
 
-      <div class="api-panel">
-        <h4>API参考</h4>
-        <div class="api-section">
-          <h5>指定默认手柄 (首选)</h5>
-          <code>set_default_device(0);</code>
-          <code>// 在脚本最上方指定默认手柄后</code>
-          <code>// 下面所有函数均可省略手柄编号！</code>
+      <div class="api-panel" :class="{ 'collapsed': apiPanelCollapsed }">
+        <div class="api-header" @click="handleApiPanelClick">
+          <div class="api-title-container">
+            <BookOpen :size="14" />
+            <h4 v-if="!apiPanelCollapsed" class="api-title">API参考</h4>
+            <span v-else class="api-title-vertical">API参考</span>
+          </div>
+          <button class="collapse-icon-btn" @click.stop="toggleApiPanel" :title="apiPanelCollapsed ? '展开API参考' : '折叠API参考'">
+            <ChevronRight :size="14" v-if="!apiPanelCollapsed" />
+            <ChevronLeft :size="14" v-else />
+          </button>
         </div>
-        <div class="api-section">
-          <h5>按键操作</h5>
-          <code>press("A"); // 默认手柄</code>
-          <code>press(0, "A"); // 指定手柄</code>
-          <code>release("A");</code>
-          <code>按键: A B X Y LB RB LT RT</code>
-          <code>BACK START GUIDE LS RS</code>
-          <code>UP DOWN LEFT RIGHT</code>
-        </div>
-        <div class="api-section">
-          <h5>摇杆 (-1.0 ~ 1.0)</h5>
-          <code>set_thumb(axis, val);</code>
-          <code>set_thumb(0, axis, val);</code>
-          <code>set_thumb("LeftX", 1.0);</code>
-          <code>axis: LeftX LeftY RightX RightY</code>
-        </div>
-        <div class="api-section">
-          <h5>扳机 (0.0 ~ 1.0)</h5>
-          <code>set_trigger(side, val);</code>
-          <code>set_trigger(0, side, val);</code>
-          <code>set_trigger("Left", 0.5);</code>
-          <code>side: Left Right</code>
-        </div>
-        <div class="api-section">
-          <h5>OCR 屏幕文本识别</h5>
-          <code>ocr() // 默认标定区 #1 识别</code>
-          <code>ocr(index) // 读取标定区序号并识别</code>
-          <code>ocr(x, y, w, h) // 指定屏幕区域识别</code>
-          <code>// 亚像素 ClearType 级别高清对齐</code>
-          <code>// 深色模式智能自适应反色</code>
-          <code>// 自动过滤空格/换行，方便字符判定</code>
-        </div>
-        <div class="api-section">
-          <h5>字符串模糊判断与匹配</h5>
-          <code>let text = ocr(1);</code>
-          <code>text.contains("确定") // 模糊匹配</code>
-          <code>text.is_empty() // 是否为空字串</code>
-          <code>text == "开始游戏" // 精确相等比较</code>
-          <code>text.len // 获取识别字数 (属性)</code>
-          <code>log("结果: " + text); // 拼接输出</code>
-        </div>
-        <div class="api-section">
-          <h5>延时与日志</h5>
-          <code>sleep(ms);</code>
-          <code>log("message");</code>
-        </div>
-        <div class="api-section">
-          <h5>变量与运算</h5>
-          <code>let x = 10;</code>
-          <code>let name = "hello";</code>
-          <code>let flag = true;</code>
-          <code>+ - * / % 比较运算</code>
-          <code>== != &lt; &gt; &lt;= &gt;=</code>
-        </div>
-        <div class="api-section">
-          <h5>条件判断</h5>
-          <code>if x &gt; 5 { ... }</code>
-          <code>if x &gt; 5 { ... }</code>
-          <code>else { ... }</code>
-          <code>if x == 1 { ... }</code>
-          <code>else if x == 2 { ... }</code>
-        </div>
-        <div class="api-section">
-          <h5>循环</h5>
-          <code>while flag { ... }</code>
-          <code>loop { ... break; }</code>
-          <code>for i in 0..10 { ... }</code>
-          <code>break / continue</code>
-        </div>
-        <div class="api-section">
-          <h5>函数</h5>
-          <code>fn add(a, b) {</code>
-          <code>  return a + b;</code>
-          <code>}</code>
-          <code>add(1, 2)</code>
-        </div>
-        <div class="api-section">
-          <h5>数组与对象</h5>
-          <code>let arr = [1, 2, 3];</code>
-          <code>arr[0] // 访问</code>
-          <code>arr.push(4);</code>
-          <code>let obj = #{a: 1};</code>
-          <code>obj.a // 访问</code>
+        <div class="api-content" v-show="!apiPanelCollapsed">
+          <div class="api-section">
+            <h5>指定默认手柄 (首选)</h5>
+            <code>set_default_device(0);</code>
+            <code>// 在脚本最上方指定默认手柄后</code>
+            <code>// 下面所有函数均可省略手柄编号！</code>
+          </div>
+          <div class="api-section">
+            <h5>按键操作</h5>
+            <code>press("A"); // 默认手柄</code>
+            <code>press(0, "A"); // 指定手柄</code>
+            <code>release("A");</code>
+            <code>按键: A B X Y LB RB LT RT</code>
+            <code>BACK START GUIDE LS RS</code>
+            <code>UP DOWN LEFT RIGHT</code>
+          </div>
+          <div class="api-section">
+            <h5>摇杆 (-1.0 ~ 1.0)</h5>
+            <code>set_thumb(axis, val);</code>
+            <code>set_thumb(0, axis, val);</code>
+            <code>set_thumb("LeftX", 1.0);</code>
+            <code>axis: LeftX LeftY RightX RightY</code>
+          </div>
+          <div class="api-section">
+            <h5>扳机 (0.0 ~ 1.0)</h5>
+            <code>set_trigger(side, val);</code>
+            <code>set_trigger(0, side, val);</code>
+            <code>set_trigger("Left", 0.5);</code>
+            <code>side: Left Right</code>
+          </div>
+          <div class="api-section">
+            <h5>OCR 屏幕文本识别</h5>
+            <code>ocr() // 默认标定区 #1 识别</code>
+            <code>ocr(index) // 读取标定区序号并识别</code>
+            <code>ocr(x, y, w, h) // 指定屏幕区域识别</code>
+            <code>// 亚像素 ClearType 级别高清对齐</code>
+            <code>// 深色模式智能自适应反色</code>
+            <code>// 自动过滤空格/换行，方便字符判定</code>
+          </div>
+          <div class="api-section">
+            <h5>字符串模糊判断与匹配</h5>
+            <code>let text = ocr(1);</code>
+            <code>text.contains("确定") // 模糊匹配</code>
+            <code>text.is_empty() // 是否为空字串</code>
+            <code>text == "开始游戏" // 精确相等比较</code>
+            <code>text.len // 获取识别字数 (属性)</code>
+            <code>text.to_int() // 字符串转为整数</code>
+            <code>log("结果: " + text); // 拼接输出</code>
+          </div>
+          <div class="api-section">
+            <h5>延时与日志</h5>
+            <code>sleep(ms);</code>
+            <code>log("message");</code>
+          </div>
+          <div class="api-section">
+            <h5>变量与运算</h5>
+            <code>let x = 10;</code>
+            <code>let name = "hello";</code>
+            <code>let flag = true;</code>
+            <code>+ - * / % 比较运算</code>
+            <code>== != &lt; &gt; &lt;= &gt;=</code>
+          </div>
+          <div class="api-section">
+            <h5>条件判断</h5>
+            <code>if x &gt; 5 { ... }</code>
+            <code>if x &gt; 5 { ... }</code>
+            <code>else { ... }</code>
+            <code>if x == 1 { ... }</code>
+            <code>else if x == 2 { ... }</code>
+          </div>
+          <div class="api-section">
+            <h5>循环</h5>
+            <code>while flag { ... }</code>
+            <code>loop { ... break; }</code>
+            <code>for i in 0..10 { ... }</code>
+            <code>break / continue</code>
+          </div>
+          <div class="api-section">
+            <h5>函数</h5>
+            <code>fn add(a, b) {</code>
+            <code>  return a + b;</code>
+            <code>}</code>
+            <code>add(1, 2)</code>
+          </div>
+          <div class="api-section">
+            <h5>数组与对象</h5>
+            <code>let arr = [1, 2, 3];</code>
+            <code>arr[0] // 访问</code>
+            <code>arr.push(4);</code>
+            <code>let obj = #{a: 1};</code>
+            <code>obj.a // 访问</code>
+          </div>
         </div>
       </div>
     </div>
@@ -896,13 +942,98 @@ function saveScriptOrder(orderedScripts: any[]) {
   border-radius: var(--radius-lg);
   padding: var(--space-md);
   overflow-y: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 
-.api-panel h4 {
+.api-panel.collapsed {
+  width: 48px;
+  min-width: 48px;
+  padding: var(--space-md) var(--space-xs);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.api-panel.collapsed:hover {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-cta);
+}
+
+.api-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.api-panel.collapsed .api-header {
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: 0;
+  height: 100%;
+  justify-content: flex-start;
+}
+
+.api-title-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-text);
+}
+
+.api-panel.collapsed .api-title-container {
+  flex-direction: column;
+  margin-top: var(--space-xs);
+}
+
+.api-title {
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text);
-  margin-bottom: var(--space-md);
+  margin: 0;
+}
+
+.api-title-vertical {
+  writing-mode: vertical-lr;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-dim);
+  letter-spacing: 4px;
+  margin-top: var(--space-sm);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.collapse-icon-btn {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  opacity: 0.7;
+}
+
+.collapse-icon-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text);
+}
+
+.api-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .api-section {

@@ -215,6 +215,10 @@ impl ScriptRuntime {
             engine.set_max_string_size(100_000);
             engine.set_max_array_size(10_000);
 
+            engine.register_fn("to_int", move |s: &str| -> i64 {
+                s.trim().parse::<i64>().unwrap_or(0)
+            });
+
             let default_device = Arc::new(Mutex::new("0".to_string()));
 
             // set_default_device(device_id)

@@ -37,6 +37,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
+  (e: 'save'): void
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
@@ -230,6 +231,11 @@ onMounted(async () => {
           isUpdating = false
         }
       }
+    })
+
+    // Bind Ctrl+S command to save
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      emit('save')
     })
 
     // Observe size changes of container and layout editor
