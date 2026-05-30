@@ -31,9 +31,16 @@ const loading = ref(false)
 const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const isAdmin = ref(false)
+const appVersion = __APP_VERSION__
 
 // 显示 Defender 信任区引导指南
 const showGuide = ref(false)
+// 显示防止游戏失焦功能使用说明
+const showFeatureGuide = ref(false)
+
+// 推荐运行和警告条默认折叠状态
+const isAdminTipCollapsed = ref(true)
+const isWarningCollapsed = ref(true)
 
 // 过滤后的待注入进程列表
 const filteredProcesses = computed(() => {
@@ -140,8 +147,12 @@ onMounted(() => {
   <div class="nofocus-container">
     <!-- 头部区域 -->
     <div class="page-header">
-      <h2>防止窗口失去焦点 (No Focus Loss)</h2>
+      <h2>防止游戏/窗口失去焦点 (No Focus Loss) <span class="badge version-badge">{{ appVersion }}</span></h2>
       <div class="header-actions">
+        <button class="btn-secondary" @click="showFeatureGuide = !showFeatureGuide" :class="{ active: showFeatureGuide }">
+          <Info :size="14" />
+          <span>功能使用说明</span>
+        </button>
         <button class="btn-secondary" @click="showGuide = !showGuide" :class="{ active: showGuide }">
           <HelpCircle :size="14" />
           <span>杀软信任指引</span>
@@ -154,36 +165,54 @@ onMounted(() => {
     </div>
 
     <!-- 管理员权限智能检测与推荐提示栏 -->
-    <div v-if="!isAdmin" class="admin-tip-banner warning-admin">
+    <div v-if="!isAdmin" class="admin-tip-banner warning-admin" :class="{ 'collapsed': isAdminTipCollapsed }">
       <div class="admin-tip-title">
         <ShieldAlert :size="16" />
-        <span>推荐以管理员权限运行 (Administrator Privileges Recommended)</span>
+        <span class="title-text">推荐以管理员权限运行 (Administrator Privileges Recommended)</span>
+        <span v-if="isAdminTipCollapsed" class="collapsed-summary">：未以管理员权限启动，注入高权限游戏可能会失败。</span>
+        <button class="btn-text-toggle" @click="isAdminTipCollapsed = !isAdminTipCollapsed">
+          {{ isAdminTipCollapsed ? '展开详情' : '收起' }}
+        </button>
       </div>
-      <div class="admin-tip-content">
-        当前软件<strong>未以管理员身份运行</strong>。由于“防止窗口失焦”功能需要对目标游戏/程序进行跨进程注入，若目标游戏或软件是以管理员权限启动的（例如大部分大型3D游戏或Steam/Wegame平台下的游戏），普通权限的 AutoController 将会因系统权限不足（注入错误代码 102 或卸载错误代码 123）导致操作失败。<strong>强烈建议您右键本程序，选择「以管理员身份运行」重新启动。</strong>
-      </div>
+      <Transition name="slide">
+        <div v-if="!isAdminTipCollapsed" class="admin-tip-content">
+          当前软件<strong>未以管理员身份运行</strong>。由于“防止窗口失焦”功能需要对目标游戏/程序进行跨进程注入，若目标游戏或软件是以管理员权限启动的（例如大部分大型3D游戏或Steam/Wegame平台下的游戏），普通权限的 AutoController 将会因系统权限不足（注入错误代码 102 或卸载错误代码 123）导致操作失败。<strong>强烈建议您右键本程序，选择「以管理员身份运行」重新启动。</strong>
+        </div>
+      </Transition>
     </div>
-    <div v-else class="admin-tip-banner success-admin">
+    <div v-else class="admin-tip-banner success-admin" :class="{ 'collapsed': isAdminTipCollapsed }">
       <div class="admin-tip-title">
         <ShieldCheck :size="16" />
-        <span>已以管理员权限运行 (Running with Administrator Privileges)</span>
+        <span class="title-text">已以管理员权限运行 (Running with Administrator Privileges)</span>
+        <span v-if="isAdminTipCollapsed" class="collapsed-summary">：已具备完整的系统高权限，可顺利附加注入。</span>
+        <button class="btn-text-toggle" @click="isAdminTipCollapsed = !isAdminTipCollapsed">
+          {{ isAdminTipCollapsed ? '展开详情' : '收起' }}
+        </button>
       </div>
-      <div class="admin-tip-content">
-        当前软件<strong>已成功以管理员身份运行</strong>。程序已具备完整的系统权限，可以完美支持对高权限游戏及各类窗口程序附加防止失焦 Hook 拦截。
-      </div>
+      <Transition name="slide">
+        <div v-if="!isAdminTipCollapsed" class="admin-tip-content">
+          当前软件<strong>已成功以管理员身份运行</strong>。程序已具备完整的系统权限，可以完美支持对高权限游戏及各类窗口程序附加防止失焦 Hook 拦截。
+        </div>
+      </Transition>
     </div>
 
     <!-- 醒目防封警告卡片 (轻量 HSL 对齐 DeviceMonitor 风格) -->
-    <div class="warning-banner">
+    <div class="warning-banner" :class="{ 'collapsed': isWarningCollapsed }">
       <div class="warning-title">
         <AlertTriangle :size="16" />
-        <span>高危安全警告与免责声明 (Ban Risk Warning)</span>
+        <span class="title-text">高危安全警告与免责声明 (Ban Risk Warning)</span>
+        <span v-if="isWarningCollapsed" class="collapsed-summary">：跨进程注入在多人网游中有封号风险，严禁在网游中使用！</span>
+        <button class="btn-text-toggle" @click="isWarningCollapsed = !isWarningCollapsed">
+          {{ isWarningCollapsed ? '展开详情' : '收起' }}
+        </button>
       </div>
-      <div class="warning-content">
-        <p>1. <strong>封号风险警告</strong>：本功能基于跨进程注入技术（DLL Injection）拦截窗口失活消息。这会被反作弊系统（如 EAC、BattlEye、Vanguard 等）视为外挂注入，<strong>在多人网络游戏或带有反作弊保护的游戏中开启此功能有极高封号风险！</strong></p>
-        <p>2. <strong>网络游戏禁用</strong>：<strong>严禁在网络联机游戏中使用此功能</strong>。仅推荐在单机游戏（例如单机挂机、防止切屏暂停/静音、双显屏辅助等）中使用。</p>
-        <p>3. <strong>免责说明</strong>：本工具为开源辅助软件，因违反规则或在网游中误用导致的任何损失（包括但不限于账号被封禁、处罚）均由使用者本人承担。</p>
-      </div>
+      <Transition name="slide">
+        <div v-if="!isWarningCollapsed" class="warning-content">
+          <p>1. <strong>封号风险警告</strong>：本功能基于跨进程注入技术（DLL Injection）拦截窗口失活消息。这会被反作弊系统（如 EAC、BattlEye、Vanguard 等）视为外挂注入，<strong>在多人网络游戏或带有反作弊保护的游戏中开启此功能有极高封号风险！</strong></p>
+          <p>2. <strong>网络游戏禁用</strong>：<strong>严禁在网络联机游戏中使用此功能</strong>。仅推荐在单机游戏（例如单机挂机、防止切屏暂停/静音、双显屏辅助等）中使用。</p>
+          <p>3. <strong>免责说明</strong>：本工具为开源辅助软件，因违反规则或在网游中误用导致的任何损失（包括但不限于账号被封禁、处罚）均由使用者本人承担。</p>
+        </div>
+      </Transition>
     </div>
 
     <!-- 消息提示栏 -->
@@ -198,6 +227,31 @@ onMounted(() => {
       <span class="message-text">{{ successMessage }}</span>
       <button class="close-msg" @click="successMessage = null">×</button>
     </div>
+
+    <!-- 防止游戏失焦功能使用说明 (平滑手风琴抽屉) -->
+    <Transition name="slide">
+      <div v-if="showFeatureGuide" class="feature-guide-panel">
+        <div class="feature-guide-header">
+          <Info :size="16" />
+          <h4>防止游戏失焦功能使用指南 (No Focus Loss Feature Guide)</h4>
+        </div>
+        <div class="feature-guide-steps">
+          <p style="margin-bottom: 8px;">
+            <strong>什么是防止游戏失焦？</strong><br />
+            当您切换到其他工作窗口或将游戏切换至后台时，许多游戏（尤其是使用 Unity、Unreal Engine 等引擎开发的游戏）会自动触发<strong>暂停、画面静止、声音变静音</strong>，或者大幅度降低后台渲染帧率（FPS）。<br />
+            本功能通过在底层将轻量级的拦截机制（<code>NoFocusLoss.dll</code>/<code>NoFocusLoss64.dll</code>）安全附加到游戏进程中，动态拦截窗口失活消息。<strong>即使您切屏、查看网页或多屏操作，游戏在后台也能保持与前台完全相同的满帧渲染、声音播放及挂机运行状态。</strong>
+          </p>
+          
+          <h5 style="margin: 12px 0 6px 0; font-size: 12px; font-weight: 700; color: var(--color-text);">使用步骤与指引：</h5>
+          <ol>
+            <li><strong>管理员身份运行（强烈推荐）</strong>：由于高级别游戏具备高系统权限，请确保以<strong>管理员身份</strong>运行 AutoController，否则注入器会因权限不足而失败。</li>
+            <li><strong>游戏必须窗口化</strong>：目标游戏需要在<strong>窗口化</strong>或<strong>无边框窗口化（Borderless）</strong>模式下运行，在独占全屏下无法发挥作用。<strong>（注意：部分游戏在修改为窗口化后，必须重启游戏才能使该渲染模式生效，建议配置后重启游戏再进行注入）</strong></li>
+            <li><strong>一键注入挂机</strong>：在左侧进程列表搜索游戏并点击<strong>「注入 Hook」</strong>，即可激活后台挂机模式！</li>
+            <li><strong>安全一键剥离</strong>：挂机结束后，可在右侧列表随时点击<strong>「安全卸载」</strong>。系统会自动干净地释放全部游戏内存占用，无痕恢复游戏默认行为。</li>
+          </ol>
+        </div>
+      </div>
+    </Transition>
 
     <!-- 杀软拦截排除配置引导 (平滑手风琴抽屉) -->
     <Transition name="slide">
@@ -866,5 +920,100 @@ onMounted(() => {
 
 .success-admin .admin-tip-content {
   color: #008f47;
+}
+
+/* 版本号徽章 */
+.version-badge {
+  font-size: 10px;
+  background: var(--color-surface-elevated);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  margin-left: var(--space-sm);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  vertical-align: middle;
+  font-weight: 500;
+}
+
+/* 防止游戏失焦功能使用说明面板 */
+.feature-guide-panel {
+  background: rgba(124, 77, 255, 0.04);
+  color: var(--color-text-muted);
+  border: 1px solid rgba(124, 77, 255, 0.15);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  flex-shrink: 0;
+}
+
+.feature-guide-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: #7c4dff;
+  margin-bottom: var(--space-sm);
+}
+
+.feature-guide-header h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7c4dff;
+}
+
+.feature-guide-steps {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.feature-guide-steps ol {
+  margin-left: 18px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+
+/* 折叠微调样式 */
+.btn-text-toggle {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 11px;
+  font-weight: bold;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+  opacity: 0.85;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-text-toggle:hover {
+  opacity: 1;
+}
+
+.collapsed-summary {
+  font-size: 12px;
+  font-weight: normal;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50%;
+  margin-left: var(--space-xs);
+}
+
+.admin-tip-banner.collapsed, .warning-banner.collapsed {
+  padding: 8px 12px;
+  gap: 0;
+  margin-bottom: var(--space-xs);
+}
+
+.title-text {
+  flex-shrink: 0;
+}
+
+.admin-tip-title, .warning-title {
+  width: 100%;
 }
 </style>

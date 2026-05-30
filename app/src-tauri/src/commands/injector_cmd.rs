@@ -26,6 +26,8 @@ pub fn check_is_admin() -> bool {
         std::process::Command::new("net")
             .arg("session")
             .creation_flags(0x08000000) // CREATE_NO_WINDOW
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
             .status()
             .map(|status| status.success())
             .unwrap_or(false)
