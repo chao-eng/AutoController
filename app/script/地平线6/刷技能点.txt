@@ -1,0 +1,315 @@
+/**
+ * 辅助函数：封装按键点击，减少冗余代码
+ */
+fn click_key(key_name, hold_time, post_sleep) {
+    press(key_name);
+    sleep(hold_time);
+    release(key_name);
+    sleep(post_sleep);
+}
+
+/**
+ * 辅助函数：检查文本中是否包含数组中的所有关键字
+ */
+fn contains_all_keywords(text_str, keywords) {
+    for kw in keywords {
+        if text_str.index_of(kw) < 0 {
+            return false;
+        }
+    }
+    return true;
+}
+
+// ==================== 页面判断逻辑优化 ====================
+
+fn is_main_menu_page(ocr_text) {
+    let text_str = `${ocr_text}`;
+    return contains_all_keywords(text_str, ["剧情", "车辆", "地平线", "在线", "创意中心", "商店" , "世界地图"]);
+}
+
+fn is_competition_page(ocr_text) {
+    let text_str = `${ocr_text}`;
+    return contains_all_keywords(text_str, ["精选", "热门", "本月最佳", "赛事"]);
+}
+
+fn is_running_page(ocr_text) {
+    let text_str = `${ocr_text}`;
+    return text_str.index_of("安娜") >= 0;
+}
+
+fn is_home_page(ocr_text) {
+    let text_str = `${ocr_text}`;
+    return contains_all_keywords(text_str, ["剧情", "购买与出售", "车辆", "可自定义车库"]);
+}
+
+fn is_garage_page(ocr_text) {
+    let text_str = `${ocr_text}`;
+    return contains_all_keywords(text_str, ["我的车辆", "前往制造商"]);
+}
+
+fn is_start_running_page(ocr_text) {
+    let text_str = `${ocr_text}`;
+    return contains_all_keywords(text_str, ["开始竞赛赛事", "难度与设置", "退出比赛"]);
+}
+
+fn is_select_running_page(ocr_text) {
+    let text_str = `${ocr_text}`;
+    return contains_all_keywords(text_str, ["单人", "合作", "玩家对战"]);
+}
+
+fn is_finish_running_page(ocr_text) {
+    let text_str = `${ocr_text}`;
+    return contains_all_keywords(text_str, ["继续", "重新开始", "观看回放影片"]);
+}
+
+/**
+ * 动态等待页面加载
+ * @param page_type_fn 页面判断的函数名
+ * @param timeout_sec 最大等待秒数
+ */
+fn wait_for_page(page_type_fn, timeout_sec) {
+    for i in 0..timeout_sec {
+        let current_text = ocr(1);
+        let is_target = false;
+        if page_type_fn == "competition" { is_target = is_competition_page(current_text); }
+        if page_type_fn == "garage"      { is_target = is_garage_page(current_text); }
+        if page_type_fn == "start_run"   { is_target = is_start_running_page(current_text); }
+        if page_type_fn == "select_run"  { is_target = is_select_running_page(current_text); }
+        if page_type_fn == "is_finish_run" { is_target = is_finish_running_page(current_text); }
+
+        if is_target {
+            return true;
+        }
+        sleep(1000); // 每秒检测一次
+    }
+    return false;
+}
+
+/**
+ * 线性控制右扳机（油门）
+ */
+fn set_throttle(value, duration) {
+    set_trigger("Right", value);
+    sleep(duration);
+}
+
+/**
+ * 从 OCR 文本中精准提取“XX技术点数可用”中的数字
+ * @param ocr_text 全量屏幕文本
+ * @return 返回提取到的整数，若未匹配到则返回 -1
+ */
+fn extract_skill_points(ocr_text) {
+    let text_str = `${ocr_text}`;
+    
+    // 1. 定位游戏里绝对唯一的汉字锚点
+    let anchor = "技术点数可用";
+    let anchor_idx = text_str.index_of(anchor);
+    
+    if anchor_idx < 0 {
+        return -1; // 没找到锚点，说明不在此页面
+    }
+    
+    // 2. 初始化逆向扫描指针：从“技术点数可用”的第一个字（即“技”）往左边开始数
+    let walk_idx = anchor_idx - 1;
+    let digits = "0123456789";
+    
+    let result_str = "";
+    let found_digits = false;
+    
+    // 3. 最多向左倒退查找 15 个字符，抓取最邻近的数字
+    for step in 0..15 {
+        if walk_idx < 0 {
+            break;
+        }
+        
+        // 每次雷打不动只截取 1 个字符（完美规避 sub_string 的参数含义争议）
+        let char_item = text_str.sub_string(walk_idx, 1);
+        
+        if digits.index_of(char_item) >= 0 {
+            // 如果遇到了数字，拼接到结果的最前面（因为是倒着找的）
+            result_str = char_item + result_str;
+            found_digits = true;
+        } else {
+            // 如果已经连续找到了数字，突然遇到了非数字（比如空格、或者汉字“箱”），说明数字截取完整了，直接退出
+            if found_digits {
+                break;
+            }
+        }
+        
+        // 指针继续向左移动
+        walk_idx = walk_idx - 1;
+    }
+    
+    // 4. 将提取出的字符串安全转换为整数
+    if result_str.len > 0 {
+        return result_str.to_int(); // 100% 精准返回 74
+    }
+    
+    return 0;
+}
+
+// ==================== 主程序 ====================
+
+fn main() {
+    log("Forza OCR 挂机自动化脚本启动中...");
+    set_default_device(0);
+
+    // 1. 状态初始化：确保退回到主菜单
+    while true {
+        let text_str = ocr(1);
+        log("当前ocr识别内容 : " + text_str);
+        
+        if is_main_menu_page(text_str) {
+            break;
+        }
+        
+        log("当前页面非主菜单页，正在尝试切换...");
+        if is_running_page(text_str) {
+            click_key("START", 83, 2000);
+        } else {
+            click_key("B", 83, 2000);
+        }
+    }
+
+    log("成功检测到主菜单页！准备开始挂机逻辑...");
+    
+    // 2. 进入车辆页面
+    log("开始执行：查询当前熟练点...");
+    click_key("RB", 100, 400);
+    let current_text = ocr(1);
+    let skill = extract_skill_points(current_text);
+    log("开始执行：当前熟练点为"+skill);
+    // ─── 动态计算循环圈数 ───
+    let LOOP_COUNT = 0;
+    if skill >= 0 {
+        LOOP_COUNT = (999 - skill) / 10;
+        // 规避极端情况下计算出负数或0圈的情况，至少跑1圈
+        if LOOP_COUNT <= 0 {
+            LOOP_COUNT = 1;
+        }
+        log("设置循环圈数为 " + LOOP_COUNT);
+    } else {
+        log("【警告】未能成功提取到熟练点数，默认设置循环圈数为 100");
+        LOOP_COUNT = 100; 
+    }
+
+    //切换到创意中心
+    for i in 0..3 {
+        click_key("RB", 100, 400);
+    }
+
+    // 3. 进入赛事页
+    sleep(1500);
+    click_key("A", 83, 2000);
+    click_key("A", 117, 1000);
+
+    // 动态等待赛事页加载（最多等 8 秒）
+    if !wait_for_page("competition", 8) {
+        log("进入赛事页失败");
+        throw "进入赛事页失败";
+    }
+    log("成功进入赛事页");
+
+    // 4. 进入我的收藏
+    log("开始执行：连续点击 RB 7次 进入我的收藏页面");
+    for i in 0..7 {
+        click_key("RB", 100, 400);
+    }
+    sleep(2000);
+
+    // 5. 进入蓝图
+    click_key("A", 83, 5000);
+    if !wait_for_page("select_run", 15) {
+        log("进入选择比赛类型页失败");
+        throw "进入选择比赛类型页失败"; 
+    }
+    click_key("A", 83, 1000);
+
+    // 6. 动态等待选择车辆页（最多等 8 秒）
+    if !wait_for_page("garage", 8) {
+        log("进入选择车辆页失败");
+        throw "进入选择车辆页失败"; 
+    }
+    log("成功进入选择车辆页");
+
+    // 7. 进入起跑准备界面（仅在第一轮需要手动推进）
+    click_key("A", 83, 1000);
+
+
+    // ==================== 核心刷图循环段 ====================
+    log("开始执行核心刷图循环，总计圈数/轮数：" + LOOP_COUNT);
+
+    for current_loop in 1..=LOOP_COUNT {
+        log("--------------------------------────────");
+        log("当前正在执行第 " + current_loop + " / " + LOOP_COUNT + " 轮挂机...");
+        log("--------------------------------────────");
+
+        // 动态等待起跑准备页 (第一轮是刚进图，后续轮数是重新开始后的加载完成)
+        // 游戏重新开始加载通常较慢，将最大等待超时提升到 30 秒，防止断连或掉帧卡住
+        if !wait_for_page("start_run", 30) {
+             log("【错误】等待进入起跑准备页超时，退出脚本。");
+             throw "进入起跑准备页失败"; 
+        }
+        log("成功进入起跑准备页，开始赛事...");
+      
+        // 8. 开始赛事
+        click_key("A", 83, 4500);
+        
+        // 9. 线性油门初始化（起步防打滑）
+        set_throttle(0.0471, 16);
+        set_throttle(0.2314, 16);
+        set_throttle(0.4039, 17);
+        set_throttle(0.5608, 17);
+        set_throttle(0.7961, 16);
+        set_throttle(0.8471, 67);
+        
+        // 直道全油门挂机阶段
+        log("开始直道挂机，尝试底层锁死油门机制...");
+        while true {
+            // 1. 无需调用包含 sleep 的 set_throttle，直接用长按形式将扳机状态强行锁死在 1.0
+            set_trigger("Right", 1.0000); 
+            
+            // 2. 让它在跑道上先跑 3 秒
+            sleep(3000); 
+            
+            //检测冲线
+            let current_text = ocr(1);
+            
+            if !is_running_page(current_text) {
+                log("检测到冲线！");
+                break; 
+            }
+        }
+        
+        // 减速/收油
+        set_throttle(0.4353, 17);
+        set_throttle(0.0941, 16);
+        set_throttle(0.0000, 0);
+        
+        // 动态等待比赛结束结算页面
+        if !wait_for_page("is_finish_run", 15) {
+             log("【错误】未检测到比赛结算结束页，退出脚本。");
+             throw "进入比赛结束页失败"; 
+        }
+        log("检测到已进入比赛结束页。");
+
+        // 判断是否是最后一轮，如果是最后一轮，则不点重新开始，直接退出
+        if current_loop == LOOP_COUNT {
+            log("🎉 已达到设定的最大循环次数，挂机任务完美结束！");
+            break;
+        }
+
+        // 点击重新开始赛事
+        log("正在为您自动点击【重新开始】赛事...");
+        click_key("X", 83, 1200); // 按下X提示重新开始
+        click_key("A", 83, 2000); // 点击A确认重新开始
+
+        log("第 " + current_loop + " 轮跑图结束，正在等待黑屏加载下一轮...");
+    }
+
+    //返回道路页
+    click_key("A", 83, 2000);
+    click_key("A", 83, 2000);
+
+    log("所有自动化脚本内容执行完毕！");
+}
