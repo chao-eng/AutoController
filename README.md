@@ -16,7 +16,9 @@
 
 ## 📝 项目概述
 
-**AutoController** 是一款专为 Windows 平台打造的高性能、专业级虚拟手柄挂机与自动化工具。它基于 **Tauri 2.0** 框架，结合 **Vue 3 (TypeScript)** 现代化前端和 **Rust** 异步后端，底层通过 **ViGEmBus** 内核驱动实现高精度、低延迟 of 硬件级 Xbox 360 手柄信号模拟。无论是长时间挂机的核心玩家，还是需要进行批量自动化测试的开发人员，AutoController 都能提供直观、强悍的解决方案。
+**AutoController** 是一款专为 Windows 平台打造的高性能、专业级虚拟手柄挂机与自动化工具。它基于 **Tauri 2.0** 框架，结合 **Vue 3 (TypeScript)** 现代化前端 and **Rust** 异步后端，底层通过 **ViGEmBus** 内核驱动实现高精度、低延迟 of 硬件级 Xbox 360 手柄信号模拟。无论是长时间挂机的核心玩家，还是需要进行批量自动化测试的开发人员，AutoController 都能提供直观、强悍 of 解决方案。
+
+> ℹ️ **提示**：关于当前版本（v0.4.0）的详细功能更新，请查看 [最新更新日志](docs/update-log.md)。
 
 ---
 
@@ -53,6 +55,12 @@
 *   **🔔 多通道智能消息通知系统**
     *   深度集成 **飞书 Webhook (Feishu)**、**Server酱 (ServerChan)**、**Server酱三代 (ServerChan3)** 及 **Telegram Bot** 消息通道。
     *   支持脚本运行成功、出错、结束时以及自定义节点进行自动化远程消息推送，挂机动态了如指掌。
+*   **👁️ 防止游戏/窗口失去焦点 (No Focus Loss)**
+    *   底层基于**跨进程 DLL 注入**与 Hook 技术拦截窗口失活消息，解决切屏/后台挂机时游戏自动暂停、静音或降帧（FPS）问题。
+    *   **物理隔离高安全注入**：将注入核心操作全部剥离至独立子进程 `injector.exe` 执行，彻底隔离敏感跨进程 Win32 API，规避主程序查杀报毒与崩溃。
+    *   **管理员权限原生检测**：前端实时检测系统特权状态并以显著色块进行提示，针对高权限游戏实现完美的一键式注入及无痕“安全卸载”剥离。
+    *   **极致单行折叠式交互**：免责声明与权限提示支持极简一键折叠，绝不占用多余的视觉操作空间。
+    *   *（本项目中防止失去焦点技术实现参考自优秀开源项目 [NoFocusLoss](https://github.com/araghon007/NoFocusLoss)）*
 
 ---
 
@@ -138,6 +146,8 @@ npm run tauri build
 
 **AutoController** is a professional-grade, high-performance virtual gamepad simulation and automation utility designed specifically for Windows. Powered by the **Tauri 2.0** framework, featuring a modern **Vue 3 (TypeScript)** frontend paired with an asynchronous **Rust** backend, it leverages the kernel-level **ViGEmBus** driver to deliver hardware-level, high-precision, and low-latency Xbox 360 gamepad emulation. Whether you are a core gamer looking for long-term AFK gaming or a developer running batch automated testing, AutoController offers an intuitive, sleek, and robust solution.
 
+> ℹ️ **Note**: For detailed features and release details on the current version (v0.4.0), check the [Latest Update Log](docs/update-log.md).
+
 ---
 
 ## ✨ Key Features
@@ -173,6 +183,12 @@ npm run tauri build
 *   **🔔 Multi-Channel Notification Dispatcher**
     *   Out-of-the-box integration with **Feishu Webhook**, **ServerChan**, **ServerChan3**, and **Telegram Bot**.
     *   Automates remote message pushes on script status changes (started, success, warning, error) or manually triggered checkpoints.
+*   **👁️ Prevent Game/Window Focus Loss (No Focus Loss)**
+    *   Leverages **cross-process DLL Injection** and Hook technology to intercept window deactivation messages, allowing games to continue rendering at full speed, playing sounds, and auto-farming even in the background.
+    *   **Sub-process Physical Isolation**: Isolates sensitive cross-process Win32 API calls within an independent background sub-process `injector.exe`, avoiding antivirus false-alarms or core shell crashes.
+    *   **Native Administrator Privilege Detection**: Evaluates privilege context and guides users (via orange warning banners) to restart under administrator mode for seamless injection and clean unloads.
+    *   **Space-Saving Collapsible Headers**: Toggles warning banners and guidelines in a single-row collapsible container to keep workspaces clean.
+    *   *(Credit for focus loss prevention goes to the open-source project [NoFocusLoss](https://github.com/araghon007/NoFocusLoss))*
 
 ---
 

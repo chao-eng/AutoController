@@ -1807,6 +1807,479 @@
     input:checked+.feishu-slider:before {
       transform: translateX(16px);
     }
+
+    /* 防止游戏失焦界面专属样式 */
+    .admin-tip-banner {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px 14px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 14px;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .admin-tip-banner.collapsed {
+      padding: 6px 12px;
+      gap: 0;
+      margin-bottom: 8px;
+    }
+
+    .admin-tip-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .admin-tip-content {
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+
+    .warning-admin {
+      background: rgba(245, 154, 35, 0.06);
+      color: #d35400;
+      border: 1px solid rgba(245, 154, 35, 0.18);
+    }
+
+    .success-admin {
+      background: rgba(16, 185, 129, 0.06);
+      color: #047857;
+      border: 1px solid rgba(16, 185, 129, 0.18);
+    }
+
+    .success-admin .admin-tip-content {
+      color: #065f46;
+    }
+
+    .warning-banner {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px 14px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 14px;
+      background: rgba(239, 68, 68, 0.06);
+      color: var(--color-error);
+      border: 1px solid rgba(239, 68, 68, 0.18);
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .warning-banner.collapsed {
+      padding: 6px 12px;
+      gap: 0;
+      margin-bottom: 8px;
+    }
+
+    .warning-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .warning-content {
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: #b91c1c;
+    }
+
+    .warning-content p {
+      margin-bottom: 3px;
+    }
+    
+    .warning-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .btn-text-toggle {
+      background: none;
+      border: none;
+      color: inherit;
+      font-size: 11px;
+      font-weight: bold;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 0;
+      margin-left: auto;
+      opacity: 0.85;
+      transition: opacity 0.1s;
+      flex-shrink: 0;
+    }
+
+    .btn-text-toggle:hover {
+      opacity: 1;
+    }
+
+    .collapsed-summary {
+      font-size: 11.5px;
+      font-weight: normal;
+      opacity: 0.85;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 50%;
+      margin-left: 6px;
+    }
+
+    .title-text {
+      flex-shrink: 0;
+    }
+
+    .version-badge {
+      font-size: 10px;
+      background: var(--color-surface-elevated);
+      color: var(--color-text-muted);
+      border: 1px solid var(--color-border);
+      margin-left: 6px;
+      padding: 1px 5px;
+      border-radius: var(--radius-sm);
+      vertical-align: middle;
+      font-weight: 500;
+    }
+
+    .feature-guide-panel {
+      background: rgba(124, 77, 255, 0.04);
+      color: var(--color-text-muted);
+      border: 1px solid rgba(124, 77, 255, 0.15);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+
+    .feature-guide-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #7c4dff;
+      margin-bottom: 8px;
+    }
+
+    .feature-guide-header h4 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: #7c4dff;
+      flex: 1;
+    }
+
+    .feature-guide-steps {
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+
+    .feature-guide-steps ol {
+      margin-left: 16px;
+      margin-top: 4px;
+      margin-bottom: 6px;
+    }
+
+    /* 杀软排除配置 */
+    .guide-panel {
+      background: rgba(59, 130, 246, 0.04);
+      color: var(--color-text-muted);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+
+    .guide-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--color-cta);
+      margin-bottom: 8px;
+    }
+
+    .guide-header h4 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-cta);
+    }
+
+    .guide-steps {
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+
+    .guide-steps ol {
+      margin-left: 16px;
+      margin-top: 4px;
+      margin-bottom: 6px;
+    }
+
+    .guide-tip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 6px;
+      color: var(--color-text-dim);
+      font-size: 10.5px;
+    }
+
+    /* 双面板 */
+    .panels-grid {
+      display: flex;
+      gap: 16px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .panel-card {
+      flex: 1;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .panel-header h3 {
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      background: var(--color-background);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-icon:hover {
+      background: var(--color-surface-elevated);
+      color: var(--color-text);
+      border-color: var(--color-text-dim);
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--color-background);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 3px 8px;
+      width: 160px;
+      transition: all 0.15s;
+    }
+
+    .search-box input {
+      border: none;
+      background: transparent;
+      font-size: 11px;
+      width: 100%;
+      color: var(--color-text);
+      outline: none;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      padding: 1px 5px;
+    }
+
+    .count-badge {
+      background: var(--color-background);
+      color: var(--color-text-muted);
+      border: 1px solid var(--color-border);
+    }
+
+    .active-badge {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--color-cta);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+    }
+
+    .process-list-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    .process-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .process-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      transition: all 0.15s;
+    }
+
+    .process-item:hover {
+      background: var(--color-surface-elevated);
+      border-color: var(--color-text-dim);
+    }
+
+    .injected-item {
+      border-left: 3px solid var(--color-cta);
+    }
+
+    .proc-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+      margin-right: 12px;
+    }
+
+    .proc-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .proc-name {
+      font-weight: 600;
+      font-size: 11.5px;
+      color: var(--color-text);
+    }
+
+    .pid-badge {
+      background: var(--color-background);
+      color: var(--color-text-muted);
+      font-family: monospace;
+      font-size: 9.5px;
+      border: 1px solid var(--color-border);
+    }
+
+    .arch-badge {
+      font-size: 9px;
+      padding: 0px 4px;
+    }
+
+    .arch-badge.x64 {
+      background: rgba(59, 130, 246, 0.08);
+      color: var(--color-cta);
+    }
+
+    .proc-title {
+      font-size: 10.5px;
+      color: var(--color-text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 280px;
+    }
+
+    .btn-inject {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(59, 130, 246, 0.08);
+      color: var(--color-cta);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      padding: 4px 8px;
+      border-radius: var(--radius-md);
+      font-size: 10.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-inject:hover {
+      background: var(--color-cta);
+      color: white;
+      border-color: var(--color-cta);
+    }
+
+    .btn-unload {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(239, 68, 68, 0.08);
+      color: var(--color-error);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      padding: 4px 8px;
+      border-radius: var(--radius-md);
+      font-size: 10.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-unload:hover {
+      background: var(--color-error);
+      color: white;
+      border-color: var(--color-error);
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      color: var(--color-text-dim);
+      text-align: center;
+    }
+
+    .empty-state p {
+      font-size: 11.5px;
+      font-weight: 500;
+      margin-top: 8px;
+      color: var(--color-text-muted);
+    }
+
+    .empty-hint {
+      font-size: 10.5px;
+      color: var(--color-text-dim);
+      margin-top: 4px;
+    }
   </style>
 </head>
 
@@ -1948,6 +2421,14 @@
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <polyline points="17 8 12 3 7 8" />
           <line x1="12" x2="12" y1="3" y2="15" />
+        </svg>
+      ),
+      EyeOff: ({ size = 18, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+          <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+          <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+          <line x1="2" x2="22" y1="2" y2="22" />
         </svg>
       )
     };
@@ -2304,6 +2785,19 @@ fn main() {
       // Notifications states
       const [notifyTestStatus, setNotifyTestStatus] = useState('idle');
 
+      // No Focus Loss States
+      const [noFocusInjectable, setNoFocusInjectable] = useState([
+        { pid: 7808, name: 'chrome.exe', window_title: '导航页 - Google Chrome', is_64bit: true },
+        { pid: 22344, name: 'WeChat.exe', window_title: '微信', is_64bit: true }
+      ]);
+      const [noFocusInjected, setNoFocusInjected] = useState([]);
+      const [noFocusSearch, setNoFocusSearch] = useState('ch');
+      const [noFocusShowFeatureGuide, setNoFocusShowFeatureGuide] = useState(false);
+      const [noFocusShowGuide, setNoFocusShowGuide] = useState(false);
+      const [noFocusAdminTipCollapsed, setNoFocusAdminTipCollapsed] = useState(true);
+      const [noFocusWarningCollapsed, setNoFocusWarningCollapsed] = useState(true);
+      const [noFocusIsAdmin, setNoFocusIsAdmin] = useState(false);
+
       // Logs state
       const [logs, setLogs] = useState([
         { time: '11:00:01', level: 'info', module: 'tauri_app', msg: 'ViGEmBus 内核模拟驱动连接成功，接口版本 v1.17。' },
@@ -2599,6 +3093,9 @@ fn main() {
                 </button>
                 <button className={`sidebar-item ${currentTab === 'notifications' ? 'active' : ''}`} onClick={() => setCurrentTab('notifications')} title="聚合通知配置">
                   <Icons.Bell size={18} />
+                </button>
+                <button className={`sidebar-item ${currentTab === 'nofocus' ? 'active' : ''}`} onClick={() => setCurrentTab('nofocus')} title="防止游戏/窗口失去焦点">
+                  <Icons.EyeOff size={18} />
                 </button>
                 <button className={`sidebar-item ${currentTab === 'logs' ? 'active' : ''}`} onClick={() => setCurrentTab('logs')} title="日志查看">
                   <Icons.ScrollText size={18} />
@@ -3332,6 +3829,249 @@ fn main() {
                   </div>
                 )}
 
+                {/* TAB 6: NO FOCUS LOSS VIEW */}
+                {currentTab === 'nofocus' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    {/* Header */}
+                    <div className="page-header">
+                      <div className="page-header-left">
+                        <h2>防止游戏/窗口失去焦点 (No Focus Loss) <span className="version-badge">v0.4.0</span></h2>
+                      </div>
+                      <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
+                        <button className={`btn btn-secondary ${noFocusShowFeatureGuide ? 'active' : ''}`} onClick={() => setNoFocusShowFeatureGuide(!noFocusShowFeatureGuide)}>
+                          <Icons.Help size={14} style={{ color: 'inherit' }} />
+                          <span>功能使用说明</span>
+                        </button>
+                        <button className={`btn btn-secondary ${noFocusShowGuide ? 'active' : ''}`} onClick={() => setNoFocusShowGuide(!noFocusShowGuide)}>
+                          <Icons.Help size={14} style={{ color: 'inherit' }} />
+                          <span>杀软信任指引</span>
+                        </button>
+                        <button className="btn btn-primary" onClick={() => {
+                          setNoFocusInjectable([
+                            { pid: 7808, name: 'chrome.exe', window_title: '导航页 - Google Chrome', is_64bit: true },
+                            { pid: 22344, name: 'WeChat.exe', window_title: '微信', is_64bit: true }
+                          ]);
+                          appendLog('info', 'injector_service', '已成功刷新当前活动窗口及进程列表。');
+                        }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                          <span>刷新进程</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Foldable Admin Tip Banner */}
+                    {!noFocusIsAdmin ? (
+                      <div className={`admin-tip-banner warning-admin ${noFocusAdminTipCollapsed ? 'collapsed' : ''}`}>
+                        <div className="admin-tip-title">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          <span className="title-text">推荐以管理员权限运行 (Administrator Privileges Recommended)</span>
+                          {noFocusAdminTipCollapsed && <span className="collapsed-summary">：未以管理员权限启动，注入高权限游戏可能会失败。</span>}
+                          <button className="btn-text-toggle" onClick={() => setNoFocusAdminTipCollapsed(!noFocusAdminTipCollapsed)}>
+                            {noFocusAdminTipCollapsed ? '展开详情' : '收起'}
+                          </button>
+                        </div>
+                        {!noFocusAdminTipCollapsed && (
+                          <div className="admin-tip-content" style={{ marginTop: 6 }}>
+                            当前软件<strong>未以管理员身份运行</strong>。由于“防止窗口失焦”功能需要对目标游戏/程序进行跨进程注入，若目标游戏或软件是以管理员权限启动的（例如大部分大型3D游戏或Steam/Wegame平台下的游戏），普通权限的 AutoController 将会因系统权限不足（注入错误代码 102 或卸载错误代码 123）导致操作失败。<strong>强烈建议您右键本程序，选择「以管理员身份运行」重新启动。</strong>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className={`admin-tip-banner success-admin ${noFocusAdminTipCollapsed ? 'collapsed' : ''}`}>
+                        <div className="admin-tip-title">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                          <span className="title-text">已以管理员权限运行 (Running with Administrator Privileges)</span>
+                          {noFocusAdminTipCollapsed && <span className="collapsed-summary">：已具备完整的系统高权限，可顺利附加注入。</span>}
+                          <button className="btn-text-toggle" onClick={() => setNoFocusAdminTipCollapsed(!noFocusAdminTipCollapsed)}>
+                            {noFocusAdminTipCollapsed ? '展开详情' : '收起'}
+                          </button>
+                        </div>
+                        {!noFocusAdminTipCollapsed && (
+                          <div className="admin-tip-content" style={{ marginTop: 6 }}>
+                            当前软件<strong>已成功以管理员身份运行</strong>。程序已具备完整的系统权限，可以完美支持对高权限游戏及各类窗口程序附加防止失焦 Hook 拦截。
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Foldable Warning Banner */}
+                    <div className={`warning-banner ${noFocusWarningCollapsed ? 'collapsed' : ''}`}>
+                      <div className="warning-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                        <span className="title-text">高危安全警告与免责声明 (Ban Risk Warning)</span>
+                        {noFocusWarningCollapsed && <span className="collapsed-summary">：跨进程注入在多人网游中有封号风险，严禁在网游中使用！</span>}
+                        <button className="btn-text-toggle" onClick={() => setNoFocusWarningCollapsed(!noFocusWarningCollapsed)}>
+                          {noFocusWarningCollapsed ? '展开详情' : '收起'}
+                        </button>
+                      </div>
+                      {!noFocusWarningCollapsed && (
+                        <div className="warning-content" style={{ marginTop: 6 }}>
+                          <p>1. <strong>封号风险警告</strong>：本功能基于跨进程注入技术（DLL Injection）拦截窗口失活消息。这会被反作弊系统（如 EAC、BattlEye、Vanguard 等）视为外挂注入，<strong>在多人网络游戏或带有反作弊保护的游戏中开启此功能有极高封号风险！</strong></p>
+                          <p>2. <strong>网络游戏禁用</strong>：<strong>严禁在网络联机游戏中使用此功能</strong>。仅推荐在单机游戏（例如单机挂机、防止切屏暂停/静音、双显屏辅助等）中使用。</p>
+                          <p>3. <strong>免责说明</strong>：本工具为开源辅助软件，因违反规则或在网游中误用导致的任何损失（包括但不限于账号被封禁、处罚）均由使用者本人承担。</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Explanatory Manual Drawer */}
+                    {noFocusShowFeatureGuide && (
+                      <div className="feature-guide-panel">
+                        <div className="feature-guide-header">
+                          <Icons.Help size={16} />
+                          <h4>防止游戏失焦功能使用指南 (No Focus Loss Feature Guide)</h4>
+                          <span className="badge version-badge">核心版本: v0.4.0</span>
+                        </div>
+                        <div className="feature-guide-steps">
+                          <p style={{ marginBottom: 8 }}>
+                            <strong>什么是防止游戏失焦？</strong><br />
+                            当您切换到其他工作窗口或将游戏切换至后台时，许多游戏（尤其是使用 Unity、Unreal Engine 等引擎开发的游戏）会自动触发<strong>暂停、画面静止、声音变静音</strong>，或者大幅度降低后台渲染帧率（FPS）。<br />
+                            本功能通过在底层将轻量级的拦截机制（<code>NoFocusLoss.dll</code>/<code>NoFocusLoss64.dll</code>）安全附加到游戏进程中，动态拦截窗口失活消息。<strong>即使您切屏、查看网页或多屏操作，游戏在后台也能保持与前台完全相同的满帧渲染、声音播放及挂机运行状态。</strong>
+                          </p>
+                          <h5 style={{ margin: '12px 0 6px 0', fontSize: 12, fontWeight: 700, color: 'var(--color-text)' }}>使用步骤与指引：</h5>
+                          <ol>
+                            <li><strong>管理员身份运行（强烈推荐）</strong>：由于高级别游戏具备高系统权限，请确保以<strong>管理员身份</strong>运行 AutoController，否则注入器会因权限不足而失败。</li>
+                            <li><strong>游戏必须窗口化</strong>：目标游戏需要在<strong>窗口化</strong>或<strong>无边框窗口化（Borderless）</strong>模式下运行，在独占全屏下无法发挥作用。<strong>（注意：部分游戏在修改为窗口化后，必须重启游戏才能使该渲染模式生效，建议配置后重启游戏再进行注入）</strong></li>
+                            <li><strong>一键注入挂机</strong>：在左侧进程列表搜索游戏并点击<strong>「注入 Hook」</strong>，即可激活后台挂机模式！</li>
+                            <li><strong>安全一键剥离</strong>：挂机结束后，可在右侧列表随时点击<strong>「安全卸载」</strong>。系统会自动干净地释放全部游戏内存占用，无痕恢复游戏默认行为。</li>
+                          </ol>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Antivirus Guide Drawer */}
+                    {noFocusShowGuide && (
+                      <div className="guide-panel">
+                        <div className="guide-header">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          <h4>Windows Defender 杀软拦截修复指引</h4>
+                        </div>
+                        <div className="guide-steps">
+                          <p>由于本功能采用<strong>“物理隔离”</strong>技术（由独立子进程 <code>injector.exe</code> 动态解密并执行注入，彻底避免主程序崩溃或被报毒），Windows Defender 或杀毒软件可能会对 <code>injector.exe</code> 进行警报或拦截。请按照以下步骤添加排除项：</p>
+                          <ol>
+                            <li>打开 Windows 的 <strong>「安全中心」</strong> ➔ <strong>「病毒和威胁防护」</strong>。</li>
+                            <li>点击 <strong>「“病毒和威胁防护”设置」</strong> 下方的 <strong>「管理设置」</strong>。</li>
+                            <li>向下滑动到 <strong>「排除项」</strong>，点击 <strong>「添加或删除排除项」</strong>。</li>
+                            <li>点击 <strong>「添加排除项」</strong> ➔ 选择 <strong>「文件」</strong>。</li>
+                            <li>定位到 AutoController 的安装目录，选中 <code>injector.exe</code> 并点击添加即可。</li>
+                          </ol>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Double Panels Layout */}
+                    <div className="panels-grid">
+                      {/* Left available panel */}
+                      <div className="panel-card">
+                        <div className="panel-header">
+                          <h3>
+                            <span>活动窗口进程 (可注入)</span>
+                            <span className="badge count-badge" style={{ marginLeft: 6 }}>
+                              {noFocusInjectable.filter(p => p.name.toLowerCase().includes(noFocusSearch.toLowerCase()) || p.window_title.toLowerCase().includes(noFocusSearch.toLowerCase())).length}
+                            </span>
+                          </h3>
+                          <div className="panel-actions">
+                            <div className="search-box">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                              <input
+                                type="text"
+                                placeholder="搜索 PID、进程..."
+                                value={noFocusSearch}
+                                onChange={(e) => setNoFocusSearch(e.target.value)}
+                              />
+                            </div>
+                            <button className="circle-icon-btn" style={{ width: 24, height: 24, padding: 0 }} onClick={() => {
+                              setNoFocusInjectable([
+                                { pid: 7808, name: 'chrome.exe', window_title: '导航页 - Google Chrome', is_64bit: true },
+                                { pid: 22344, name: 'WeChat.exe', window_title: '微信', is_64bit: true }
+                              ]);
+                            }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="process-list-container">
+                          {noFocusInjectable.filter(p => p.name.toLowerCase().includes(noFocusSearch.toLowerCase()) || p.window_title.toLowerCase().includes(noFocusSearch.toLowerCase())).length === 0 ? (
+                            <div className="empty-state">
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
+                              <p>未找到符合条件的活动窗口</p>
+                            </div>
+                          ) : (
+                            <div className="process-list">
+                              {noFocusInjectable.filter(p => p.name.toLowerCase().includes(noFocusSearch.toLowerCase()) || p.window_title.toLowerCase().includes(noFocusSearch.toLowerCase())).map(p => (
+                                <div key={p.pid} className="process-item">
+                                  <div className="proc-details">
+                                    <div className="proc-meta">
+                                      <span className="proc-name">{p.name}</span>
+                                      <span className="badge pid-badge">PID: {p.pid}</span>
+                                      <span className="badge arch-badge x64">{p.is_64bit ? '64-bit' : '32-bit'}</span>
+                                    </div>
+                                    <div className="proc-title" title={p.window_title}>窗口: {p.window_title}</div>
+                                  </div>
+                                  <button className="btn-inject" onClick={() => {
+                                    setNoFocusInjectable(noFocusInjectable.filter(item => item.pid !== p.pid));
+                                    setNoFocusInjected([...noFocusInjected, p]);
+                                    appendLog('success', 'injector_service', `成功向进程「${p.name}」(PID: ${p.pid}) 注入 NoFocusLoss 核心 Hook。`);
+                                  }}>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                    <span>注入 Hook</span>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right hooked panel */}
+                      <div className="panel-card" style={{ borderLeft: noFocusInjected.length > 0 ? '1px solid var(--color-border)' : '' }}>
+                        <div className="panel-header">
+                          <h3>
+                            <span>已附加 Hook 进程 (运行中)</span>
+                            <span className="badge count-badge active-badge" style={{ marginLeft: 6 }}>
+                              {noFocusInjected.length}
+                            </span>
+                          </h3>
+                        </div>
+
+                        <div className="process-list-container">
+                          {noFocusInjected.length === 0 ? (
+                            <div className="empty-state">
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m19 2 1 1-1 1M22.5 5.5l.5.5-.5.5M16 2.5l-.5-.5.5-.5M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10c0-1.85-.5-3.58-1.39-5.07l-.7.71A8.93 8.93 0 0 1 21 12c0 5-4 9-9 9s-9-4-9-9 4-9 9-9c1.6 0 3.12.42 4.44 1.15l.71-.71A10.05 10.05 0 0 0 12 2Zm7 13.5v-7h-1.5v7H19Z"/></svg>
+                              <p>当前无附加 Hook 状态 of 进程</p>
+                              <span className="empty-hint">在左侧列表中选择进程并点击“注入 Hook”</span>
+                            </div>
+                          ) : (
+                            <div className="process-list">
+                              {noFocusInjected.map(p => (
+                                <div key={p.pid} className="process-item injected-item">
+                                  <div className="proc-details">
+                                    <div className="proc-meta">
+                                      <span className="proc-name">{p.name}</span>
+                                      <span className="badge pid-badge">PID: {p.pid}</span>
+                                      <span className="badge arch-badge x64">{p.is_64bit ? '64-bit' : '32-bit'}</span>
+                                    </div>
+                                    <div className="proc-title" title={p.window_title}>窗口: {p.window_title}</div>
+                                  </div>
+                                  <button className="btn-unload" onClick={() => {
+                                    setNoFocusInjected(noFocusInjected.filter(item => item.pid !== p.pid));
+                                    setNoFocusInjectable([...noFocusInjectable, p]);
+                                    appendLog('info', 'injector_service', `已从进程「${p.name}」(PID: ${p.pid}) 中安全卸载 NoFocusLoss 模块。`);
+                                  }}>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" x2="12" y1="2" y2="12"/></svg>
+                                    <span>安全卸载</span>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
                 {/* TAB 6: LOGS VIEW */}
                 {currentTab === 'logs' && (
                   <div className="log-viewer-layout">
@@ -3401,7 +4141,7 @@ fn main() {
                     <span>MEM: 42 MB</span>
                   </div>
                   <div className="status-item">
-                    <span>v0.3.0</span>
+                    <span>v0.4.0</span>
                   </div>
                 </div>
               </footer>
