@@ -1,0 +1,80 @@
+/**
+* 注意：
+* 1. 当前脚本需开启  PaddleOCR 功能 ，部署教程可参考项目主页
+* 2. 当前脚本启动前需要打开 【收集簿】-》【车辆收藏】-》【1998 斯巴鲁购买页】
+* 3. 默认购买1辆车，可搭配任务功能指定循环次数
+*/
+
+/**
+ * 辅助函数：封装按键点击，减少冗余代码
+ */
+fn click_key(key_name, hold_time, post_sleep) {
+    press(key_name);
+    sleep(hold_time);
+    release(key_name);
+    sleep(post_sleep);
+}
+
+/**
+ * 辅助函数：检查文本中是否包含数组中的所有关键字
+ */
+fn contains_all_keywords(text_str, keywords) {
+    for kw in keywords {
+        if text_str.index_of(kw) < 0 {
+            return false;
+        }
+    }
+    return true;
+}
+
+fn is_buy_page(ocr_text) {
+    let text_str = `${ocr_text}`;
+    return contains_all_keywords(text_str, ["车辆收藏", "1998斯巴鲁"]);
+}
+
+fn is_confirm_page(ocr_text) {
+    let text_str = `${ocr_text}`;
+    return contains_all_keywords(text_str, ["车辆收藏","购买这辆车"]);
+}
+
+/**
+ * 动态等待页面加载
+ * @param page_type_fn 页面判断的函数名
+ * @param timeout_sec 最大等待秒数
+ */
+fn wait_for_page(page_type_fn, timeout_sec) {
+    for i in 0..timeout_sec {
+        let current_text = ocr(1);
+        let is_target = false;
+        if page_type_fn == "is_buy" { is_target = is_buy_page(current_text); }
+        if page_type_fn == "is_confirm" { is_target = is_confirm_page(current_text); }
+
+        if is_target {
+            return true;
+        }
+        sleep(1000); // 每秒检测一次
+    }
+    return false;
+}
+
+fn main() {
+    log("Forza OCR 挂机自动化脚本启动中...");
+    set_default_device(0);
+    
+    if !wait_for_page("is_buy", 8) {
+        log("进入1998 斯巴鲁购买页失败");
+        throw "进入1998 斯巴鲁购买页失败";
+    }
+
+    click_key("START", 83, 2000);
+    
+    if !wait_for_page("is_confirm", 8) {
+        log("进入1998 斯巴鲁购买确认页失败");
+        throw "进入1998 斯巴鲁购买确认页失败";
+    }
+
+    click_key("DOWN", 83, 1000);
+    click_key("A", 83, 1000);
+    click_key("A", 83, 1000);
+    click_key("A", 83, 1000);
+}

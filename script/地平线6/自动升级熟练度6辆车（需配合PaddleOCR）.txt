@@ -1,0 +1,172 @@
+/**
+ * 注意：
+ * 1. 当前脚本需开启 PaddleOCR 功能 ，部署教程可参考项目主页
+ * 2. 当前脚本启动前需要在【家】或 【嘉年华场地中】
+ * 3. 确保【收藏】的车辆为空，加点前会将该车辆加入收藏，方便删除
+ * 4. 打开【我的车辆】 筛选 【B级车】 【重复项】  排序 【最近添加】
+ * 选择 从右往左开始，整列都是全新斯巴鲁的一列 ， 默认会执行6辆车
+ */
+
+/**
+ * 辅助函数：封装按键点击，减少冗余代码
+ */
+fn click_key(key_name, hold_time, post_sleep) {
+    press(key_name);
+    sleep(hold_time);
+    release(key_name);
+    sleep(post_sleep);
+}
+
+/**
+ * 辅助函数：检查文本中是否包含数组中的所有关键字
+ */
+fn contains_all_keywords(text_str, keywords) {
+    for kw in keywords {
+        if text_str.index_of(kw) < 0 {
+            return false;
+        }
+    }
+    return true;
+}
+
+// --- 页面判断函数 ---
+fn is_car_list_page(ocr_text) { return contains_all_keywords(`${ocr_text}`, ["我的车辆", "所有车辆"]); }
+fn is_confirm_drive_page(ocr_text) { return contains_all_keywords(`${ocr_text}`, ["上车","添加至收藏"]); }
+fn is_drive_car_page(ocr_text) { return contains_all_keywords(`${ocr_text}`, ["驾驶","切换视角高度"]); }
+fn is_my_car_page(ocr_text) { return contains_all_keywords(`${ocr_text}`, ["我的车辆","升级与调校"]); }
+fn is_skill_car_page(ocr_text) { return contains_all_keywords(`${ocr_text}`, ["花费","可用点数"]); }
+
+/**
+ * 动态等待页面加载
+ * @param page_type_fn 页面判断的函数名
+ * @param timeout_sec 最大等待秒数
+ */
+fn wait_for_page(page_type_fn, timeout_sec) {
+    for i in 0..timeout_sec {
+        // 效率建议：改成区域OCR，例如 ocr(1, x1, y1, x2, y2)
+        let current_text = ocr(1); 
+        let is_target = false;
+        
+        if page_type_fn == "is_car_list"      { is_target = is_car_list_page(current_text); }
+        if page_type_fn == "is_confirm_drive" { is_target = is_confirm_drive_page(current_text); }
+        if page_type_fn == "is_drive_car"     { is_target = is_drive_car_page(current_text); }
+        if page_type_fn == "is_my_car"        { is_target = is_my_car_page(current_text); } // 【修复】原脚本遗漏了此判断
+        if page_type_fn == "is_skill_car"     { is_target = is_skill_car_page(current_text); }
+
+        if is_target {
+            return true;
+        }
+        sleep(1000); // 每秒检测一次
+    }
+    return false;
+}
+
+/**
+ * 核心刷点逻辑
+ */
+fn core() {
+    click_key("A", 83, 1000);
+    
+    if !wait_for_page("is_confirm_drive", 8) {
+        log("确认上车页失败");
+        throw "确认上车失败";
+    }
+
+    // 上车并加入收藏
+    click_key("DOWN", 83, 1000);
+    click_key("A", 83, 1000);
+    click_key("A", 83, 1000);
+    click_key("A", 83, 1000);
+
+    // 等待进入驾驶界面
+    if !wait_for_page("is_drive_car", 8) {
+        log("当前车非新车或加载超时");
+        throw "当前车非新车";
+    }
+    
+    // 按Pause/Menu键进菜单
+    click_key("B", 83, 1000); 
+
+    if !wait_for_page("is_my_car", 8) {
+        log("进入我的车辆页面失败");
+        throw "进入我的车辆页面失败";
+    }
+    
+    click_key("DOWN", 83, 1000);
+    click_key("A", 83, 1000);
+
+    // 导航到车辆熟练度（下移7次）
+    for i in 0..7 {
+        click_key("DOWN", 100, 600); // 如果经常漏按，可以把 600 调大到 800
+    }
+
+    click_key("A", 83, 1000);
+    if !wait_for_page("is_skill_car", 8) {
+        log("进入熟练度页面失败");
+        throw "进入熟练度页面失败";
+    }
+
+    // --- 开始加点（根据你的走位逻辑） ---
+    click_key("A", 83, 1000);
+    click_key("RIGHT", 83, 1000);
+    click_key("A", 83, 1000);
+    click_key("UP", 83, 1000);
+    click_key("A", 83, 1000);
+    click_key("UP", 83, 1000);
+    click_key("A", 83, 1000);
+    click_key("UP", 83, 1000);
+    click_key("A", 83, 1000);
+    click_key("LEFT", 83, 1000);
+    click_key("A", 83, 1000);
+    
+    // 返回到车辆列表
+    click_key("B", 83, 1000);
+    click_key("B", 83, 1000);
+
+    click_key("UP", 83, 1000);
+    click_key("A", 83, 1000);
+
+    // 重新筛选（防止列表刷新导致位置错乱）
+    click_key("Y", 83, 1000);
+    click_key("DOWN", 83, 1000);
+    click_key("DOWN", 83, 1000);
+    click_key("A", 83, 1000);
+
+    click_key("DOWN", 83, 1000);
+    click_key("DOWN", 83, 1000);
+    click_key("DOWN", 83, 1000);
+    click_key("A", 83, 1000);
+    click_key("B", 83, 1000);
+
+    // 重新排序
+    click_key("X", 83, 1000);
+    for i in 0..6 {
+        click_key("DOWN", 100, 600);
+    }
+    click_key("A", 83, 1000);
+}
+
+fn main() {
+    log("Forza OCR 挂机自动化脚本启动中...");
+    set_default_device(0);
+    
+    if !wait_for_page("is_car_list", 8) {
+        log("未检测到车辆列表页，请确保初始界面正确");
+        throw "进入车辆列表页失败";
+    }
+    
+    // 定义选车路径：[第一辆不移动, 第二辆向下, 第三辆向下, 第四辆向左, 第五辆向上, 第六辆向上]
+    let move_steps = ["NONE", "DOWN", "DOWN", "LEFT", "UP", "UP"];
+    
+    for i in 0..6 {
+        log(`正在处理第 ${i + 1} 辆车...`);
+        if move_steps[i] != "NONE" {
+            click_key(move_steps[i], 83, 1000);
+        }
+        core();
+    }
+
+    // 第七辆车的前置移动（原脚本末尾遗留部分）
+    click_key("LEFT", 83, 1000);
+    log("脚本运行完毕。");
+}
