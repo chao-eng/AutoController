@@ -163,7 +163,7 @@ docker run -d -p 8085:8000 --name win-paddleocr --restart always crpi-a1liy20beo
 ### 4. 软件配置与联调
 - 打开 AutoController 应用，切换至系统配置页面， **OCR 自动化配置**区域。
 - 将 OCR 引擎切换为 `PaddleOCR (HTTP API)`。
-- 在接口地址输入框中填写本地 OCR API 服务终结点：`http://127.0.0.1:8050/ocr`。
+- 在接口地址输入框中填写PaddleOCR URL 地址：`http://127.0.0.1:8050/ocr`。
 
 </details>
 
