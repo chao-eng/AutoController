@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps<{
   modelValue: number
@@ -14,23 +14,25 @@ const emit = defineEmits<{
 const maxVal = props.max || 255
 const percentage = computed(() => ((props.modelValue / maxVal) * 100).toFixed(0))
 
+const trackRef = ref<HTMLElement | null>(null)
+
 function handlePointerDown(e: PointerEvent) {
-  const el = e.currentTarget as HTMLElement
-  el.setPointerCapture(e.pointerId)
+  if (!trackRef.value) return
+  trackRef.value.setPointerCapture(e.pointerId)
   updateValue(e)
 }
 
 function updateValue(e: PointerEvent) {
-  const el = e.currentTarget as HTMLElement
-  const rect = el.getBoundingClientRect()
+  if (!trackRef.value) return
+  const rect = trackRef.value.getBoundingClientRect()
   const x = e.clientX - rect.left
   const pct = Math.max(0, Math.min(1, x / rect.width))
   emit('update:modelValue', Math.round(pct * maxVal))
 }
 
 function handlePointerMove(e: PointerEvent) {
-  const el = e.currentTarget as HTMLElement
-  if (el.hasPointerCapture(e.pointerId)) {
+  if (!trackRef.value) return
+  if (trackRef.value.hasPointerCapture(e.pointerId)) {
     updateValue(e)
   }
 }
@@ -40,6 +42,7 @@ function handlePointerMove(e: PointerEvent) {
   <div class="trigger-bar-container">
     <span v-if="label" class="trigger-label">{{ label }}</span>
     <div
+      ref="trackRef"
       class="trigger-track"
       @pointerdown="handlePointerDown"
       @pointermove="handlePointerMove"
@@ -77,6 +80,7 @@ function handlePointerMove(e: PointerEvent) {
   cursor: ew-resize;
   position: relative;
   border: 1px solid var(--color-border);
+  touch-action: none;
 }
 
 .trigger-fill {

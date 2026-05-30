@@ -686,15 +686,29 @@
       background: var(--color-background);
       border: 1px solid var(--color-border);
       border-radius: 5px;
-      overflow: hidden;
       position: relative;
-      cursor: pointer;
+      cursor: ew-resize;
     }
 
     .trigger-bar-fill {
       height: 100%;
       background: var(--color-cta);
+      border-radius: 4px;
       transition: width 0.05s ease;
+    }
+
+    .trigger-bar-knob {
+      width: 14px;
+      height: 14px;
+      background: #FFFFFF;
+      border: 2px solid var(--color-cta);
+      border-radius: 50%;
+      position: absolute;
+      top: -3px;
+      box-shadow: var(--shadow-sm);
+      transition: left 0.05s ease;
+      pointer-events: none;
+      transform: translateX(-50%);
     }
 
     /* Button section mimicking actual controller view */
@@ -2311,6 +2325,12 @@ fn main() {
       const [isDraggingL, setIsDraggingL] = useState(false);
       const [isDraggingR, setIsDraggingR] = useState(false);
 
+      // Trigger drag simulation handlers
+      const triggerRefL = useRef(null);
+      const triggerRefR = useRef(null);
+      const [isDraggingTriggerL, setIsDraggingTriggerL] = useState(false);
+      const [isDraggingTriggerR, setIsDraggingTriggerR] = useState(false);
+
       const handleStickDrag = (e, stickType) => {
         const ref = stickType === 'L' ? stickRefL : stickRefR;
         if (!ref.current) return;
@@ -2342,6 +2362,22 @@ fn main() {
         }));
       };
 
+      const handleTriggerDrag = (e, side) => {
+        const ref = side === 'L' ? triggerRefL : triggerRefR;
+        if (!ref.current) return;
+        const rect = ref.current.getBoundingClientRect();
+        let val = (e.clientX - rect.left) / rect.width;
+        val = Math.max(0.0, Math.min(1.0, val));
+
+        setDevices(prev => prev.map(d => {
+          if (d.id === selectedDeviceId) {
+            const roundedVal = parseFloat(val.toFixed(2));
+            return side === 'L' ? { ...d, lt: roundedVal } : { ...d, rt: roundedVal };
+          }
+          return d;
+        }));
+      };
+
       const startDraggingStick = (e, stickType) => {
         if (stickType === 'L') setIsDraggingL(true);
         else setIsDraggingR(true);
@@ -2352,6 +2388,8 @@ fn main() {
         const handleMouseMove = (e) => {
           if (isDraggingL) handleStickDrag(e, 'L');
           if (isDraggingR) handleStickDrag(e, 'R');
+          if (isDraggingTriggerL) handleTriggerDrag(e, 'L');
+          if (isDraggingTriggerR) handleTriggerDrag(e, 'R');
         };
         const handleMouseUp = () => {
           if (isDraggingL) {
@@ -2364,6 +2402,26 @@ fn main() {
             setDevices(prev => prev.map(d => d.id === selectedDeviceId ? { ...d, rx: 0, ry: 0 } : d));
             appendLog('debug', 'virtual_gamepad', 'R 摇杆回弹复位至 (0, 0)');
           }
+          if (isDraggingTriggerL) {
+            setIsDraggingTriggerL(false);
+            setDevices(prev => {
+              const dev = prev.find(d => d.id === selectedDeviceId);
+              if (dev) {
+                appendLog('debug', 'virtual_gamepad', `左扳机深度拉伸锁定在 ${dev.lt}`);
+              }
+              return prev;
+            });
+          }
+          if (isDraggingTriggerR) {
+            setIsDraggingTriggerR(false);
+            setDevices(prev => {
+              const dev = prev.find(d => d.id === selectedDeviceId);
+              if (dev) {
+                appendLog('debug', 'virtual_gamepad', `右扳机深度拉伸锁定在 ${dev.rt}`);
+              }
+              return prev;
+            });
+          }
         };
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp);
@@ -2371,7 +2429,7 @@ fn main() {
           window.removeEventListener('mousemove', handleMouseMove);
           window.removeEventListener('mouseup', handleMouseUp);
         };
-      }, [isDraggingL, isDraggingR]);
+      }, [isDraggingL, isDraggingR, isDraggingTriggerL, isDraggingTriggerR, selectedDeviceId]);
 
       // Controller face buttons layout flags
       const BTN_MASKS = {
@@ -2715,11 +2773,17 @@ fn main() {
                                 <span>L扳机</span>
                                 <span>{Math.round(devices.find(d => d.id === selectedDeviceId).lt * 255)}</span>
                               </div>
-                              <div className="trigger-bar-track" onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setTriggerValue('L', (e.clientX - rect.left) / rect.width);
-                              }}>
+                              <div
+                                className="trigger-bar-track"
+                                ref={triggerRefL}
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setIsDraggingTriggerL(true);
+                                  handleTriggerDrag(e, 'L');
+                                }}
+                              >
                                 <div className="trigger-bar-fill" style={{ width: `${devices.find(d => d.id === selectedDeviceId).lt * 100}%` }}></div>
+                                <div className="trigger-bar-knob" style={{ left: `${devices.find(d => d.id === selectedDeviceId).lt * 100}%` }}></div>
                               </div>
                             </div>
 
@@ -2728,15 +2792,21 @@ fn main() {
                                 <span>R扳机</span>
                                 <span>{Math.round(devices.find(d => d.id === selectedDeviceId).rt * 255)}</span>
                               </div>
-                              <div className="trigger-bar-track" onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setTriggerValue('R', (e.clientX - rect.left) / rect.width);
-                              }}>
+                              <div
+                                className="trigger-bar-track"
+                                ref={triggerRefR}
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  setIsDraggingTriggerR(true);
+                                  handleTriggerDrag(e, 'R');
+                                }}
+                              >
                                 <div className="trigger-bar-fill" style={{ width: `${devices.find(d => d.id === selectedDeviceId).rt * 100}%` }}></div>
+                                <div className="trigger-bar-knob" style={{ left: `${devices.find(d => d.id === selectedDeviceId).rt * 100}%` }}></div>
                               </div>
                             </div>
 
-                            <span style={{ fontSize: '10px', color: 'var(--color-text-dim)', lineHeight: '1.2' }}>提示: 鼠标拖拽圆盘控制摇杆，点击滑槽模拟扳机拉伸。</span>
+                            <span style={{ fontSize: '10px', color: 'var(--color-text-dim)', lineHeight: '1.2' }}>提示: 鼠标拖拽圆盘控制摇杆，点击或拖拽滑槽模拟扳机拉伸。</span>
                           </div>
 
                           {/* Controller Button Panel exact replication */}

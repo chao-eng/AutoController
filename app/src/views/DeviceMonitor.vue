@@ -128,12 +128,12 @@ const vigemSuggestion = computed(() => {
           <TriggerBar
             :modelValue="selectedDevice()!.state.left_trigger"
             label="L扳机"
-            @update:modelValue="(v) => store.setTrigger(selectedDeviceId!, 'Left', v)"
+            @update:modelValue="(v) => store.setTrigger(selectedDeviceId!, 'Left', v / 255)"
           />
           <TriggerBar
             :modelValue="selectedDevice()!.state.right_trigger"
             label="R扳机"
-            @update:modelValue="(v) => store.setTrigger(selectedDeviceId!, 'Right', v)"
+            @update:modelValue="(v) => store.setTrigger(selectedDeviceId!, 'Right', v / 255)"
           />
         </div>
         <div class="buttons-section">
