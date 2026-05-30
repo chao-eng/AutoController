@@ -8,6 +8,7 @@ import {
   CalendarClock,
   ScrollText,
   Bell,
+  EyeOff,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -19,6 +20,7 @@ const navItems = [
   { icon: Settings, label: '配置', path: '/config' },
   { icon: CalendarClock, label: '任务', path: '/scheduler' },
   { icon: Bell, label: '通知', path: '/notifications' },
+  { icon: EyeOff, label: '防失去焦点', path: '/nofocus' },
   { icon: ScrollText, label: '日志', path: '/logs' },
 ]
 

@@ -4,6 +4,15 @@ version = "0.3.0"
 description = "AutoController - 高性能游戏手柄宏录制与脚本化自动化工具"
 authors = ["AutoController Team"]
 edition = "2021"
+default-run = "autocontroller"
+
+[[bin]]
+name = "autocontroller"
+path = "src/main.rs"
+
+[[bin]]
+name = "injector"
+path = "src/injector_main.rs"
 
 [lib]
 name = "app_lib"
@@ -40,7 +49,13 @@ windows = { version = "0.58.0", features = [
     "Graphics_Imaging",
     "Storage_Streams",
     "Globalization",
-    "Foundation_Collections"
+    "Foundation_Collections",
+    "Win32_System_Threading",
+    "Win32_System_Memory",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader"
 ] }
 reqwest = { version = "0.12", features = ["json", "blocking", "multipart"] }
 

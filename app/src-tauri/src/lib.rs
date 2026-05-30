@@ -182,6 +182,9 @@ pub fn run() {
             log_cmd::log_query,
             log_cmd::log_export,
             notify::send_aggregated_notification,
+            injector_cmd::get_injectable_processes,
+            injector_cmd::inject_focus_hook,
+            injector_cmd::unload_focus_hook,
         ])
 
         .run(tauri::generate_context!())

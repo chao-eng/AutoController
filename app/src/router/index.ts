@@ -34,6 +34,11 @@ const router = createRouter({
       component: () => import('../views/NotificationConfig.vue'),
     },
     {
+      path: '/nofocus',
+      name: 'nofocus',
+      component: () => import('../views/NoFocusLoss.vue'),
+    },
+    {
       path: '/logs',
       name: 'logs',
       component: () => import('../views/LogViewer.vue'),
