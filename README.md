@@ -135,6 +135,35 @@ npm run tauri dev
 npm run tauri build
 ```
 
+---
+
+## 🐳 PaddleOCR 本地部署教程 (Docker)
+为了在脚本运行中使用更精准的 PaddleOCR 识别引擎，推荐在 Windows 上使用 Docker 容器化部署本地 OCR 高性能服务：
+
+### 1. 准备工作：启用 WSL 2
+Docker Desktop 在 Windows 上首选以 **WSL 2** 作为底层引擎。
+- 以管理员身份打开 PowerShell，运行以下命令安装 WSL：
+  ```powershell
+  wsl --install
+  ```
+- 安装完成后，请重启电脑以使配置生效。
+
+### 2. 安装 Docker Desktop
+- [前往 Docker 官方网站](https://www.docker.com/products/docker-desktop/) 下载最新的 Docker Desktop for Windows 安装包。
+- 运行安装程序，确保勾选了 **Use the WSL 2 based engine** 选项，按照指引完成安装并启动。
+
+### 3. 拉取并运行 PaddleOCR 镜像
+在 PowerShell 或 CMD 控制台中运行以下指令拉取并后台启动 OCR 服务（该镜像已发布于阿里云容器仓库，国内直连拉取速度极快）：
+```powershell
+docker run -d -p 8085:8000 --name win-paddleocr --restart always crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest
+```
+
+### 4. 软件配置与联调
+- 打开 AutoController 应用，切换至系统配置页面， **OCR 自动化配置**区域。
+- 将 OCR 引擎切换为 `PaddleOCR (HTTP API)`。
+- 在接口地址输入框中填写本地 OCR API 服务终结点：`http://127.0.0.1:8085/ocr`。
+- 点击 **测试连接**。若显示“连接成功”并返回识别测试耗时，则表明本地 PaddleOCR 高性能引擎已完美联通！
+
 </details>
 
 ---
@@ -262,5 +291,34 @@ Build a highly optimized Windows installer package:
 # Builds the app (output .msi / .exe will be stored in app/src-tauri/target/release/bundle/)
 npm run tauri build
 ```
+
+---
+
+## 🐳 PaddleOCR Local Deployment Guide (Docker)
+To utilize the PaddleOCR HTTP dual-engine system, we recommend deploying a local OCR service inside a Docker container on Windows:
+
+### 1. Prerequisites: Enable WSL 2
+Docker Desktop on Windows runs optimally using the **WSL 2** engine.
+- Open PowerShell as Administrator, and run:
+  ```powershell
+  wsl --install
+  ```
+- Restart your computer after installation to apply the changes.
+
+### 2. Install Docker Desktop
+- Visit [Docker Desktop for Windows Official Page](https://www.docker.com/products/docker-desktop/) to download the installer.
+- Run the installer, ensure that the **Use the WSL 2 based engine** option is checked, and complete the setup.
+
+### 3. Pull and Run the PaddleOCR Image
+Execute the following command in PowerShell/CMD to pull and run the OCR container in the background (hosted on Aliyun ACR with excellent bandwidth):
+```powershell
+docker run -d -p 9982:9982 --name win-paddleocr --restart always crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest
+```
+
+### 4. Connect in AutoController
+- Launch AutoController and navigate to the **OCR Configuration** tab.
+- Switch the OCR engine to `PaddleOCR (HTTP API)`.
+- Input the local OCR API endpoint: `http://127.0.0.1:9982/ocr`.
+- Click **Test Connection**. When it reports success, your high-precision OCR engine is ready for action!
 
 </details>
