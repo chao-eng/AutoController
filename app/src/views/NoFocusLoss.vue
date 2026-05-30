@@ -9,6 +9,7 @@ import {
   Zap, 
   ZapOff, 
   ShieldAlert, 
+  ShieldCheck,
   HelpCircle, 
   Info,
   CheckCircle,
@@ -29,6 +30,7 @@ const searchQuery = ref('')
 const loading = ref(false)
 const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
+const isAdmin = ref(false)
 
 // 显示 Defender 信任区引导指南
 const showGuide = ref(false)
@@ -120,8 +122,17 @@ async function unloadHook(proc: ProcessInfo) {
   }
 }
 
+async function checkAdminStatus() {
+  try {
+    isAdmin.value = await invoke<boolean>('check_is_admin')
+  } catch (err) {
+    console.error('检查管理员权限失败:', err)
+  }
+}
+
 onMounted(() => {
   fetchProcesses()
+  checkAdminStatus()
 })
 </script>
 
@@ -139,6 +150,26 @@ onMounted(() => {
           <RefreshCw :size="14" :class="{ 'spinning': loading }" />
           <span>刷新进程</span>
         </button>
+      </div>
+    </div>
+
+    <!-- 管理员权限智能检测与推荐提示栏 -->
+    <div v-if="!isAdmin" class="admin-tip-banner warning-admin">
+      <div class="admin-tip-title">
+        <ShieldAlert :size="16" />
+        <span>推荐以管理员权限运行 (Administrator Privileges Recommended)</span>
+      </div>
+      <div class="admin-tip-content">
+        当前软件<strong>未以管理员身份运行</strong>。由于“防止窗口失焦”功能需要对目标游戏/程序进行跨进程注入，若目标游戏或软件是以管理员权限启动的（例如大部分大型3D游戏或Steam/Wegame平台下的游戏），普通权限的 AutoController 将会因系统权限不足（注入错误代码 102 或卸载错误代码 123）导致操作失败。<strong>强烈建议您右键本程序，选择「以管理员身份运行」重新启动。</strong>
+      </div>
+    </div>
+    <div v-else class="admin-tip-banner success-admin">
+      <div class="admin-tip-title">
+        <ShieldCheck :size="16" />
+        <span>已以管理员权限运行 (Running with Administrator Privileges)</span>
+      </div>
+      <div class="admin-tip-content">
+        当前软件<strong>已成功以管理员身份运行</strong>。程序已具备完整的系统权限，可以完美支持对高权限游戏及各类窗口程序附加防止失焦 Hook 拦截。
       </div>
     </div>
 
@@ -794,5 +825,46 @@ onMounted(() => {
 .slide-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+/* 管理员权限提示栏 */
+.admin-tip-banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-md);
+  flex-shrink: 0;
+  transition: all var(--transition-normal);
+}
+
+.admin-tip-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.admin-tip-content {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.warning-admin {
+  background: rgba(245, 154, 35, 0.06);
+  color: #d35400;
+  border: 1px solid rgba(245, 154, 35, 0.18);
+}
+
+.success-admin {
+  background: rgba(0, 182, 91, 0.06);
+  color: var(--color-success);
+  border: 1px solid rgba(0, 182, 91, 0.18);
+}
+
+.success-admin .admin-tip-content {
+  color: #008f47;
 }
 </style>

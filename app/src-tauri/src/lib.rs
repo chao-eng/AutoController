@@ -185,6 +185,7 @@ pub fn run() {
             injector_cmd::get_injectable_processes,
             injector_cmd::inject_focus_hook,
             injector_cmd::unload_focus_hook,
+            injector_cmd::check_is_admin,
         ])
 
         .run(tauri::generate_context!())
