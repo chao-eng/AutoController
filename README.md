@@ -158,7 +158,7 @@ Docker Desktop 在 Windows 上首选以 **WSL 2** 作为底层引擎。
 docker run -d -p 8085:8000 --name win-paddleocr --restart always crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest
 ```
 验证：
-打开 网址 http://127.0.0.1:8050/docs#/ ，可以正确显示页面即部署成功。
+打开 网址 `http://127.0.0.1:8050/docs#/` ，可以正确显示页面即部署成功。
 
 ### 4. 软件配置与联调
 - 打开 AutoController 应用，切换至系统配置页面， **OCR 自动化配置**区域。
