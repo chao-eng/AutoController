@@ -1,0 +1,3393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>手柄自动化控制台 - 高保真交互原型</title>
+
+  <!-- React + Babel Pinned Versions -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+    integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L"
+    crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+    integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm"
+    crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+    integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y"
+    crossorigin="anonymous"></script>
+
+  <!-- Fonts -->
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap">
+
+  <style>
+    :root {
+      /* Real Project Colors mapped from ConfigPanel & DeviceMonitor */
+      --color-primary: #1F2329;
+      --color-secondary: #F5F6F7;
+      --color-cta: #3B82F6;
+      --color-cta-hover: #2563EB;
+      --color-background: #F3F4F6;
+      --color-surface: #FFFFFF;
+      --color-surface-elevated: #F9FAFB;
+      --color-text: #1f2329;
+      --color-text-muted: #646a73;
+      --color-text-dim: #8f959e;
+      --color-border: #E5E7EB;
+      --color-error: #EF4444;
+      --color-warning: #F59E0B;
+      --color-info: #3B82F6;
+      --color-success: #10B981;
+
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-code: 'Fira Code', Consolas, Monaco, monospace;
+
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+
+      --sidebar-width: 60px;
+      --header-height: 48px;
+      --statusbar-height: 28px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      background-color: #E2E8F0;
+      font-family: var(--font-body);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Tauri Native Desktop Window Container mock */
+    .app-window {
+      width: 1280px;
+      height: 800px;
+      background: var(--color-background);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--color-border);
+      position: relative;
+    }
+
+    /* Tauri Title Bar matching screenshots */
+    .tauri-titlebar {
+      height: var(--header-height);
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 16px;
+      user-select: none;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .tauri-titlebar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-container {
+      width: 24px;
+      height: 24px;
+      background: #111827;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+    }
+
+    .logo-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text);
+      letter-spacing: -0.1px;
+    }
+
+    .tauri-titlebar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .titlebar-icon-btn {
+      color: var(--color-text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s;
+    }
+
+    .titlebar-icon-btn:hover {
+      color: var(--color-text);
+    }
+
+    /* Window Controls (Tauri mock) */
+    .window-controls {
+      display: flex;
+      align-items: center;
+      margin-left: 8px;
+    }
+
+    .win-control-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .win-control-btn:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--color-text);
+    }
+
+    .win-control-btn.close:hover {
+      background: var(--color-error);
+      color: #FFFFFF;
+    }
+
+    /* App Core Layout */
+    .app-layout {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+      position: relative;
+    }
+
+    /* Sidebar Styling (extremely narrow) */
+    .sidebar {
+      width: var(--sidebar-width);
+      height: 100%;
+      background: #FFFFFF;
+      border-right: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      align-items: center;
+    }
+
+    .sidebar-item {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-lg);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+      background: transparent;
+      outline: none;
+      position: relative;
+    }
+
+    .sidebar-item:hover {
+      color: var(--color-text);
+      background: var(--color-surface-elevated);
+    }
+
+    .sidebar-item.active {
+      color: var(--color-cta);
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    /* App Main Panel */
+    .app-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--color-background);
+      position: relative;
+    }
+
+    /* Main Page Content Wrapper */
+    .page-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-shrink: 0;
+    }
+
+    .page-header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .page-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--color-text);
+      letter-spacing: -0.3px;
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    /* Bottom Status Bar */
+    .status-bar {
+      height: var(--statusbar-height);
+      background: #FFFFFF;
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 11px;
+      color: var(--color-text-muted);
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .status-items {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-indicator-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-success);
+    }
+
+    /* Alert Banner (Green ViGEm banner) */
+    .alert-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      margin-bottom: 20px;
+      flex-shrink: 0;
+      background: rgba(16, 185, 129, 0.08);
+      color: #047857;
+      border: 1px solid rgba(16, 185, 129, 0.15);
+    }
+
+    /* Common Button Styles mapping exact project style */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: none;
+      outline: none;
+    }
+
+    .btn-primary {
+      background: var(--color-cta);
+      color: #FFFFFF;
+    }
+
+    .btn-primary:hover {
+      background: var(--color-cta-hover);
+    }
+
+    .btn-secondary {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-surface-elevated);
+    }
+
+    .btn-danger {
+      background: var(--color-error);
+      color: #FFFFFF;
+    }
+
+    .btn-danger:hover {
+      background: #DC2626;
+    }
+
+    .btn-record {
+      background: var(--color-error);
+      color: #FFFFFF;
+    }
+
+    .btn-record:hover {
+      background: #DC2626;
+    }
+
+    .record-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      display: inline-block;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 0.3;
+      }
+
+      50% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0.3;
+      }
+    }
+
+    /* Device Card Grid Layout */
+    .devices-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-shrink: 0;
+    }
+
+    /* Exact Device Card design from Screenshot 1 */
+    .device-card {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 140px;
+    }
+
+    .device-card:hover {
+      border-color: var(--color-text-dim);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .device-card.selected {
+      border-color: var(--color-cta);
+      box-shadow: 0 0 0 1px var(--color-cta);
+    }
+
+    .device-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .device-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-text);
+      line-height: 1.2;
+    }
+
+    .device-title span {
+      display: block;
+    }
+
+    .device-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Orange Tag */
+    .index-tag {
+      background: #FEF3C7;
+      color: #D97706;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1.5px 5px;
+      border-radius: 4px;
+    }
+
+    .card-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #9CA3AF;
+    }
+
+    .card-status-dot.active {
+      background: var(--color-success);
+    }
+
+    .card-icon-btn {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .card-icon-btn:hover {
+      background: var(--color-background);
+      color: var(--color-text);
+    }
+
+    .card-icon-btn.delete:hover {
+      background: rgba(239, 68, 68, 0.08);
+      color: var(--color-error);
+    }
+
+    /* Device Card Info Text */
+    .device-info-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 11.5px;
+      color: var(--color-text-dim);
+    }
+
+    .device-info-line {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Add Device Card (Dashed) */
+    .add-device-card {
+      background: transparent;
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--color-text-dim);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 140px;
+    }
+
+    .add-device-card:hover {
+      border-color: var(--color-cta);
+      color: var(--color-cta);
+      background: #FFFFFF;
+    }
+
+    /* Downward Control Panel matching DeviceMonitor.vue */
+    .control-panel {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(12px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--color-border);
+      padding-bottom: 12px;
+    }
+
+    .control-header h3 {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .offline-badge {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--color-text-dim);
+      background: var(--color-background);
+      padding: 2.5px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+    }
+
+    .control-grid {
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    /* Stick visualizer */
+    .stick-section {
+      display: flex;
+      gap: 24px;
+    }
+
+    .stick-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stick-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+    }
+
+    .stick-visualizer-box {
+      width: 100px;
+      height: 100px;
+      border: 1.5px solid var(--color-border);
+      border-radius: 50%;
+      position: relative;
+      background: var(--color-surface-elevated);
+      cursor: crosshair;
+      user-select: none;
+    }
+
+    .stick-axis-line {
+      position: absolute;
+      background: var(--color-border);
+    }
+
+    .stick-axis-h {
+      top: 50%;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+    }
+
+    .stick-axis-v {
+      left: 50%;
+      top: 10%;
+      bottom: 10%;
+      width: 1px;
+    }
+
+    .stick-knob {
+      width: 22px;
+      height: 22px;
+      background: var(--color-primary);
+      border: 2px solid #FFFFFF;
+      border-radius: 50%;
+      position: absolute;
+      top: calc(50% - 11px);
+      left: calc(50% - 11px);
+      box-shadow: var(--shadow-md);
+      transition: transform 0.05s ease;
+      pointer-events: none;
+    }
+
+    /* Trigger Slider */
+    .trigger-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 160px;
+    }
+
+    .trigger-bar-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .trigger-bar-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .trigger-bar-track {
+      height: 10px;
+      background: var(--color-background);
+      border: 1px solid var(--color-border);
+      border-radius: 5px;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .trigger-bar-fill {
+      height: 100%;
+      background: var(--color-cta);
+      transition: width 0.05s ease;
+    }
+
+    /* Button section mimicking actual controller view */
+    .buttons-section {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .controller-layout-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--color-surface-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: 20px;
+      padding: 10px 20px 16px;
+      min-width: 330px;
+      user-select: none;
+    }
+
+    .shoulder-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 4px;
+    }
+
+    .main-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .left-side {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      min-width: 90px;
+    }
+
+    .center-side {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      padding-top: 24px;
+    }
+
+    .right-side {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      min-width: 90px;
+    }
+
+    .dpad-cluster,
+    .abxy-cluster {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .dpad-row,
+    .abxy-row {
+      display: flex;
+      gap: 2px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .dpad-center-spacer,
+    .abxy-center-spacer {
+      width: 26px;
+      height: 26px;
+    }
+
+    .game-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: #FFFFFF;
+      color: var(--color-text-dim);
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      outline: none;
+    }
+
+    .game-btn:hover {
+      background: var(--color-background);
+      color: var(--color-text);
+    }
+
+    .game-btn.pressed {
+      border-color: var(--color-cta);
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--color-cta);
+    }
+
+    .game-btn.shoulder-btn {
+      width: 44px;
+      height: 20px;
+      font-size: 8.5px;
+      border-radius: var(--radius-sm) var(--radius-sm) var(--radius-md) var(--radius-md);
+    }
+
+    .game-btn.dpad-btn {
+      width: 26px;
+      height: 26px;
+      font-size: 12px;
+      border-radius: 4px;
+    }
+
+    .game-btn.stick-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      font-size: 9.5px;
+      border: 2px solid var(--color-border);
+    }
+
+    .game-btn.guide-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      font-size: 13px;
+      border: 2px solid var(--color-border);
+    }
+
+    .game-btn.misc-btn {
+      width: 34px;
+      height: 18px;
+      font-size: 7px;
+      border-radius: 10px;
+      letter-spacing: 0.2px;
+    }
+
+    /* Colored highlights matching vue */
+    .game-btn.a-btn.pressed {
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--color-success);
+      border-color: var(--color-success);
+    }
+
+    .game-btn.b-btn.pressed {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--color-error);
+      border-color: var(--color-error);
+    }
+
+    .game-btn.x-btn.pressed {
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--color-cta);
+      border-color: var(--color-cta);
+    }
+
+    .game-btn.y-btn.pressed {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--color-warning);
+      border-color: var(--color-warning);
+    }
+
+    /* Script Editor layout */
+    .editor-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .script-sidebar {
+      width: 180px;
+      background: var(--color-surface-elevated);
+      border-right: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .script-search {
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .script-search:focus {
+      border-color: var(--color-cta);
+    }
+
+    .script-pills {
+      display: flex;
+      gap: 2px;
+      background: var(--color-background);
+      padding: 2px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+
+    .script-pill {
+      flex: 1;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 4px 0;
+      text-align: center;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .script-pill.active {
+      background: #FFFFFF;
+      color: var(--color-text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .script-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow-y: auto;
+    }
+
+    .script-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 3px solid transparent;
+    }
+
+    .script-item:hover {
+      background: var(--color-background);
+      color: var(--color-text);
+    }
+
+    .script-item.active {
+      background: rgba(16, 185, 129, 0.08);
+      color: var(--color-text);
+      border-left-color: var(--color-success);
+      font-weight: 500;
+    }
+
+    .editor-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: #FFFFFF;
+    }
+
+    .editor-toolbar {
+      height: 38px;
+      background: var(--color-surface-elevated);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 11px;
+      color: var(--color-text-muted);
+      font-family: var(--font-code);
+      flex-shrink: 0;
+    }
+
+    .editor-textarea-container {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .editor-linenumbers {
+      width: 40px;
+      background: var(--color-surface-elevated);
+      border-right: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      padding: 16px 8px 16px 0;
+      font-family: var(--font-code);
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--color-cta);
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .editor-textarea {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 16px;
+      font-family: var(--font-code);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #333333;
+      background: #FAFAFA;
+      overflow-y: auto;
+    }
+
+    /* API Reference matching screenshots */
+    .api-reference-panel {
+      width: 250px;
+      border-left: 1px solid var(--color-border);
+      background: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .api-header {
+      padding: 12px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .api-content {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .api-card {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .api-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-cta);
+    }
+
+    .api-code-block {
+      background: var(--color-background);
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-family: var(--font-code);
+      font-size: 10.5px;
+      color: #D32F2F;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .api-desc {
+      font-size: 10px;
+      color: var(--color-text-muted);
+      line-height: 1.4;
+      white-space: pre-line;
+    }
+
+    /* Config panel cards */
+    .config-sections {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 800px;
+    }
+
+    .config-card {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .config-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-text);
+      border-left: 3px solid var(--color-cta);
+      padding-left: 8px;
+      margin-bottom: 16px;
+    }
+
+    .config-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--color-background);
+    }
+
+    .config-row:last-child {
+      border-bottom: none;
+    }
+
+    .config-row-label {
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+
+    .config-input-select {
+      padding: 4px 8px;
+      font-size: 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      background: var(--color-surface-elevated);
+      cursor: pointer;
+    }
+
+    .config-input-text {
+      padding: 6px 10px;
+      font-size: 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      outline: none;
+      width: 260px;
+      background: var(--color-surface-elevated);
+    }
+
+    /* OCR regions layout */
+    .ocr-config-card {
+      background: var(--color-surface-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .ocr-status-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ocr-label-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ocr-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .ocr-status-badge {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--color-success);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ocr-coords {
+      display: flex;
+      gap: 4px;
+    }
+
+    .coord-tag {
+      background: #F3F4F6;
+      border: 1px solid #E5E7EB;
+      color: var(--color-text-muted);
+      font-size: 10px;
+      font-family: var(--font-code);
+      padding: 1.5px 5px;
+      border-radius: 4px;
+    }
+
+    .ocr-hint-code {
+      font-size: 11px;
+      color: var(--color-text-dim);
+    }
+
+    .ocr-hint-code code {
+      font-family: var(--font-code);
+      color: var(--color-cta);
+      font-weight: 600;
+    }
+
+    .ocr-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .ocr-text-btn {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .ocr-text-btn:hover {
+      color: var(--color-error);
+    }
+
+    .ocr-recal-btn {
+      font-size: 12px;
+      background: none;
+      border: 1px solid var(--color-border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--color-text);
+      transition: all 0.15s;
+    }
+
+    .ocr-recal-btn:hover {
+      border-color: var(--color-cta);
+      color: var(--color-cta);
+    }
+
+    /* Scheduler Cards */
+    .scheduler-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Exact Task Schedule Card design from Screenshot 4 */
+    .schedule-card {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .schedule-card:hover {
+      border-color: var(--color-cta);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .schedule-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .schedule-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .schedule-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    .sequence-badge {
+      font-size: 9.5px;
+      font-weight: 600;
+      background: rgba(59, 130, 246, 0.12);
+      color: var(--color-cta);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    .schedule-desc {
+      font-size: 11.5px;
+      color: var(--color-text-dim);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .schedule-chain-box {
+      margin-top: 6px;
+      padding: 6px 10px;
+      background: var(--color-background);
+      border-left: 2px solid var(--color-cta);
+      border-radius: 0 4px 4px 0;
+      max-width: 480px;
+    }
+
+    .schedule-chain-text {
+      font-size: 11.5px;
+      color: var(--color-text-muted);
+    }
+
+    .schedule-meta {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      margin-right: 24px;
+    }
+
+    .schedule-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .circle-icon-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--color-border);
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      transition: all 0.15s;
+    }
+
+    .circle-icon-btn:hover {
+      background: var(--color-background);
+      color: var(--color-text);
+      border-color: var(--color-text-muted);
+    }
+
+    .circle-icon-btn.primary {
+      background: var(--color-cta);
+      color: #FFFFFF;
+      border: none;
+    }
+
+    .circle-icon-btn.primary:hover {
+      background: var(--color-cta-hover);
+    }
+
+    .circle-icon-btn.danger:hover {
+      background: rgba(239, 68, 68, 0.08);
+      color: var(--color-error);
+      border-color: var(--color-error);
+    }
+
+    /* Global running sequence panel matching TaskScheduler.vue design */
+    .running-progress-panel {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(5, 150, 105, 0.03) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: var(--radius-lg);
+      padding: 12px 18px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+      animation: slideDown 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .progress-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .progress-panel-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #047857;
+    }
+
+    .pulse-dot-green {
+      width: 8px;
+      height: 8px;
+      background: var(--color-success);
+      border-radius: 50%;
+      animation: pulse-dot 1.5s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0% {
+        transform: scale(0.9);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scale(1.3);
+        opacity: 0.4;
+      }
+
+      100% {
+        transform: scale(0.9);
+        opacity: 1;
+      }
+    }
+
+    .btn-stop-global {
+      background: var(--color-error);
+      color: #FFFFFF;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      border: none;
+      outline: none;
+    }
+
+    .progress-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 4px;
+    }
+
+    .progress-card {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--color-text-dim);
+      margin-bottom: 4px;
+    }
+
+    .progress-bar-container {
+      height: 5px;
+      background: var(--color-background);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.2s ease;
+    }
+
+    .progress-bar-fill.task-fill {
+      background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+    }
+
+    .progress-bar-fill.step-fill {
+      background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+    }
+
+    .progress-footer {
+      font-size: 10px;
+      color: var(--color-text-dim);
+      text-align: right;
+    }
+
+    /* Notification cards */
+    .notify-card {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .notify-card:hover {
+      transform: translateY(-1px);
+      border-color: var(--color-cta);
+      box-shadow: var(--shadow-md);
+    }
+
+    .notify-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+    }
+
+    .notify-card-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .notify-badge-red {
+      font-size: 9px;
+      font-weight: 700;
+      background: rgba(239, 68, 68, 0.08);
+      color: var(--color-error);
+      border: 1px solid rgba(239, 68, 68, 0.15);
+      padding: 1.5px 5px;
+      border-radius: 4px;
+      align-self: start;
+    }
+
+    .notify-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    .notify-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .notify-field-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .notify-field-row label {
+      font-size: 10px;
+      color: var(--color-text-dim);
+    }
+
+    .notify-field-val {
+      font-family: var(--font-code);
+      font-size: 11.5px;
+      color: var(--color-text-muted);
+      background: var(--color-surface-elevated);
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      user-select: none;
+    }
+
+    .test-notification-btn {
+      width: 100%;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface-elevated);
+      color: var(--color-text);
+      font-size: 11.5px;
+      padding: 6px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .test-notification-btn:hover {
+      background: var(--color-border);
+    }
+
+    .test-notification-btn.testing {
+      color: var(--color-text-dim);
+      cursor: not-allowed;
+    }
+
+    .test-notification-btn.success {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: var(--color-success);
+      color: var(--color-success);
+    }
+
+    /* Logs viewer matching LogViewer.vue */
+    .log-viewer-layout {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .log-filter-row {
+      background: var(--color-surface-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      display: flex;
+      gap: 2px;
+      align-self: start;
+    }
+
+    .log-filter-btn {
+      padding: 3px 8px;
+      font-size: 10.5px;
+      font-weight: 500;
+      color: var(--color-text-dim);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      outline: none;
+      transition: all 0.15s;
+    }
+
+    .log-filter-btn:hover {
+      color: var(--color-text);
+    }
+
+    .log-filter-btn.active {
+      background: var(--color-cta);
+      color: #FFFFFF;
+    }
+
+    .log-table {
+      flex: 1;
+      overflow-y: auto;
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 8px;
+      font-family: var(--font-body);
+      font-size: 11px;
+      margin-top: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .log-row {
+      display: flex;
+      gap: 12px;
+      padding: 3.5px 8px;
+      border-radius: 4px;
+      transition: background 0.1s;
+    }
+
+    .log-row:hover {
+      background: var(--color-surface-elevated);
+    }
+
+    .log-time {
+      color: var(--color-text-dim);
+      min-width: 65px;
+    }
+
+    .log-level {
+      min-width: 42px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .log-module {
+      color: var(--color-cta);
+      min-width: 100px;
+      font-weight: 500;
+    }
+
+    .log-message {
+      color: var(--color-text-muted);
+      flex: 1;
+      word-break: break-all;
+    }
+
+    /* Screen Calibration Bounding Box overlay (Huashu-Design highlight) */
+    .calibration-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(2px);
+      user-select: none;
+      cursor: crosshair;
+    }
+
+    .calibration-box {
+      border: 2px dashed var(--color-cta);
+      background: rgba(59, 130, 246, 0.15);
+      position: absolute;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4), 0 0 15px rgba(59, 130, 246, 0.3);
+      pointer-events: none;
+    }
+
+    .calibration-label {
+      position: absolute;
+      top: -24px;
+      left: 0;
+      background: var(--color-cta);
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .calibration-hint-panel {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      text-align: center;
+      max-width: 320px;
+      box-shadow: var(--shadow-lg);
+      pointer-events: auto;
+      cursor: default;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      animation: modalSlide 0.2s ease-out;
+    }
+
+    @keyframes modalSlide {
+      from {
+        transform: translateY(10px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    /* Simple switch */
+    .feishu-switch {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 18px;
+    }
+
+    .feishu-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .feishu-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--color-border);
+      transition: .2s;
+      border-radius: 18px;
+    }
+
+    .feishu-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    }
+
+    input:checked+.feishu-slider {
+      background-color: var(--color-cta);
+    }
+
+    input:checked+.feishu-slider:before {
+      transform: translateX(16px);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Mock Application Window -->
+  <div class="app-window" id="root"></div>
+
+  <!-- React code -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Direct Pure inline SVG Lucide icons for no-internet fallback safety
+    const Icons = {
+      Monitor: ({ size = 18, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <rect width="20" height="14" x="2" y="3" rx="2" />
+          <line x1="8" x2="16" y1="21" y2="21" />
+          <line x1="12" x2="12" y1="17" y2="21" />
+        </svg>
+      ),
+      FileCode: ({ size = 18, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+          <polyline points="14 2 14 8 20 8" />
+          <path d="m10 13-2 2 2 2" />
+          <path d="m14 17 2-2-2-2" />
+        </svg>
+      ),
+      Settings: ({ size = 18, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      ),
+      CalendarClock: ({ size = 18, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" />
+          <path d="M16 2v4" />
+          <path d="M8 2v4" />
+          <path d="M3 10h18" />
+          <circle cx="18" cy="16" r="5" />
+          <path d="M18 13v3l2 2" />
+        </svg>
+      ),
+      Bell: ({ size = 18, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+        </svg>
+      ),
+      ScrollText: ({ size = 18, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+          <polyline points="14 2 14 8 20 8" />
+          <path d="M8 13h8" />
+          <path d="M8 17h8" />
+        </svg>
+      ),
+      Gamepad: ({ size = 14, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <line x1="6" x2="10" y1="12" y2="12" />
+          <line x1="8" x2="8" y1="10" y2="14" />
+          <line x1="15" x2="15.01" y1="13" y2="13" />
+          <line x1="18" x2="18.01" y1="11" y2="11" />
+          <rect x="2" y="6" width="20" height="12" rx="3" />
+        </svg>
+      ),
+      Github: ({ size = 14, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+          <path d="M9 18c-4.51 2-5-2-7-2" />
+        </svg>
+      ),
+      Help: ({ size = 14, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+          <line x1="12" x2="12.01" y1="17" y2="17" />
+        </svg>
+      ),
+      Plus: ({ size = 14, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <line x1="12" x2="12" y1="5" y2="19" />
+          <line x1="5" x2="19" y1="12" y2="12" />
+        </svg>
+      ),
+      Power: ({ size = 12, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M12 2v10" />
+          <path d="M18.4 6.6a9 9 0 1 1-12.77.04" />
+        </svg>
+      ),
+      Trash: ({ size = 12, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M3 6h18" />
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+        </svg>
+      ),
+      Check: ({ size = 14, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ),
+      Trash2: ({ size = 14, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M3 6h18" />
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+          <line x1="10" x2="10" y1="11" y2="17" />
+          <line x1="14" x2="14" y1="11" y2="17" />
+        </svg>
+      ),
+      Paperplane: ({ size = 12, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <line x1="22" x2="11" y1="2" y2="13" />
+          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+        </svg>
+      ),
+      Play: ({ size = 12, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <polygon points="5 3 19 12 5 21 5 3" />
+        </svg>
+      ),
+      Square: ({ size = 12, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <rect width="18" height="18" x="3" y="3" rx="2" />
+        </svg>
+      ),
+      Eye: ({ size = 12, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      ),
+      Upload: ({ size = 13, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" x2="12" y1="3" y2="15" />
+        </svg>
+      )
+    };
+
+    function App() {
+      const [currentTab, setCurrentTab] = useState('devices');
+      const [devices, setDevices] = useState([
+        { id: '0', name: 'Xbox 360', connected: true, lx: 0, ly: 0, rx: 0, ry: 0, lt: 0, rt: 0, buttons: 0 }
+      ]);
+      const [selectedDeviceId, setSelectedDeviceId] = useState('0');
+
+      // Scripts
+      const [scripts, setScripts] = useState([
+        {
+          id: '1',
+          name: '地平线6-刷技能点（需配合PaddleOCR）.txt',
+          content: `/**
+ * 辅助函数：封装按键点击，减少冗余代码
+ */
+fn click_key(key_name, hold_time, post_sleep) {
+    press(key_name);
+    sleep(hold_time);
+    release(key_name);
+    sleep(post_sleep);
+}
+
+/**
+ * 辅助函数：检查文本中是否包含数组中的所有关键字
+ */
+fn contains_all_keywords(text_str, keywords) {
+    for kw in keywords {
+        if text_str.index_of(kw) < 0 {
+            return false;
+        }
+    }
+    return true;
+}
+
+// ==================== 页面判断逻辑优化 ====================
+
+fn is_main_menu_page(ocr_text) {
+    let text_str = \`\${ocr_text}\`;
+    return contains_all_keywords(text_str, ["剧情", "车辆", "地平线", "在线", "创意中心", "商店" , "世界地图"]);
+}
+
+fn is_competition_page(ocr_text) {
+    let text_str = \`\${ocr_text}\`;
+    return contains_all_keywords(text_str, ["精选", "热门", "本月最佳", "赛事"]);
+}
+
+fn is_running_page(ocr_text) {
+    let text_str = \`\${ocr_text}\`;
+    return text_str.index_of("安娜") >= 0;
+}
+
+fn is_home_page(ocr_text) {
+    let text_str = \`\${ocr_text}\`;
+    return contains_all_keywords(text_str, ["剧情", "购买与出售", "车辆", "可自定义车库"]);
+}
+
+fn is_garage_page(ocr_text) {
+    let text_str = \`\${ocr_text}\`;
+    return contains_all_keywords(text_str, ["我的车辆", "前往制造商"]);
+}
+
+fn is_start_running_page(ocr_text) {
+    let text_str = \`\${ocr_text}\`;
+    return contains_all_keywords(text_str, ["开始竞赛赛事", "难度与设置", "退出比赛"]);
+}
+
+fn is_select_running_page(ocr_text) {
+    let text_str = \`\${ocr_text}\`;
+    return contains_all_keywords(text_str, ["单人", "合作", "玩家对战"]);
+}
+
+fn is_finish_running_page(ocr_text) {
+    let text_str = \`\${ocr_text}\`;
+    return contains_all_keywords(text_str, ["继续", "重新开始", "观看回放影片"]);
+}
+
+/**
+ * 动态等待页面加载
+ * @param page_type_fn 页面判断的函数名
+ * @param timeout_sec 最大等待秒数
+ */
+fn wait_for_page(page_type_fn, timeout_sec) {
+    for i in 0..timeout_sec {
+        let current_text = ocr(1);
+        let is_target = false;
+        if page_type_fn == "competition" { is_target = is_competition_page(current_text); }
+        if page_type_fn == "garage"      { is_target = is_garage_page(current_text); }
+        if page_type_fn == "start_run"   { is_target = is_start_running_page(current_text); }
+        if page_type_fn == "select_run"  { is_target = is_select_running_page(current_text); }
+        if page_type_fn == "is_finish_run" { is_target = is_finish_running_page(current_text); }
+
+        if is_target {
+            return true;
+        }
+        sleep(1000); // 每秒检测一次
+    }
+    return false;
+}
+
+/**
+ * 线性控制右扳机（油门）
+ */
+fn set_throttle(value, duration) {
+    set_trigger("Right", value);
+    sleep(duration);
+}
+
+/**
+ * 从 OCR 文本中精准提取“XX技术点数可用”中的数字
+ * @param ocr_text 全量屏幕文本
+ * @return 返回提取到的整数，若未匹配到则返回 -1
+ */
+fn extract_skill_points(ocr_text) {
+    let text_str = \`\${ocr_text}\`;
+    
+    // 1. 定位游戏里绝对唯一的汉字锚点
+    let anchor = "技术点数可用";
+    let anchor_idx = text_str.index_of(anchor);
+    
+    if anchor_idx < 0 {
+        return -1; // 没找到锚点，说明不在此页面
+    }
+    
+    // 2. 初始化逆向扫描指针：从“技术点数可用”的第一个字（即“技”）往左边开始数
+    let walk_idx = anchor_idx - 1;
+    let digits = "0123456789";
+    
+    let result_str = "";
+    let found_digits = false;
+    
+    // 3. 最多向左倒退查找 15 个字符，抓取最邻近的数字
+    for step in 0..15 {
+        if walk_idx < 0 {
+            break;
+        }
+        
+        // 每次雷打不动只截取 1 个字符（完美规避 sub_string 的参数含义争议）
+        let char_item = text_str.sub_string(walk_idx, 1);
+        
+        if digits.index_of(char_item) >= 0 {
+            // 如果遇到了数字，拼接到结果的最前面（因为是倒着找的）
+            result_str = char_item + result_str;
+            found_digits = true;
+        } else {
+            // 如果已经连续找到了数字，突然遇到了非数字（比如空格、或者汉字“箱”），说明数字截取完整了，直接退出
+            if found_digits {
+                break;
+            }
+        }
+        
+        // 指针继续向左移动
+        walk_idx = walk_idx - 1;
+    }
+    
+    // 4. 将提取出的字符串安全转换为整数
+    if result_str.len > 0 {
+        return result_str.to_int(); // 100% 精准返回 74
+    }
+    
+    return 0;
+}
+
+// ==================== 主程序 ====================
+
+fn main() {
+    log("Forza OCR 挂机自动化脚本启动中...");
+    set_default_device(0);
+
+    // 1. 状态初始化：确保退回到主菜单
+    while true {
+        let text_str = ocr(1);
+        log("当前ocr识别内容 : " + text_str);
+        
+        if is_main_menu_page(text_str) {
+            break;
+        }
+        
+        log("当前页面非主菜单页，正在尝试切换...");
+        if is_running_page(text_str) {
+            click_key("START", 83, 2000);
+        } else {
+            click_key("B", 83, 2000);
+        }
+    }
+
+    log("成功检测到主菜单页！准备开始挂机逻辑...");
+    
+    // 2. 进入车辆页面
+    log("开始执行：查询当前熟练点...");
+    click_key("RB", 100, 400);
+    let current_text = ocr(1);
+    let skill = extract_skill_points(current_text);
+    log("开始执行：当前熟练点为"+skill);
+    // ─── 动态计算循环圈数 ───
+    let LOOP_COUNT = 0;
+    if skill >= 0 {
+        LOOP_COUNT = (999 - skill) / 10;
+        // 规避极端情况下计算出负数或0圈的情况，至少跑1圈
+        if LOOP_COUNT <= 0 {
+            LOOP_COUNT = 1;
+        }
+        log("设置循环圈数为 " + LOOP_COUNT);
+    } else {
+        log("【警告】未能成功提取到熟练点数，默认设置循环圈数为 100");
+        LOOP_COUNT = 100; 
+    }
+
+    //切换到创意中心
+    for i in 0..3 {
+        click_key("RB", 100, 400);
+    }
+
+    // 3. 进入赛事页
+    sleep(1500);
+    click_key("A", 83, 2000);
+    click_key("A", 117, 1000);
+
+    // 动态等待赛事页加载（最多等 8 秒）
+    if !wait_for_page("competition", 8) {
+        log("进入赛事页失败");
+        throw "进入赛事页失败";
+    }
+    log("成功进入赛事页");
+
+    // 4. 进入我的收藏
+    log("开始执行：连续点击 RB 7次 进入我的收藏页面");
+    for i in 0..7 {
+        click_key("RB", 100, 400);
+    }
+    sleep(2000);
+
+    // 5. 进入蓝图
+    click_key("A", 83, 5000);
+    if !wait_for_page("select_run", 15) {
+        log("进入选择比赛类型页失败");
+        throw "进入选择比赛类型页失败"; 
+    }
+    click_key("A", 83, 1000);
+
+    // 6. 动态等待选择车辆页（最多等 8 秒）
+    if !wait_for_page("garage", 8) {
+        log("进入选择车辆页失败");
+        throw "进入选择车辆页失败"; 
+    }
+    log("成功进入选择车辆页");
+
+    // 7. 进入起跑准备界面（仅在第一轮需要手动推进）
+    click_key("A", 83, 1000);
+
+
+    // ==================== 核心刷图循环段 ====================
+    log("开始执行核心刷图循环，总计圈数/轮数：" + LOOP_COUNT);
+
+    for current_loop in 1..=LOOP_COUNT {
+        log("----------------------------------------");
+        log("当前正在执行第 " + current_loop + " / " + LOOP_COUNT + " 轮挂机...");
+        log("----------------------------------------");
+
+        // 动态等待起跑准备页 (第一轮是刚进图，后续轮数是重新开始后的加载完成)
+        // 游戏重新开始加载通常较慢，将最大等待超时提升到 30 秒，防止断连或掉帧卡住
+        if !wait_for_page("start_run", 30) {
+             log("【错误】等待进入起跑准备页超时，退出脚本。");
+             throw "进入起跑准备页失败"; 
+        }
+        log("成功进入起跑准备页，开始赛事...");
+      
+        // 8. 开始赛事
+        click_key("A", 83, 4500);
+        
+        // 9. 线性油门初始化（起步防打滑）
+        set_throttle(0.0471, 16);
+        set_throttle(0.2314, 16);
+        set_throttle(0.4039, 17);
+        set_throttle(0.5608, 17);
+        set_throttle(0.7961, 16);
+        set_throttle(0.8471, 67);
+        
+        // 直道全油门挂机阶段
+        log("开始直道挂机，尝试底层锁死油门机制...");
+        while true {
+            // 1. 无需调用包含 sleep 的 set_throttle，直接用长按形式将扳机状态强行锁死在 1.0
+            set_trigger("Right", 1.0000); 
+            
+            // 2. 让它在跑道上先跑 3 秒
+            sleep(3000); 
+            
+            //检测冲线
+            let current_text = ocr(1);
+            
+            if !is_running_page(current_text) {
+                log("检测到冲线！");
+                break; 
+            }
+        }
+        
+        // 减速/收油
+        set_throttle(0.4353, 17);
+        set_throttle(0.0941, 16);
+        set_throttle(0.0000, 0);
+        
+        // 动态等待比赛结束结算页面
+        if !wait_for_page("is_finish_run", 15) {
+             log("【错误】未检测到比赛结算结束页，退出脚本。");
+             throw "进入比赛结束页失败"; 
+        }
+        log("检测到已进入比赛结束页。");
+
+        // 判断是否是最后一轮，如果是最后一轮，则不点重新开始，直接退出
+        if current_loop == LOOP_COUNT {
+            log("🎉 已达到设定的最大循环次数，挂机任务完美结束！");
+            break;
+        }
+
+        // 点击重新开始赛事
+        log("正在为您自动点击【重新开始】赛事...");
+        click_key("X", 83, 1200); // 按下X提示重新开始
+        click_key("A", 83, 2000); // 点击A确认重新开始
+
+        log("第 " + current_loop + " 轮跑图结束，正在等待黑屏加载下一轮...");
+    }
+
+    //返回道路页
+    click_key("A", 83, 2000);
+    click_key("A", 83, 2000);
+
+    log("所有自动化脚本内容执行完毕！");
+}`
+        }
+      ]);
+      const [activeScriptId, setActiveScriptId] = useState('1');
+      const [scriptSearch, setScriptSearch] = useState('');
+      const [scriptRunning, setScriptRunning] = useState(false);
+
+      // Config panel states
+      const [autoStart, setAutoStart] = useState(false);
+      const [minimizeToTray, setMinimizeToTray] = useState(true);
+      const [logLevel, setLogLevel] = useState('info');
+      const [ocrEngine, setOcrEngine] = useState('paddleocr');
+      const [paddleUrl, setPaddleUrl] = useState('http://127.0.0.1:8050/ocr');
+      const [ocrRegions, setOcrRegions] = useState([
+        { x: 914, y: 378, w: 1590, h: 889 }
+      ]);
+      const [calibrating, setCalibrating] = useState(false);
+      const [calibCoords, setCalibCoords] = useState({ x: 914, y: 378, w: 300, h: 120 });
+
+      // Scheduler states
+      const [schedulerRunning, setSchedulerRunning] = useState(false);
+      const [sequenceProgress, setSequenceProgress] = useState({ stepLoop: 0, totalStepLoops: 100 });
+
+      // Notifications states
+      const [notifyTestStatus, setNotifyTestStatus] = useState('idle');
+
+      // Logs state
+      const [logs, setLogs] = useState([
+        { time: '11:00:01', level: 'info', module: 'tauri_app', msg: 'ViGEmBus 内核模拟驱动连接成功，接口版本 v1.17。' },
+        { time: '11:00:02', level: 'info', module: 'tauri_app', msg: '初始化虚拟 Xbox 360 手柄实例成功，分配编号槽 #0' },
+        { time: '11:00:05', level: 'debug', module: 'config_manager', msg: '成功加载系统配置文件 settings.json。' },
+        { time: '11:00:10', level: 'info', module: 'ocr_service', msg: 'OCR 屏幕文本识别引擎启动成功 (外部 PaddleOCR: 127.0.0.1:8050)。' }
+      ]);
+      const [logFilter, setLogFilter] = useState('all');
+
+      // Helper to append log entries
+      const appendLog = (level, module, msg) => {
+        const timeStr = new Date().toTimeString().split(' ')[0];
+        setLogs(prev => [...prev, { time: timeStr, level, module, msg }]);
+      };
+
+      // Stick drag simulation handlers
+      const stickRefL = useRef(null);
+      const stickRefR = useRef(null);
+      const [isDraggingL, setIsDraggingL] = useState(false);
+      const [isDraggingR, setIsDraggingR] = useState(false);
+
+      const handleStickDrag = (e, stickType) => {
+        const ref = stickType === 'L' ? stickRefL : stickRefR;
+        if (!ref.current) return;
+        const rect = ref.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        let dx = e.clientX - centerX;
+        let dy = e.clientY - centerY;
+        const radius = rect.width / 2;
+
+        // Clamp length to radius
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length > radius) {
+          dx = (dx / length) * radius;
+          dy = (dy / length) * radius;
+        }
+
+        const valX = parseFloat((dx / radius).toFixed(2));
+        const valY = parseFloat((-dy / radius).toFixed(2)); // Y-up standard
+
+        setDevices(prev => prev.map(d => {
+          if (d.id === selectedDeviceId) {
+            return stickType === 'L'
+              ? { ...d, lx: valX, ly: valY }
+              : { ...d, rx: valX, ry: valY };
+          }
+          return d;
+        }));
+      };
+
+      const startDraggingStick = (e, stickType) => {
+        if (stickType === 'L') setIsDraggingL(true);
+        else setIsDraggingR(true);
+        handleStickDrag(e, stickType);
+      };
+
+      useEffect(() => {
+        const handleMouseMove = (e) => {
+          if (isDraggingL) handleStickDrag(e, 'L');
+          if (isDraggingR) handleStickDrag(e, 'R');
+        };
+        const handleMouseUp = () => {
+          if (isDraggingL) {
+            setIsDraggingL(false);
+            setDevices(prev => prev.map(d => d.id === selectedDeviceId ? { ...d, lx: 0, ly: 0 } : d));
+            appendLog('debug', 'virtual_gamepad', 'L 摇杆回弹复位至 (0, 0)');
+          }
+          if (isDraggingR) {
+            setIsDraggingR(false);
+            setDevices(prev => prev.map(d => d.id === selectedDeviceId ? { ...d, rx: 0, ry: 0 } : d));
+            appendLog('debug', 'virtual_gamepad', 'R 摇杆回弹复位至 (0, 0)');
+          }
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+        };
+      }, [isDraggingL, isDraggingR]);
+
+      // Controller face buttons layout flags
+      const BTN_MASKS = {
+        A: 0x1000, B: 0x2000, X: 0x4000, Y: 0x8000,
+        LB: 0x0100, RB: 0x0200, BACK: 0x0020, START: 0x0010,
+        GUIDE: 0x0400, LS: 0x0040, RS: 0x0080,
+        UP: 0x0001, DOWN: 0x0002, LEFT: 0x0004, RIGHT: 0x0008
+      };
+
+      const toggleButtonPress = (btnKey) => {
+        const mask = BTN_MASKS[btnKey];
+        setDevices(prev => prev.map(d => {
+          if (d.id === selectedDeviceId) {
+            const currentPressed = (d.buttons & mask) !== 0;
+            const nextButtons = currentPressed ? (d.buttons & ~mask) : (d.buttons | mask);
+            appendLog('debug', 'virtual_gamepad', `虚拟手柄按钮 ${btnKey} ${!currentPressed ? '按下' : '释放'}`);
+            return { ...d, buttons: nextButtons };
+          }
+          return d;
+        }));
+      };
+
+      const isButtonPressed = (device, btnKey) => {
+        if (!device) return false;
+        return (device.buttons & BTN_MASKS[btnKey]) !== 0;
+      };
+
+      // Add & Remove Devices logic
+      const addGamepadDevice = () => {
+        if (devices.length >= 8) return;
+        const newId = Math.max(...devices.map(d => parseInt(d.id))) + 1 + "";
+        const newDevice = { id: newId, name: 'Xbox 360', connected: true, lx: 0, ly: 0, rx: 0, ry: 0, lt: 0, rt: 0, buttons: 0 };
+        setDevices([...devices, newDevice]);
+        appendLog('success', 'tauri_app', `虚拟手柄 #${newId} (Xbox 360) 插入并连通成功。`);
+      };
+
+      const removeGamepadDevice = (id, e) => {
+        e.stopPropagation();
+        if (devices.length <= 1) return;
+        setDevices(devices.filter(d => d.id !== id));
+        if (selectedDeviceId === id) {
+          setSelectedDeviceId(devices.find(d => d.id !== id).id);
+        }
+        appendLog('warn', 'tauri_app', `虚拟手柄 #${id} 已热插拔断开移出系统。`);
+      };
+
+      const toggleDeviceConnection = (id, e) => {
+        e.stopPropagation();
+        setDevices(prev => prev.map(d => {
+          if (d.id === id) {
+            const nextState = !d.connected;
+            appendLog('info', 'tauri_app', `手柄槽 #${id} 已切换连接状态为: ${nextState ? '在线' : '离线'}`);
+            return { ...d, connected: nextState };
+          }
+          return d;
+        }));
+      };
+
+      // Trigger simulation Click handler
+      const setTriggerValue = (side, val) => {
+        setDevices(prev => prev.map(d => {
+          if (d.id === selectedDeviceId) {
+            const roundedVal = parseFloat(val.toFixed(2));
+            appendLog('debug', 'virtual_gamepad', `${side === 'L' ? '左' : '右'}扳机深度拉伸为 ${roundedVal}`);
+            return side === 'L' ? { ...d, lt: roundedVal } : { ...d, rt: roundedVal };
+          }
+          return d;
+        }));
+      };
+
+      // OCR Calibration simulated drawing box
+      const triggerOcrCalibration = (idx) => {
+        setCalibrating(true);
+        appendLog('info', 'ocr_service', `已激活 OCR 区域 #${idx || ocrRegions.length + 1} 屏幕取景校准框。`);
+      };
+
+      const completeOcrCalibration = () => {
+        setCalibrating(false);
+        const newRegion = { x: calibCoords.x, y: calibCoords.y, w: calibCoords.w, h: calibCoords.h };
+        setOcrRegions([newRegion]);
+        appendLog('success', 'ocr_service', `🎯 OCR 识别区 #1 标定成功！坐标更新为 [X:${calibCoords.x}, Y:${calibCoords.y}, W:${calibCoords.w}, H:${calibCoords.h}]`);
+      };
+
+      // Scheduler ticking simulation
+      useEffect(() => {
+        let interval;
+        if (schedulerRunning) {
+          interval = setInterval(() => {
+            setSequenceProgress(prev => {
+              if (prev.stepLoop >= prev.totalStepLoops) {
+                appendLog('success', 'scheduler', '「刷新技能点」串联任务序列全部执行轮次顺利完成。');
+                setSchedulerRunning(false);
+                return { ...prev, stepLoop: 0 };
+              }
+              const nextVal = prev.stepLoop + 1;
+              if (nextVal % 25 === 0) {
+                appendLog('info', 'scheduler', `执行步骤 1 (刷技能点（需配合PaddleOCR）) 中：第 ${nextVal} 次按键连击模拟...`);
+              }
+              return { ...prev, stepLoop: nextVal };
+            });
+          }, 80);
+        }
+        return () => clearInterval(interval);
+      }, [schedulerRunning]);
+
+      // Notification Test
+      const runNotificationTest = () => {
+        setNotifyTestStatus('testing');
+        appendLog('info', 'notify_center', '测试发送 Server酱³ 远程通知通道推送卡片...');
+        setTimeout(() => {
+          setNotifyTestStatus('success');
+          appendLog('success', 'notify_center', 'Server酱³ 推送测试完成。响应: {"StatusCode":0,"StatusMessage":"success"}');
+          setTimeout(() => setNotifyTestStatus('idle'), 3000);
+        }, 1500);
+      };
+
+      // Active script selector
+      const currentActiveScript = scripts.find(s => s.id === activeScriptId) || scripts[0];
+
+      // Logs filter helper
+      const filteredLogs = logs.filter(l => {
+        if (logFilter === 'all') return true;
+        return l.level.toLowerCase() === logFilter.toLowerCase();
+      });
+
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {/* Top Tauri mock Window Bar */}
+          <header className="tauri-titlebar">
+            <div className="tauri-titlebar-left">
+              <div className="logo-container">
+                <Icons.Gamepad size={14} />
+              </div>
+              <span className="logo-title">手柄自动化控制台</span>
+            </div>
+            <div className="tauri-titlebar-right">
+              <a href="https://github.com" target="_blank" className="titlebar-icon-btn" title="查看 GitHub 仓库">
+                <Icons.Github size={15} />
+              </a>
+              <div className="titlebar-icon-btn" title="系统帮助" onClick={() => alert('提示: 本系统集成了内核模拟手柄与 OCR 游戏挂机自动化脚本引擎。')}>
+                <Icons.Help size={15} />
+              </div>
+
+              <div className="window-controls">
+                <div className="win-control-btn" onClick={() => alert('已最小化到托盘运行')}>－</div>
+                <div className="win-control-btn" onClick={() => alert('支持双击窗口最大化')}>⤢</div>
+                <div className="win-control-btn close" onClick={() => alert('Tauri 原型程序，可在托盘彻底退出')}>✕</div>
+              </div>
+            </div>
+          </header>
+
+          <div className="app-layout">
+            {/* Sidebar on left */}
+            <aside className="sidebar">
+              <nav className="sidebar-nav">
+                <button className={`sidebar-item ${currentTab === 'devices' ? 'active' : ''}`} onClick={() => setCurrentTab('devices')} title="设备监控">
+                  <Icons.Monitor size={18} />
+                </button>
+                <button className={`sidebar-item ${currentTab === 'scripts' ? 'active' : ''}`} onClick={() => setCurrentTab('scripts')} title="脚本编辑器">
+                  <Icons.FileCode size={18} />
+                </button>
+                <button className={`sidebar-item ${currentTab === 'config' ? 'active' : ''}`} onClick={() => setCurrentTab('config')} title="参数配置">
+                  <Icons.Settings size={18} />
+                </button>
+                <button className={`sidebar-item ${currentTab === 'scheduler' ? 'active' : ''}`} onClick={() => setCurrentTab('scheduler')} title="任务调度与序列控制">
+                  <Icons.CalendarClock size={18} />
+                </button>
+                <button className={`sidebar-item ${currentTab === 'notifications' ? 'active' : ''}`} onClick={() => setCurrentTab('notifications')} title="聚合通知配置">
+                  <Icons.Bell size={18} />
+                </button>
+                <button className={`sidebar-item ${currentTab === 'logs' ? 'active' : ''}`} onClick={() => setCurrentTab('logs')} title="日志查看">
+                  <Icons.ScrollText size={18} />
+                </button>
+              </nav>
+            </aside>
+
+            {/* Main Area */}
+            <div className="app-main">
+              {/* Task scheduler global running sequence panel */}
+              {schedulerRunning && (
+                <div className="running-progress-panel">
+                  <div className="progress-panel-header">
+                    <div className="progress-panel-title">
+                      <span className="pulse-dot-green"></span>
+                      <span>串联任务序列正在运行...</span>
+                    </div>
+                    <button className="btn-stop-global" onClick={() => { setSchedulerRunning(false); appendLog('warn', 'scheduler', '强制手动终止正在运行的任务序列！'); }}>
+                      <Icons.Square size={10} />
+                      <span>强制终止序列</span>
+                    </button>
+                  </div>
+                  <div className="progress-grid">
+                    <div className="progress-card">
+                      <div className="progress-meta">
+                        <span>序列总体循环</span>
+                        <span style={{ color: 'var(--color-cta)', fontWeight: '600' }}>1 / 1 轮</span>
+                      </div>
+                      <div className="progress-bar-container">
+                        <div className="progress-bar-fill task-fill" style={{ width: '100%' }}></div>
+                      </div>
+                    </div>
+                    <div className="progress-card">
+                      <div className="progress-meta">
+                        <span>当前脚本: <strong style={{ color: 'var(--color-text)' }}>刷技能点（需配合PaddleOCR）</strong></span>
+                        <span style={{ color: 'var(--color-cta)', fontWeight: '600' }}>{sequenceProgress.stepLoop} / {sequenceProgress.totalStepLoops} 次</span>
+                      </div>
+                      <div className="progress-bar-container">
+                        <div className="progress-bar-fill step-fill" style={{ width: `${(sequenceProgress.stepLoop / sequenceProgress.totalStepLoops) * 100}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="progress-footer">
+                    <span>正在执行第 1 / 1 个脚本步骤</span>
+                  </div>
+                </div>
+              )}
+
+              {/* View Panel Content */}
+              <div className="page-container">
+
+                {/* TAB 1: DEVICES VIEW */}
+                {currentTab === 'devices' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div className="page-header">
+                      <div className="page-header-left">
+                        <h2>设备监控</h2>
+                      </div>
+                      <button className="btn btn-primary" onClick={addGamepadDevice} disabled={devices.length >= 8}>
+                        <Icons.Plus size={14} />
+                        <span>添加设备</span>
+                      </button>
+                    </div>
+
+                    <div className="alert-banner">
+                      <Icons.Check size={14} />
+                      <span>ViGEmBus 已连接，虚拟手柄将被系统识别</span>
+                    </div>
+
+                    {/* Cards grid */}
+                    <div className="devices-grid">
+                      {devices.map((d) => (
+                        <div
+                          key={d.id}
+                          className={`device-card ${selectedDeviceId === d.id ? 'selected' : ''}`}
+                          onClick={() => d.connected && setSelectedDeviceId(d.id)}
+                          style={{ opacity: d.connected ? 1 : 0.55 }}
+                        >
+                          <div className="device-card-header">
+                            <div className="device-title">
+                              <span>Xbox</span>
+                              <span>360</span>
+                            </div>
+                            <div className="device-actions">
+                              <span className="index-tag">#{d.id}</span>
+                              <span className={`card-status-dot ${d.connected ? 'active' : ''}`}></span>
+                              <div className="card-icon-btn" title="开关连接" onClick={(e) => toggleDeviceConnection(d.id, e)}>
+                                <Icons.Power size={11} />
+                              </div>
+                              {devices.length > 1 && (
+                                <div className="card-icon-btn delete" title="断开模拟并移除" onClick={(e) => removeGamepadDevice(d.id, e)}>
+                                  <Icons.Trash size={11} />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="device-info-lines">
+                            <div className="device-info-line"><span>L摇杆</span><span>X:{(d.lx * 32767).toFixed(0)} Y:{(d.ly * 32767).toFixed(0)}</span></div>
+                            <div className="device-info-line"><span>R摇杆</span><span>X:{(d.rx * 32767).toFixed(0)} Y:{(d.ry * 32767).toFixed(0)}</span></div>
+                            <div className="device-info-line"><span>L扳机</span><span>{(d.lt * 255).toFixed(0)}</span></div>
+                            <div className="device-info-line"><span>R扳机</span><span>{(d.rt * 255).toFixed(0)}</span></div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {devices.length < 8 && (
+                        <button className="add-device-card" onClick={addGamepadDevice}>
+                          <Icons.Plus size={22} />
+                          <span>添加设备</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Lower Interactive Control Panel */}
+                    {devices.find(d => d.id === selectedDeviceId) && (
+                      <div className="control-panel">
+                        <div className="control-header">
+                          <h3>输入控制 — 设备 #{selectedDeviceId}</h3>
+                          {!devices.find(d => d.id === selectedDeviceId)?.connected && (
+                            <span className="offline-badge">已断开连接（保留在列表）</span>
+                          )}
+                        </div>
+
+                        <div className="control-grid" style={{ opacity: devices.find(d => d.id === selectedDeviceId)?.connected ? 1 : 0.4, pointerEvents: devices.find(d => d.id === selectedDeviceId)?.connected ? 'auto' : 'none' }}>
+
+                          {/* Draggable Joysticks */}
+                          <div className="stick-section">
+                            <div className="stick-container">
+                              <span className="stick-label">L 摇杆</span>
+                              <div
+                                className="stick-visualizer-box"
+                                ref={stickRefL}
+                                onMouseDown={(e) => startDraggingStick(e, 'L')}
+                              >
+                                <div className="stick-axis-line stick-axis-h"></div>
+                                <div className="stick-axis-line stick-axis-v"></div>
+                                <div
+                                  className="stick-knob"
+                                  style={{ transform: `translate(${devices.find(d => d.id === selectedDeviceId).lx * 36}px, ${devices.find(d => d.id === selectedDeviceId).ly * -36}px)` }}
+                                />
+                              </div>
+                              <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
+                                X:{devices.find(d => d.id === selectedDeviceId).lx.toFixed(2)} Y:{devices.find(d => d.id === selectedDeviceId).ly.toFixed(2)}
+                              </span>
+                            </div>
+
+                            <div className="stick-container">
+                              <span className="stick-label">R 摇杆</span>
+                              <div
+                                className="stick-visualizer-box"
+                                ref={stickRefR}
+                                onMouseDown={(e) => startDraggingStick(e, 'R')}
+                              >
+                                <div className="stick-axis-line stick-axis-h"></div>
+                                <div className="stick-axis-line stick-axis-v"></div>
+                                <div
+                                  className="stick-knob"
+                                  style={{ transform: `translate(${devices.find(d => d.id === selectedDeviceId).rx * 36}px, ${devices.find(d => d.id === selectedDeviceId).ry * -36}px)` }}
+                                />
+                              </div>
+                              <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
+                                X:{devices.find(d => d.id === selectedDeviceId).rx.toFixed(2)} Y:{devices.find(d => d.id === selectedDeviceId).ry.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Trigger slider bars */}
+                          <div className="trigger-section">
+                            <div className="trigger-bar-wrapper">
+                              <div className="trigger-bar-label">
+                                <span>L扳机</span>
+                                <span>{Math.round(devices.find(d => d.id === selectedDeviceId).lt * 255)}</span>
+                              </div>
+                              <div className="trigger-bar-track" onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setTriggerValue('L', (e.clientX - rect.left) / rect.width);
+                              }}>
+                                <div className="trigger-bar-fill" style={{ width: `${devices.find(d => d.id === selectedDeviceId).lt * 100}%` }}></div>
+                              </div>
+                            </div>
+
+                            <div className="trigger-bar-wrapper">
+                              <div className="trigger-bar-label">
+                                <span>R扳机</span>
+                                <span>{Math.round(devices.find(d => d.id === selectedDeviceId).rt * 255)}</span>
+                              </div>
+                              <div className="trigger-bar-track" onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setTriggerValue('R', (e.clientX - rect.left) / rect.width);
+                              }}>
+                                <div className="trigger-bar-fill" style={{ width: `${devices.find(d => d.id === selectedDeviceId).rt * 100}%` }}></div>
+                              </div>
+                            </div>
+
+                            <span style={{ fontSize: '10px', color: 'var(--color-text-dim)', lineHeight: '1.2' }}>提示: 鼠标拖拽圆盘控制摇杆，点击滑槽模拟扳机拉伸。</span>
+                          </div>
+
+                          {/* Controller Button Panel exact replication */}
+                          <div className="buttons-section">
+                            <div className="controller-layout-box">
+                              <div className="shoulder-row">
+                                <button
+                                  className={`game-btn shoulder-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LB') ? 'pressed' : ''}`}
+                                  onMouseDown={() => toggleButtonPress('LB')}
+                                  onMouseUp={() => toggleButtonPress('LB')}
+                                >LB</button>
+                                <button
+                                  className={`game-btn guide-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'GUIDE') ? 'pressed' : ''}`}
+                                  onMouseDown={() => toggleButtonPress('GUIDE')}
+                                  onMouseUp={() => toggleButtonPress('GUIDE')}
+                                >⌂</button>
+                                <button
+                                  className={`game-btn shoulder-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RB') ? 'pressed' : ''}`}
+                                  onMouseDown={() => toggleButtonPress('RB')}
+                                  onMouseUp={() => toggleButtonPress('RB')}
+                                >RB</button>
+                              </div>
+
+                              <div className="main-row">
+                                <div className="left-side">
+                                  <button
+                                    className={`game-btn stick-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LS') ? 'pressed' : ''}`}
+                                    onClick={() => toggleButtonPress('LS')}
+                                  >LS</button>
+
+                                  <div className="dpad-cluster">
+                                    <div className="dpad-row">
+                                      <button
+                                        className={`game-btn dpad-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'UP') ? 'pressed' : ''}`}
+                                        onMouseDown={() => toggleButtonPress('UP')}
+                                        onMouseUp={() => toggleButtonPress('UP')}
+                                      >↑</button>
+                                    </div>
+                                    <div className="dpad-row">
+                                      <button
+                                        className={`game-btn dpad-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LEFT') ? 'pressed' : ''}`}
+                                        onMouseDown={() => toggleButtonPress('LEFT')}
+                                        onMouseUp={() => toggleButtonPress('LEFT')}
+                                      >←</button>
+                                      <div className="dpad-center-spacer"></div>
+                                      <button
+                                        className={`game-btn dpad-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RIGHT') ? 'pressed' : ''}`}
+                                        onMouseDown={() => toggleButtonPress('RIGHT')}
+                                        onMouseUp={() => toggleButtonPress('RIGHT')}
+                                      >→</button>
+                                    </div>
+                                    <div className="dpad-row">
+                                      <button
+                                        className={`game-btn dpad-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'DOWN') ? 'pressed' : ''}`}
+                                        onMouseDown={() => toggleButtonPress('DOWN')}
+                                        onMouseUp={() => toggleButtonPress('DOWN')}
+                                      >↓</button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="center-side">
+                                  <button
+                                    className={`game-btn misc-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'BACK') ? 'pressed' : ''}`}
+                                    onClick={() => toggleButtonPress('BACK')}
+                                  >BACK</button>
+                                  <button
+                                    className={`game-btn misc-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'START') ? 'pressed' : ''}`}
+                                    onClick={() => toggleButtonPress('START')}
+                                  >START</button>
+                                </div>
+
+                                <div className="right-side">
+                                  <div className="abxy-cluster">
+                                    <div className="abxy-row">
+                                      <button
+                                        className={`game-btn y-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'Y') ? 'pressed' : ''}`}
+                                        onMouseDown={() => toggleButtonPress('Y')}
+                                        onMouseUp={() => toggleButtonPress('Y')}
+                                      >Y</button>
+                                    </div>
+                                    <div className="abxy-row">
+                                      <button
+                                        className={`game-btn x-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'X') ? 'pressed' : ''}`}
+                                        onMouseDown={() => toggleButtonPress('X')}
+                                        onMouseUp={() => toggleButtonPress('X')}
+                                      >X</button>
+                                      <div className="abxy-center-spacer"></div>
+                                      <button
+                                        className={`game-btn b-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'B') ? 'pressed' : ''}`}
+                                        onMouseDown={() => toggleButtonPress('B')}
+                                        onMouseUp={() => toggleButtonPress('B')}
+                                      >B</button>
+                                    </div>
+                                    <div className="abxy-row">
+                                      <button
+                                        className={`game-btn a-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'A') ? 'pressed' : ''}`}
+                                        onMouseDown={() => toggleButtonPress('A')}
+                                        onMouseUp={() => toggleButtonPress('A')}
+                                      >A</button>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    className={`game-btn stick-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RS') ? 'pressed' : ''}`}
+                                    onClick={() => toggleButtonPress('RS')}
+                                  >RS</button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 2: SCRIPTS VIEW */}
+                {currentTab === 'scripts' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div className="page-header">
+                      <div className="page-header-left">
+                        <h2>脚本编辑器</h2>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn-record" onClick={() => alert('宏录制开始失败: 请确保物理手柄已通过桥接挂载！')}>
+                          <span className="record-dot"></span>
+                          <span>物理手柄宏录制</span>
+                        </button>
+                        <button className="btn btn-primary" onClick={() => {
+                          const name = prompt('请输入新脚本文件名称:');
+                          if (name) {
+                            const newScript = { id: Date.now() + "", name, content: `// 新脚本: ${name}\nset_default_device(0);\n` };
+                            setScripts([...scripts, newScript]);
+                            setActiveScriptId(newScript.id);
+                            appendLog('info', 'script_manager', `新建脚本文件成功: ${name}.rhai`);
+                          }
+                        }}>
+                          <Icons.Plus size={14} />
+                          <span>新建</span>
+                        </button>
+                        <button className="btn btn-secondary" onClick={() => {
+                          appendLog('success', 'script_manager', `已保存脚本：${currentActiveScript.name}`);
+                          alert('保存成功！');
+                        }}>
+                          保存
+                        </button>
+                        <button className={`btn btn-primary`} style={{ background: scriptRunning ? 'var(--color-error)' : 'var(--color-cta)' }} onClick={() => {
+                          setScriptRunning(!scriptRunning);
+                          if (!scriptRunning) {
+                            appendLog('info', 'script_engine', `启动自动化脚本: ${currentActiveScript.name}`);
+                            appendLog('debug', 'ocr_service', `OCR扫描区 #1 成功读取 hp_val: "889"`);
+                          } else {
+                            appendLog('warn', 'script_engine', '用户手动中止脚本运行。');
+                          }
+                        }}>
+                          <Icons.Play size={10} style={{ display: scriptRunning ? 'none' : 'inline' }} />
+                          <Icons.Square size={10} style={{ display: scriptRunning ? 'inline' : 'none' }} />
+                          <span>{scriptRunning ? '停止' : '运行'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="editor-layout">
+                      {/* Column 1: Library */}
+                      <div className="script-sidebar">
+                        <input
+                          type="text"
+                          className="script-search"
+                          placeholder="脚本名称"
+                          value={scriptSearch}
+                          onChange={(e) => setScriptSearch(e.target.value)}
+                        />
+                        <div className="script-pills">
+                          <span className="script-pill active">全部</span>
+                          <span className="script-pill" onClick={() => alert('Filter: forza6')}>forza6</span>
+                          <span className="script-pill" onClick={() => alert('Filter: 未绑定')}>未绑定</span>
+                        </div>
+
+                        <div className="script-list">
+                          {scripts.filter(s => s.name.toLowerCase().includes(scriptSearch.toLowerCase())).map(s => (
+                            <div
+                              key={s.id}
+                              className={`script-item ${activeScriptId === s.id ? 'active' : ''}`}
+                              onClick={() => { setActiveScriptId(s.id); setScriptRunning(false); }}
+                            >
+                              <Icons.ScrollText size={13} style={{ flexShrink: 0 }} />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Column 2: Content editor */}
+                      <div className="editor-center">
+                        <div className="editor-toolbar">
+                          <span>{currentActiveScript.name}.rhai (Rhai 脚本文件)</span>
+                          {scriptRunning && (
+                            <span style={{ color: 'var(--color-success)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span className="pulse-dot-green"></span>
+                              <span>执行中...</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="editor-textarea-container">
+                          <div className="editor-linenumbers">
+                            {currentActiveScript.content.split('\n').map((_, idx) => (
+                              <div key={idx}>{idx + 1}</div>
+                            ))}
+                          </div>
+                          <textarea
+                            className="editor-textarea"
+                            value={currentActiveScript.content}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setScripts(scripts.map(s => s.id === activeScriptId ? { ...s, content: val } : s));
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Column 3: API Reference */}
+                      <div className="api-reference-panel">
+                        <div className="api-header">
+                          <span>API 参考手册</span>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-dim)' }}>&gt;</span>
+                        </div>
+                        <div className="api-content">
+                          <div className="api-card">
+                            <span className="api-title">指定默认手柄 (首选)</span>
+                            <div className="api-code-block">set_default_device(0);</div>
+                            <span className="api-desc">//在脚本最上方指定默认手柄后{"\n"}//下面所有函数均可省略手柄编号!</span>
+                          </div>
+
+                          <div className="api-card">
+                            <span className="api-title">按键操作</span>
+                            <div className="api-code-block">press("A");//默认手柄{"\n"}press(0, "A");//指定手柄{"\n"}release("A");</div>
+                            <span className="api-desc">按键: A B X Y LB RB LT RT{"\n"}BACK START GUIDE LS RS{"\n"}UP DOWN LEFT RIGHT</span>
+                          </div>
+
+                          <div className="api-card">
+                            <span className="api-title">摇杆 (-1.0 ~ 1.0)</span>
+                            <div className="api-code-block">set_thumb(axis, val);{"\n"}set_thumb(0, axis, val);{"\n"}set_thumb("LeftX", 1.0);</div>
+                            <span className="api-desc">axis: LeftX LeftY RightX RightY</span>
+                          </div>
+
+                          <div className="api-card">
+                            <span className="api-title">扳机 (0.0 ~ 1.0)</span>
+                            <div className="api-code-block">set_trigger(side, val);{"\n"}set_trigger(0, side, val);{"\n"}set_trigger("Left", 0.5);</div>
+                            <span className="api-desc">side: Left Right</span>
+                          </div>
+
+                          <div className="api-card">
+                            <span className="api-title">OCR 屏幕文本识别</span>
+                            <div className="api-code-block">ocr() //默认标记区 #1 识别{"\n"}ocr(index) //读取特定区序号并识别</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* TAB 3: CONFIG VIEW */}
+                {currentTab === 'config' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div className="page-header">
+                      <div className="page-header-left">
+                        <h2>参数配置</h2>
+                      </div>
+                    </div>
+
+                    <div className="config-sections">
+
+                      {/* General Setting */}
+                      <div className="config-card">
+                        <div className="config-card-title">通用设置</div>
+                        <div className="config-row">
+                          <span className="config-row-label">开机自启动</span>
+                          <input type="checkbox" checked={autoStart} onChange={() => setAutoStart(!autoStart)} />
+                        </div>
+                        <div className="config-row">
+                          <span className="config-row-label">最小化到托盘</span>
+                          <input type="checkbox" checked={minimizeToTray} onChange={() => setMinimizeToTray(!minimizeToTray)} />
+                        </div>
+                        <div className="config-row">
+                          <span className="config-row-label">日志级别</span>
+                          <select className="config-input-select" value={logLevel} onChange={(e) => setLogLevel(e.target.value)}>
+                            <option value="trace">Trace</option>
+                            <option value="debug">Debug</option>
+                            <option value="info">Info</option>
+                            <option value="warn">Warn</option>
+                            <option value="error">Error</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* OCR Calibration Settings */}
+                      <div className="config-card">
+                        <div className="config-card-title">OCR 自动化配置</div>
+                        <div className="config-row">
+                          <span className="config-row-label">OCR 识别引擎</span>
+                          <select className="config-input-select" value={ocrEngine} onChange={(e) => setOcrEngine(e.target.value)}>
+                            <option value="winocr">Windows 原生 (WinRT OCR)</option>
+                            <option value="paddleocr">外部 PaddleOCR (HTTP)</option>
+                          </select>
+                        </div>
+                        {ocrEngine === 'paddleocr' && (
+                          <div className="config-row">
+                            <span className="config-row-label">PaddleOCR URL 地址</span>
+                            <input
+                              type="text"
+                              className="config-input-text"
+                              value={paddleUrl}
+                              onChange={(e) => setPaddleUrl(e.target.value)}
+                            />
+                          </div>
+                        )}
+
+                        <div className="ocr-regions-list">
+                          {ocrRegions.map((region, idx) => (
+                            <div key={idx} className="ocr-config-card">
+                              <div className="ocr-status-group">
+                                <div className="ocr-label-group">
+                                  <span className="ocr-card-title">OCR 识别区 #{idx + 1}</span>
+                                  <span className="ocr-status-badge">
+                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-success)', display: 'inline-block' }}></span>
+                                    已指定
+                                  </span>
+                                </div>
+                                <div className="ocr-coords">
+                                  <span className="coord-tag">X: {region.x}</span>
+                                  <span className="coord-tag">Y: {region.y}</span>
+                                  <span className="coord-tag">W: {region.w}</span>
+                                  <span className="coord-tag">H: {region.h}</span>
+                                </div>
+                                <div className="ocr-hint-code">
+                                  脚本调用: <code>ocr({idx + 1})</code>
+                                </div>
+                              </div>
+
+                              <div className="ocr-actions">
+                                <button className="ocr-text-btn" onClick={() => {
+                                  setOcrRegions([]);
+                                  appendLog('warn', 'ocr_service', '已清空 OCR 识别区配置');
+                                }}>删除</button>
+                                <button className="ocr-recal-btn" onClick={() => triggerOcrCalibration(idx + 1)}>重新指定</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {ocrRegions.length === 0 && (
+                          <div style={{ textAlign: 'center', padding: '24px 0', border: '1px dashed var(--color-border)', borderRadius: 8, margin: '16px 0', color: 'var(--color-text-dim)', fontSize: '12px' }}>
+                            ⚠️ 尚未标定任何 OCR 识别区。
+                          </div>
+                        )}
+
+                        <button
+                          className="btn btn-primary"
+                          style={{ marginTop: '16px' }}
+                          onClick={() => triggerOcrCalibration()}
+                        >
+                          <Icons.Plus size={13} />
+                          <span>添加标记区 (#{ocrRegions.length + 1})</span>
+                        </button>
+                      </div>
+
+                      {/* Profile Manager */}
+                      <div className="config-card">
+                        <div className="config-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Profile管理</span>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => alert('触发文件导入')}>
+                              <Icons.Upload size={11} />
+                              <span>导入</span>
+                            </button>
+                            <button className="btn btn-primary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => alert('创建 Profile')}>
+                              <Icons.Plus size={11} />
+                              <span>创建 Profile</span>
+                            </button>
+                          </div>
+                        </div>
+                        <div style={{ padding: '16px', background: 'var(--color-surface-elevated)', border: '1px solid var(--color-border)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <Icons.Gamepad size={22} style={{ color: 'var(--color-text-muted)' }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <h4 style={{ fontSize: '13px', fontWeight: 'bold' }}>地平线 5 自动挂机配置</h4>
+                              <span style={{ fontSize: '9px', fontWeight: '600', color: 'var(--color-cta)', border: '1px solid var(--color-cta)', padding: '1px 5px', borderRadius: 4 }}>Xbox 360</span>
+                            </div>
+                            <p style={{ fontSize: '11px', color: 'var(--color-text-dim)', marginTop: '2px' }}>ForzaHorizon5.exe</p>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 4: SCHEDULER VIEW */}
+                {currentTab === 'scheduler' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div className="page-header">
+                      <div className="page-header-left">
+                        <h2>任务调度与序列控制</h2>
+                      </div>
+                      <button className="btn btn-primary" onClick={() => alert('打开多脚本序列编排弹窗...')}>
+                        <Icons.Plus size={14} />
+                        <span>新建任务序列</span>
+                      </button>
+                    </div>
+
+                    {/* Schedule cards */}
+                    <div className="scheduler-list">
+                      <div className="schedule-card">
+                        <div className="schedule-info">
+                          <div className="schedule-title-row">
+                            <span className="schedule-title">刷新技能点</span>
+                            <span className="sequence-badge">序列</span>
+                          </div>
+                          <div className="schedule-desc">
+                            <span>🖱️ 手动执行 (不自动触发)</span>
+                            <span>•</span>
+                            <span>多脚本串联序列 (步骤数: 1)</span>
+                          </div>
+
+                          <div className="schedule-chain-box">
+                            <p className="schedule-chain-text">
+                              <strong>步骤 1:</strong> 刷技能点（需配合PaddleOCR） (1次)
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="schedule-meta">
+                          <span>轮数: 1</span>
+                        </div>
+
+                        <div className="schedule-actions">
+                          {!schedulerRunning ? (
+                            <button className="circle-icon-btn primary" title="启动执行" onClick={() => { setSchedulerRunning(true); appendLog('info', 'scheduler', '激活「刷新技能点」任务序列，开始第一轮调度...'); }}>
+                              <Icons.Play size={12} fill="currentColor" />
+                            </button>
+                          ) : (
+                            <button className="circle-icon-btn danger" style={{ background: 'var(--color-error)', color: '#FFFFFF' }} title="终止执行" onClick={() => setSchedulerRunning(false)}>
+                              <Icons.Square size={12} fill="currentColor" />
+                            </button>
+                          )}
+                          <button className="circle-icon-btn" title="查看细节"><Icons.Eye size={12} /></button>
+                          <button className="circle-icon-btn danger" title="删除"><Icons.Trash2 size={12} /></button>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* TAB 5: NOTIFICATIONS VIEW */}
+                {currentTab === 'notifications' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div className="page-header">
+                      <div className="page-header-left">
+                        <h2>聚合通知配置</h2>
+                        <p className="page-subtitle">配置飞书群Webhook、Server酱或Telegram Bot，在定时任务序列执行中断或完成时自动向您分发通知。</p>
+                      </div>
+                      <button className="btn btn-primary" onClick={() => alert('添加远程分发通道')}>
+                        <Icons.Plus size={14} />
+                        <span>添加通道</span>
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                      <div className="notify-card">
+                        <div className="notify-card-header">
+                          <div className="notify-card-info">
+                            <span className="notify-badge-red">SERVER酱³</span>
+                            <span className="notify-title">server酱3</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="card-icon-btn" title="编辑"><Icons.Settings size={12} /></button>
+                            <button className="card-icon-btn delete" title="删除"><Icons.Trash2 size={12} /></button>
+                          </div>
+                        </div>
+
+                        <div className="notify-fields">
+                          <div className="notify-field-row">
+                            <label>UID:</label>
+                            <span className="notify-field-val">16***</span>
+                          </div>
+                          <div className="notify-field-row">
+                            <label>Send Key:</label>
+                            <span className="notify-field-val">sctp*********</span>
+                          </div>
+                        </div>
+
+                        <button
+                          className={`test-notification-btn ${notifyTestStatus === 'testing' ? 'testing' : ''} ${notifyTestStatus === 'success' ? 'success' : ''}`}
+                          onClick={runNotificationTest}
+                          disabled={notifyTestStatus === 'testing'}
+                        >
+                          {notifyTestStatus === 'testing' && (
+                            <React.Fragment>
+                              <span style={{ width: 10, height: 10, border: '2px solid var(--color-text-dim)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite', display: 'inline-block' }}></span>
+                              <span>正在测试...</span>
+                            </React.Fragment>
+                          )}
+                          {notifyTestStatus === 'success' && (
+                            <React.Fragment>
+                              <Icons.Check size={12} />
+                              <span>发送测试成功！</span>
+                            </React.Fragment>
+                          )}
+                          {notifyTestStatus === 'idle' && (
+                            <React.Fragment>
+                              <Icons.Paperplane size={12} />
+                              <span>发送测试消息</span>
+                            </React.Fragment>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* TAB 6: LOGS VIEW */}
+                {currentTab === 'logs' && (
+                  <div className="log-viewer-layout">
+                    <div className="page-header">
+                      <div className="page-header-left">
+                        <h2>日志查看</h2>
+                      </div>
+                      <button className="circle-icon-btn" title="清空日志控制台" onClick={() => { setLogs([]); appendLog('info', 'tauri_app', '日志控制台已手动清空。'); }}>
+                        <Icons.Trash2 size={14} />
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                      <div className="log-filter-row">
+                        {['all', 'Error', 'Warn', 'Info', 'Debug'].map(lvl => (
+                          <button
+                            key={lvl}
+                            className={`log-filter-btn ${logFilter === lvl ? 'active' : ''}`}
+                            onClick={() => setLogFilter(lvl)}
+                          >
+                            {lvl === 'all' ? '全部' : lvl}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="log-table">
+                      {filteredLogs.slice().reverse().map((entry, idx) => (
+                        <div key={idx} className="log-row">
+                          <span className="log-time">[{entry.time}]</span>
+                          <span
+                            className="log-level"
+                            style={{
+                              color: entry.level === 'error' ? 'var(--color-error)' :
+                                entry.level === 'warn' ? 'var(--color-warning)' :
+                                  entry.level === 'success' ? 'var(--color-success)' : 'var(--color-text-dim)'
+                            }}
+                          >
+                            [{entry.level}]
+                          </span>
+                          <span className="log-module">[{entry.module}]</span>
+                          <span className="log-message">{entry.msg}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                  </div>
+                )}
+
+              </div>
+
+              {/* Bottom footer statusbar */}
+              <footer className="status-bar">
+                <div className="status-items">
+                  <div className="status-item">
+                    <span className="status-indicator-dot"></span>
+                    <span>1 设备运行中</span>
+                  </div>
+                </div>
+                <div className="status-items">
+                  <div className="status-item">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18" /><path d="M15 3v18" /><path d="M3 9h18" /><path d="M3 15h18" /></svg>
+                    <span>CPU: 0%</span>
+                  </div>
+                  <div className="status-item">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 18V4h12v14M6 8h12M6 12h12" /></svg>
+                    <span>MEM: 42 MB</span>
+                  </div>
+                  <div className="status-item">
+                    <span>v0.3.0</span>
+                  </div>
+                </div>
+              </footer>
+            </div>
+          </div>
+
+          {/* Semi-transparent OCR Box Calibration Drag Overlay */}
+          {calibrating && (
+            <div className="calibration-overlay">
+              <div
+                className="calibration-box"
+                style={{
+                  left: calibCoords.x / 2 + 'px',
+                  top: calibCoords.y / 2 + 'px',
+                  width: calibCoords.w / 2 + 'px',
+                  height: calibCoords.h / 2 + 'px'
+                }}
+              >
+                <div className="calibration-label">OCR 识别区 #1 (X:{calibCoords.x} Y:{calibCoords.y} W:{calibCoords.w} H:{calibCoords.h})</div>
+              </div>
+
+              <div className="calibration-hint-panel">
+                <h4 style={{ fontSize: '13.5px', fontWeight: 'bold' }}>🎯 OCR 自动化取景框标定中</h4>
+                <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>已模拟唤起系统悬浮识别窗口，您可通过调整下方参数拟合屏幕文字位置：</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', textAlign: 'left' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <label style={{ fontSize: '9px', color: 'var(--color-text-dim)' }}>X 偏移</label>
+                    <input type="number" className="config-input-select" style={{ width: '100%' }} value={calibCoords.x} onChange={e => setCalibCoords({ ...calibCoords, x: parseInt(e.target.value) || 0 })} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <label style={{ fontSize: '9px', color: 'var(--color-text-dim)' }}>Y 偏移</label>
+                    <input type="number" className="config-input-select" style={{ width: '100%' }} value={calibCoords.y} onChange={e => setCalibCoords({ ...calibCoords, y: parseInt(e.target.value) || 0 })} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <label style={{ fontSize: '9px', color: 'var(--color-text-dim)' }}>宽度 W</label>
+                    <input type="number" className="config-input-select" style={{ width: '100%' }} value={calibCoords.w} onChange={e => setCalibCoords({ ...calibCoords, w: parseInt(e.target.value) || 0 })} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <label style={{ fontSize: '9px', color: 'var(--color-text-dim)' }}>高度 H</label>
+                    <input type="number" className="config-input-select" style={{ width: '100%' }} value={calibCoords.h} onChange={e => setCalibCoords({ ...calibCoords, h: parseInt(e.target.value) || 0 })} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <button className="btn btn-secondary" style={{ flex: 1, padding: '4px' }} onClick={() => setCalibrating(false)}>取消</button>
+                  <button className="btn btn-primary" style={{ flex: 1, padding: '4px' }} onClick={completeOcrCalibration}>保存标定</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+
+</html>
