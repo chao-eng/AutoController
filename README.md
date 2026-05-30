@@ -157,12 +157,13 @@ Docker Desktop 在 Windows 上首选以 **WSL 2** 作为底层引擎。
 ```powershell
 docker run -d -p 8085:8000 --name win-paddleocr --restart always crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest
 ```
+验证：
+打开 网址 http://127.0.0.1:8050/docs#/ ，可以正确显示页面即部署成功。
 
 ### 4. 软件配置与联调
 - 打开 AutoController 应用，切换至系统配置页面， **OCR 自动化配置**区域。
 - 将 OCR 引擎切换为 `PaddleOCR (HTTP API)`。
-- 在接口地址输入框中填写本地 OCR API 服务终结点：`http://127.0.0.1:8085/ocr`。
-- 点击 **测试连接**。若显示“连接成功”并返回识别测试耗时，则表明本地 PaddleOCR 高性能引擎已完美联通！
+- 在接口地址输入框中填写本地 OCR API 服务终结点：`http://127.0.0.1:8050/ocr`。
 
 </details>
 
