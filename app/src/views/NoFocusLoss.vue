@@ -55,15 +55,18 @@ const filteredProcesses = computed(() => {
   )
 })
 
-// 获取可注入的窗口进程列表
+// 获取可注入的窗口进程列表和已注入的进程列表
 async function fetchProcesses() {
   loading.value = true
   errorMessage.value = null
   try {
+    // 1. 获取已注入进程列表（从后端持久状态获取，防丢失）
+    const injected = await invoke<ProcessInfo[]>('get_injected_processes')
+    injectedProcesses.value = injected
+
+    // 2. 获取可注入进程列表
     const list = await invoke<ProcessInfo[]>('get_injectable_processes')
-    // 排除已经注入过的进程
-    const injectedPids = injectedProcesses.value.map((ip) => ip.pid)
-    injectableProcesses.value = list.filter((p) => !injectedPids.includes(p.pid))
+    injectableProcesses.value = list
   } catch (err: any) {
     console.error('获取窗口进程列表失败:', err)
     errorMessage.value = `获取窗口进程列表失败: ${err.toString()}`
@@ -128,6 +131,7 @@ async function unloadHook(proc: ProcessInfo) {
     errorMessage.value = err.toString()
   }
 }
+
 
 async function checkAdminStatus() {
   try {

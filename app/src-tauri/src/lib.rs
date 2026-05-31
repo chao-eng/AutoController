@@ -21,6 +21,8 @@ use script_engine::ScriptRuntime;
 use scheduler::TaskQueue;
 use config::AppConfigManager;
 use system::ProcessMonitor;
+use system::injector::InjectedProcessesState;
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -59,6 +61,7 @@ pub fn run() {
         .manage(TaskQueue::new())
         .manage(AppConfigManager::new())
         .manage(ProcessMonitor::new())
+        .manage(InjectedProcessesState::new())
         .manage(reload_handle)
         .setup(move |app| {
             system::tray::setup_tray(app)?;
@@ -184,6 +187,7 @@ pub fn run() {
             log_cmd::log_export,
             notify::send_aggregated_notification,
             injector_cmd::get_injectable_processes,
+            injector_cmd::get_injected_processes,
             injector_cmd::inject_focus_hook,
             injector_cmd::unload_focus_hook,
             injector_cmd::check_is_admin,

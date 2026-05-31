@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::process::Command;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
 use windows::Win32::Foundation::{HWND, LPARAM, BOOL, CloseHandle};
 use windows::Win32::UI::WindowsAndMessaging::{
@@ -19,13 +19,26 @@ use windows::Win32::System::Threading::{
     OpenProcess, IsWow64Process, PROCESS_QUERY_LIMITED_INFORMATION,
 };
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ProcessInfo {
     pub pid: u32,
     pub name: String,
     pub window_title: String,
     pub is_64bit: bool,
 }
+
+pub struct InjectedProcessesState {
+    pub processes: parking_lot::Mutex<HashMap<u32, ProcessInfo>>,
+}
+
+impl InjectedProcessesState {
+    pub fn new() -> Self {
+        Self {
+            processes: parking_lot::Mutex::new(HashMap::new()),
+        }
+    }
+}
+
 
 // 缓存正在运行的 top-level 窗口及其对应的 PID 映射
 struct EnumWindowsData {
