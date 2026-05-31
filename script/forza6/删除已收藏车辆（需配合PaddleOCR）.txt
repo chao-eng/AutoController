@@ -1,0 +1,166 @@
+/**
+ * 注意：
+ * 1. 当前脚本需开启 PaddleOCR 功能 ，部署教程可参考项目主页
+ */
+
+/**
+ * 辅助函数：封装按键点击
+ * @param count 连续点击次数，默认 1 次
+ */
+fn click_key(key_name, hold_time, post_sleep, count) {
+    let loops = 1;
+    if count > 0 {
+        loops = count;
+    }
+    
+    for i in 0..loops {
+        press(key_name);
+        sleep(hold_time);
+        release(key_name);
+        sleep(post_sleep);
+    }
+}
+
+/**
+ * 辅助函数：检查文本中是否包含数组中的所有关键字
+ */
+fn contains_all_keywords(text_str, keywords) {
+    for kw in keywords {
+        if text_str.index_of(kw) < 0 {
+            return false;
+        }
+    }
+    return true;
+}
+
+// 页面判定函数
+fn is_car_list_page(ocr_text) { return contains_all_keywords(`${ocr_text}`, ["我的车辆", "斯巴鲁"]); }
+fn is_confirm_remove_page(ocr_text) { return contains_all_keywords(`${ocr_text}`, ["上车", "从车库移除车辆"]); }
+fn is_submit_remove_page(ocr_text) { return contains_all_keywords(`${ocr_text}`, ["确定要移除所选车辆吗"]); }
+fn is_collect_page(ocr_text) { return contains_all_keywords(`${ocr_text}`, ["收藏","可用的车身套件和预设配置"]); }
+fn is_main_menu_page(ocr_text) {return contains_all_keywords(ocr_text, ["剧情", "车辆", "地平线", "在线", "创意中心", "商店" , "世界地图"]);}
+fn is_running_page(ocr_text) {return ocr_text.index_of("安娜") >= 0;}
+
+
+/**
+ * 动态等待页面加载
+ * @param page_type "confirm" | "submit"
+ * @param timeout_sec 最大等待秒数
+ */
+fn wait_for_page(page_type, timeout_sec) {
+    // 计算最大检测次数，每 400ms 检测一次，提升响应速度
+    let max_retries = (timeout_sec * 1000) / 400; 
+    
+    for i in 0..max_retries {
+        let current_text = ocr(1); 
+        let is_target = false;
+        
+        if page_type == "confirm" { is_target = is_confirm_remove_page(current_text); }
+        if page_type == "submit"  { is_target = is_submit_remove_page(current_text); }
+
+        if is_target {
+            return true;
+        }
+        sleep(400); // 缩短等待步长，一旦界面翻页成功可以秒进下一步
+    }
+    return false;
+}
+
+/**
+ * 核心删除动作流
+ */
+fn core(){
+    // 1. 在车辆列表页，按下 A 键进入菜单
+    click_key("A", 80, 500, 1);
+    
+    if !wait_for_page("confirm", 5) {
+        log("【错误】未检测到 - 删除确认页（可能卡顿或未选中车辆）");
+        return false; 
+    }
+    
+    // 2. 向下移动 4 次选择“从车库移除车辆”
+    click_key("DOWN", 80, 300, 4);
+    // 按 A 确认移除
+    click_key("A", 80, 500, 1);
+
+    if !wait_for_page("submit", 5) {
+        log("【错误】未检测到 - 二次确认提交页");
+        return false;
+    }
+    
+    // 3. 弹窗默认在“取消”，向下按一次切换到“确定”并按 A 移除
+    click_key("DOWN", 80, 300, 1);
+    click_key("A", 80, 800, 1); 
+    
+    return true;
+}
+
+fn main() {
+    log(" Forza OCR 挂机自动删车脚本启动...");
+    set_default_device(0);
+
+        //进入车库页面
+    while true {
+        let text_str = ocr(1);
+        log("当前ocr识别内容 : " + text_str);
+        
+        if is_main_menu_page(text_str) {
+            break;
+        }
+        
+        log("当前页面非主菜单页，正在尝试切换...");
+        if is_running_page(text_str) {
+            click_key("START", 83, 2000,1);
+        } else {
+            click_key("B", 83, 2000,1);
+        }
+    }
+    click_key("RB",80,1000,1);
+    click_key("A", 80, 1000, 1);
+    //打开筛选
+    click_key("Y", 80, 1000, 1);
+    if is_collect_page(ocr(1)) {
+      click_key("A", 80, 800, 1); 
+      click_key("B", 80, 800, 1); 
+    }else{
+      log("暂无已收藏车辆，退出脚本。");
+      return;
+    }
+
+    
+    let fail_count = 0;
+    
+    while true {
+        let current_ocr = ocr(1);
+        
+        // 检查是否还在车辆列表页
+        if is_car_list_page(current_ocr) {
+            fail_count = 0; // 重置错误计数
+            log("检测到车辆列表，开始执行删除程序...");
+
+            //确认是否在收藏界面
+            click_key("Y", 80, 800, 1); 
+            let next_ocr = ocr(1);
+            if is_collect_page(next_ocr) {
+                click_key("B", 80, 800, 1); 
+            }else{
+                log("收藏车辆已全部删除，退出脚本。");
+                break;
+            }
+            
+            let success = core();
+            if !success {
+                fail_count = fail_count + 1;
+                if fail_count >= 3 {
+                    log("连续 3次动作卡死，触发安全保护，退出脚本。");
+                    break;
+                }
+            }
+        } else {
+            log("当前未在车辆列表页（可能已全部删完，或界面被遮挡），脚本结束。");
+            break;
+        }
+        
+        sleep(1000); 
+    }
+}

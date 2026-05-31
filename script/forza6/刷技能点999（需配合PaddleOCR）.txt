@@ -30,43 +30,35 @@ fn contains_all_keywords(text_str, keywords) {
 // ==================== 页面判断逻辑优化 ====================
 
 fn is_main_menu_page(ocr_text) {
-    let text_str = `${ocr_text}`;
-    return contains_all_keywords(text_str, ["剧情", "车辆", "地平线", "在线", "创意中心", "商店" , "世界地图"]);
+    return contains_all_keywords(ocr_text, ["剧情", "车辆", "地平线", "在线", "创意中心", "商店" , "世界地图"]);
 }
 
 fn is_competition_page(ocr_text) {
-    let text_str = `${ocr_text}`;
-    return contains_all_keywords(text_str, ["精选", "热门", "本月最佳", "赛事"]);
+    return contains_all_keywords(ocr_text, ["精选", "热门", "本月最佳", "赛事"]);
 }
 
 fn is_running_page(ocr_text) {
-    let text_str = `${ocr_text}`;
-    return text_str.index_of("安娜") >= 0;
+    return ocr_text.index_of("安娜") >= 0;
 }
 
 fn is_home_page(ocr_text) {
-    let text_str = `${ocr_text}`;
-    return contains_all_keywords(text_str, ["剧情", "购买与出售", "车辆", "可自定义车库"]);
+    return contains_all_keywords(ocr_text, ["剧情", "购买与出售", "车辆", "可自定义车库"]);
 }
 
 fn is_garage_page(ocr_text) {
-    let text_str = `${ocr_text}`;
-    return contains_all_keywords(text_str, ["我的车辆", "前往制造商"]);
+    return contains_all_keywords(ocr_text, ["我的车辆", "前往制造商"]);
 }
 
 fn is_start_running_page(ocr_text) {
-    let text_str = `${ocr_text}`;
-    return contains_all_keywords(text_str, ["开始竞赛赛事", "难度与设置", "退出比赛"]);
+    return contains_all_keywords(ocr_text, ["开始竞赛赛事", "难度与设置", "退出比赛"]);
 }
 
 fn is_select_running_page(ocr_text) {
-    let text_str = `${ocr_text}`;
-    return contains_all_keywords(text_str, ["单人", "合作", "玩家对战"]);
+    return contains_all_keywords(ocr_text, ["单人", "合作", "玩家对战"]);
 }
 
 fn is_finish_running_page(ocr_text) {
-    let text_str = `${ocr_text}`;
-    return contains_all_keywords(text_str, ["继续", "重新开始", "观看回放影片"]);
+    return contains_all_keywords(ocr_text, ["继续", "重新开始", "观看回放影片"]);
 }
 
 /**
@@ -272,6 +264,9 @@ fn main() {
         
         // 直道全油门挂机阶段
         log("开始直道挂机，尝试底层锁死油门机制...");
+        let safety_counter = 0;   // 安全计数器
+        let max_drive_time = 20;  // 20次 * 3秒 = 60秒（根据你蓝图的实际跑完时间调整，比如40秒能跑完，就设为15）
+
         while true {
             // 1. 无需调用包含 sleep 的 set_throttle，直接用长按形式将扳机状态强行锁死在 1.0
             set_trigger("Right", 1.0000); 
@@ -279,12 +274,18 @@ fn main() {
             // 2. 让它在跑道上先跑 3 秒
             sleep(3000); 
             
+            safety_counter = safety_counter + 1;
             //检测冲线
             let current_text = ocr(1);
             
             if !is_running_page(current_text) {
                 log("检测到冲线！");
                 break; 
+            }
+
+            if safety_counter >= max_drive_time {
+                log("【安全保护】检测到单轮行驶时间异常过长，强行触发收油逻辑，防止冲出赛道！");
+                break;
             }
         }
         
@@ -296,6 +297,9 @@ fn main() {
         // 动态等待比赛结束结算页面
         if !wait_for_page("is_finish_run", 15) {
              log("【错误】未检测到比赛结算结束页，退出脚本。");
+             //退出比赛
+             click_key("START", 83, 1000);
+             
              throw "进入比赛结束页失败"; 
         }
         log("检测到已进入比赛结束页。");
