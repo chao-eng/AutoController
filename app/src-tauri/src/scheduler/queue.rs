@@ -105,6 +105,27 @@ impl TaskQueue {
         Ok(())
     }
 
+    pub fn update_task(&self, mut updated_task: ScheduledTask) -> Result<(), String> {
+        let mut tasks = self.tasks.lock();
+        if !tasks.contains_key(&updated_task.id) {
+            return Err(format!("任务不存在: {}", updated_task.id));
+        }
+        
+        // 如果任务已启用，基于上次运行时间计算下一次运行时间
+        if updated_task.enabled {
+            updated_task.next_run = calculate_next_run(&updated_task.schedule, updated_task.last_run);
+        } else {
+            updated_task.next_run = None;
+        }
+        
+        tracing::info!(task_id = %updated_task.id, name = %updated_task.name, "定时任务已更新");
+        tasks.insert(updated_task.id.clone(), updated_task);
+        drop(tasks);
+        self.persist();
+        Ok(())
+    }
+
+
     pub fn remove_task(&self, task_id: &str) -> Result<(), String> {
         let mut tasks = self.tasks.lock();
         if tasks.remove(task_id).is_some() {

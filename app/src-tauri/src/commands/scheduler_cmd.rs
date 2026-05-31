@@ -11,6 +11,15 @@ pub fn scheduler_create_task(
 }
 
 #[tauri::command]
+pub fn scheduler_update_task(
+    queue: tauri::State<'_, TaskQueue>,
+    task: ScheduledTask,
+) -> Result<(), String> {
+    queue.update_task(task)
+}
+
+
+#[tauri::command]
 pub fn scheduler_remove_task(
     queue: tauri::State<'_, TaskQueue>,
     task_id: String,

@@ -4,7 +4,7 @@ import { useSchedulerStore } from '../stores/scheduler'
 import { useScriptStore } from '../stores/script'
 import { useUIStore } from '../stores/ui'
 import { useConfigStore } from '../stores/config'
-import { Plus, ToggleLeft, ToggleRight, Trash2, Play, Square, ArrowUp, ArrowDown, X } from '@lucide/vue'
+import { Plus, ToggleLeft, ToggleRight, Trash2, Play, Square, ArrowUp, ArrowDown, X, Edit } from '@lucide/vue'
 import type { ScheduledTask } from '../types/scheduler'
 
 const store = useSchedulerStore()
@@ -14,6 +14,7 @@ const configStore = useConfigStore()
 
 // 新建/编辑任务序列状态
 const showEditor = ref(false)
+const editingTaskId = ref<string | null>(null)
 const taskName = ref('')
 const taskLoopCount = ref(1)
 const steps = ref<{ script_id: string; loop_count: number }[]>([])
@@ -45,6 +46,7 @@ function getTypeName(type: string): string {
 }
 
 function openEditor() {
+  editingTaskId.value = null
   taskName.value = ''
   taskLoopCount.value = 1
   steps.value = []
@@ -65,6 +67,57 @@ function openEditor() {
   }
   showEditor.value = true
 }
+
+function openEditEditor(task: ScheduledTask) {
+  editingTaskId.value = task.id
+  taskName.value = task.name
+  
+  if (task.action && 'execute_sequence' in task.action) {
+    taskLoopCount.value = task.action.execute_sequence.task_loop_count
+    steps.value = task.action.execute_sequence.steps.map(s => ({
+      script_id: s.script_id,
+      loop_count: s.loop_count
+    }))
+  } else {
+    taskLoopCount.value = 1
+    steps.value = []
+  }
+
+  selectedNotificationChannels.value = task.notification_channels ? [...task.notification_channels] : []
+
+  if (task.schedule === 'manual') {
+    scheduleType.value = 'manual'
+  } else if ('once' in task.schedule) {
+    scheduleType.value = 'once'
+    const date = new Date(task.schedule.once)
+    const tzoffset = date.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(date.getTime() - tzoffset)).toISOString().slice(0, 16);
+    onceDateTime.value = localISOTime
+  } else if ('daily' in task.schedule) {
+    scheduleType.value = 'daily'
+    dailyTime.value = task.schedule.daily.time
+  } else if ('interval' in task.schedule) {
+    scheduleType.value = 'interval'
+    const ms = task.schedule.interval.duration_ms
+    if (ms % 3600000 === 0) {
+      intervalDuration.value = ms / 3600000
+      intervalUnit.value = 'hours'
+    } else if (ms % 60000 === 0) {
+      intervalDuration.value = ms / 60000
+      intervalUnit.value = 'minutes'
+    } else {
+      intervalDuration.value = ms / 1000
+      intervalUnit.value = 'seconds'
+    }
+  } else if ('cron' in task.schedule) {
+    scheduleType.value = 'cron'
+    cronExpression.value = task.schedule.cron.expression
+  }
+
+  taskPriority.value = task.priority
+  showEditor.value = true
+}
+
 
 
 function addStep() {
@@ -135,6 +188,45 @@ async function saveTask() {
     schedule = { cron: { expression: cronExpression.value } };
   } else {
     schedule = 'manual'; // 手动执行类型直接对应 Rust 序列化后的 'manual' 字符串
+  }
+
+  if (editingTaskId.value) {
+    const originalTask = store.tasks.find(t => t.id === editingTaskId.value)
+    if (!originalTask) return
+
+    const updatedTask: ScheduledTask = {
+      id: originalTask.id,
+      name: taskName.value,
+      schedule,
+      action: {
+        execute_sequence: {
+          steps: steps.value.map((s) => ({
+            script_id: s.script_id,
+            loop_count: s.loop_count,
+          })),
+          task_loop_count: taskLoopCount.value,
+        },
+      },
+      priority: taskPriority.value,
+      enabled: originalTask.enabled,
+      last_run: originalTask.last_run,
+      next_run: originalTask.next_run,
+      notification_channels: [...selectedNotificationChannels.value],
+    }
+
+    try {
+      await store.updateTask(updatedTask)
+      showEditor.value = false
+      editingTaskId.value = null
+      taskName.value = ''
+      taskLoopCount.value = 1
+      steps.value = []
+      selectedNotificationChannels.value = []
+      uiStore.showToast('修改任务序列成功', 'success')
+    } catch (e) {
+      uiStore.showAlert('修改失败', `修改任务序列失败: ${e}`)
+    }
+    return
   }
 
   const newTask: ScheduledTask = {
@@ -355,6 +447,16 @@ async function stopSequence(taskId: string) {
             <ToggleLeft v-else :size="18" />
           </button>
 
+          <!-- 编辑 -->
+          <button
+            class="icon-btn"
+            @click="openEditEditor(task)"
+            :disabled="store.executingTaskId === task.id"
+            title="编辑任务"
+          >
+            <Edit :size="14" />
+          </button>
+
           <!-- 删除 -->
           <button
             class="icon-btn danger"
@@ -373,7 +475,7 @@ async function stopSequence(taskId: string) {
       <div v-if="showEditor" class="editor-backdrop" @click.self="showEditor = false">
         <div class="editor-modal">
           <div class="modal-header">
-            <h3>编排串联多脚本序列</h3>
+            <h3>{{ editingTaskId ? '修改任务序列与调度' : '编排串联多脚本序列' }}</h3>
             <button class="close-btn" @click="showEditor = false">
               <X :size="18" />
             </button>
@@ -456,28 +558,6 @@ async function stopSequence(taskId: string) {
               </div>
             </div>
 
-            <!-- 聚合通知配置 -->
-            <div class="scheduler-config-box">
-              <h4 class="scheduler-config-title">🔔 任务通知配置</h4>
-              <div class="form-group">
-                <label>选择通知通道 (任务完成或中断时发送通知)</label>
-                <div v-if="!configStore.config.notification_channels || configStore.config.notification_channels.length === 0" class="notify-empty-hint">
-                  暂无配置好的通知通道。你可以先去“通知配置”页面添加。
-                </div>
-                <div v-else class="notify-checkbox-list">
-                  <label v-for="ch in configStore.config.notification_channels" :key="ch.id" class="notify-checkbox-item">
-                    <input 
-                      type="checkbox" 
-                      :value="ch.id" 
-                      v-model="selectedNotificationChannels" 
-                    />
-                    <span class="notify-ch-name">{{ ch.name }}</span>
-                    <span class="notify-ch-type">({{ getTypeName(ch.config.type) }})</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
             <div class="steps-container">
 
               <div class="steps-header">
@@ -522,6 +602,28 @@ async function stopSequence(taskId: string) {
                       <Trash2 :size="12" />
                     </button>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 聚合通知配置 -->
+            <div class="scheduler-config-box">
+              <h4 class="scheduler-config-title">🔔 任务通知配置</h4>
+              <div class="form-group">
+                <label>选择通知通道 (任务完成或中断时发送通知)</label>
+                <div v-if="!configStore.config.notification_channels || configStore.config.notification_channels.length === 0" class="notify-empty-hint">
+                  暂无配置好的通知通道。你可以先去“通知配置”页面添加。
+                </div>
+                <div v-else class="notify-checkbox-list">
+                  <label v-for="ch in configStore.config.notification_channels" :key="ch.id" class="notify-checkbox-item">
+                    <input 
+                      type="checkbox" 
+                      :value="ch.id" 
+                      v-model="selectedNotificationChannels" 
+                    />
+                    <span class="notify-ch-name">{{ ch.name }}</span>
+                    <span class="notify-ch-type">({{ getTypeName(ch.config.type) }})</span>
+                  </label>
                 </div>
               </div>
             </div>

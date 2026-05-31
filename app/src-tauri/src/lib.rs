@@ -170,6 +170,7 @@ pub fn run() {
             script_cmd::script_rename,
             script_cmd::script_delete,
             scheduler_cmd::scheduler_create_task,
+            scheduler_cmd::scheduler_update_task,
             scheduler_cmd::scheduler_remove_task,
             scheduler_cmd::scheduler_toggle_task,
             scheduler_cmd::scheduler_list,

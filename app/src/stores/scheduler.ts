@@ -48,6 +48,17 @@ export const useSchedulerStore = defineStore('scheduler', () => {
     }
   }
 
+  async function updateTask(task: ScheduledTask) {
+    try {
+      await invoke('scheduler_update_task', { task })
+      await fetchTasks()
+    } catch (e) {
+      error.value = String(e)
+      throw e
+    }
+  }
+
+
   async function removeTask(taskId: string) {
     try {
       await invoke('scheduler_remove_task', { taskId })
@@ -127,6 +138,7 @@ export const useSchedulerStore = defineStore('scheduler', () => {
     sequenceProgress,
     fetchTasks,
     createTask,
+    updateTask,
     removeTask,
     toggleTask,
     executeSequence,
