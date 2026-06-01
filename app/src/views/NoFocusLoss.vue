@@ -31,7 +31,6 @@ const loading = ref(false)
 const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const isAdmin = ref(false)
-const appVersion = __APP_VERSION__
 
 // 显示 Defender 信任区引导指南
 const showGuide = ref(false)
@@ -151,7 +150,7 @@ onMounted(() => {
   <div class="nofocus-container">
     <!-- 头部区域 -->
     <div class="page-header">
-      <h2>防止游戏/窗口失去焦点 (No Focus Loss) <span class="badge version-badge">{{ appVersion }}</span></h2>
+      <h2>防止游戏/窗口失去焦点 (No Focus Loss)</h2>
       <div class="header-actions">
         <button class="btn-secondary" @click="showFeatureGuide = !showFeatureGuide" :class="{ active: showFeatureGuide }">
           <Info :size="14" />
