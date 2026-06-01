@@ -49,7 +49,7 @@
     *   基于 Rust `tracing` 库实现的**异步级联日志系统**，支持日志轮转，并可一键导出为 JSON / CSV 格式。
 *   **🔍 智能屏幕文字识别 (OCR) 系统**
     *   **原生/外部双引擎架构**：支持 **Windows 原生 (WinRT OCR)** 零依赖、高速度离线文字识别，以及 **外部 PaddleOCR (HTTP API)** 双模式运行。
-    *   **PaddleOCR 容器化部署**：提供高度优化的 PaddleOCR Windows 容器镜像：`crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest`，支持一键运行本地 HTTP OCR 服务。
+    *   **PaddleOCR 双方案部署**：支持 **一键 EXE 独立部署**（零依赖、双击即用，从 GitHub Releases 下载）或 **Docker 容器化部署**（提供国内极速直连的阿里云优化镜像）。
     *   **多区域标定与脚本 API**：支持在 UI 界面多区域框选标定，脚本中通过 `ocr()`、`ocr(序号)` 或 `ocr(x,y,w,h)` 灵活读取。
     *   **自适应高保真增强**：短边小于 600px 时自动采用 GDI HALFTONE 差值算法智能高清晰度放大，保障极高字亲和性与识别率。
 *   **🔔 多通道智能消息通知系统**
@@ -103,67 +103,58 @@ AutoController/
 
 ---
 
-## 🚀 快速上手
+## 🚀 使用说明
 
-### 1. 环境准备
-在开始编译和运行 AutoController 之前，请确保您的 Windows 环境已安装以下组件：
-*   **Windows 10/11**
-*   **ViGEmBus 驱动**：[前往 ViGEmBus 官方发布页面下载并安装](https://github.com/ViGEm/ViGEmBus/releases)
-*   **Node.js** (v24.x 或更高版本)
-*   **Rust 工具链** (Rust 1.95+ 及 Cargo)
+### 1. 下载安装
+- 前往本项目的 [GitHub Releases 页面](https://github.com/chao-eng/AutoController/releases) 下载最新版本的 Windows 安装包（如 `.msi` 或打包好的独立 `.exe` 执行文件）。
+- 按照向导完成软件安装。程序已**内置集成了所需的 ViGEmBus 内核驱动**，安装过程中会自动处理，**无需用户手动下载安装**。
 
-### 2. 获取源码并安装前端依赖
-```bash
-# 克隆仓库 (假设已克隆)
-cd AutoController/app
-
-# 安装前端 node_modules
-npm install
-```
-
-### 3. 运行开发模式
-您可以通过以下命令运行调试开发版本的 AutoController：
-```bash
-# 启动前端及 Tauri 开发版窗口
-npm run tauri dev
-```
-
-### 4. 构建生产安装包
-要打包出高度优化的生产级 Windows 安装包：
-```bash
-# 构建打包 (生成的 .msi / .exe 安装文件将存放于 app/src-tauri/target/release/bundle/)
-npm run tauri build
-```
+### 2. 运行与配置
+- **普通模式**：双击启动桌面的 **AutoController** 即可开始使用设备模拟、录制宏或编写 QuickJS 脚本。
+- **管理员模式 (推荐 🛡️)**：如果您挂机的游戏具有高权限或需要使用 **防止窗口失去焦点 (No Focus Loss)** 注入技术，请在桌面上右键选择 **“以管理员身份运行”** 启动本程序。
+- **OCR 增强**：如果编写的自动化脚本需要使用高精度文字识别，请参考下方 [🐳 PaddleOCR 本地服务部署教程](#🐳-paddleocr-本地服务部署教程-exe--docker) 开启外部服务。
 
 ---
 
-## 🐳 PaddleOCR 本地部署教程 (Docker)
-为了在脚本运行中使用更精准的 PaddleOCR 识别引擎，推荐在 Windows 上使用 Docker 容器化部署本地 OCR 高性能服务：
+## 🐳 PaddleOCR 本地服务部署教程 (EXE / Docker)
 
-### 1. 准备工作：启用 WSL 2
-Docker Desktop 在 Windows 上首选以 **WSL 2** 作为底层引擎。
-- 以管理员身份打开 PowerShell，运行以下命令安装 WSL：
-  ```powershell
-  wsl --install
-  ```
-- 安装完成后，请重启电脑以使配置生效。
+为了在脚本运行中使用更精准的 PaddleOCR 识别引擎，您需要在本地部署一个 OCR 服务。目前提供以下两种灵活的部署方案：
 
-### 2. 安装 Docker Desktop
-- [前往 Docker 官方网站](https://www.docker.com/products/docker-desktop/) 下载最新的 Docker Desktop for Windows 安装包。
-- 运行安装程序，确保勾选了 **Use the WSL 2 based engine** 选项，按照指引完成安装并启动。
+### 💡 方案 A：一键 EXE 点击部署 (推荐 🌟)
+这是最简单、快捷且无需任何依赖（如 Docker / WSL2）的部署方式，适合绝大多数 Windows 用户。
 
-### 3. 拉取并运行 PaddleOCR 镜像
-在 PowerShell 或 CMD 控制台中运行以下指令拉取并后台启动 OCR 服务（该镜像已发布于阿里云容器仓库，国内直连拉取速度极快）：
-```powershell
-docker run -d -p 8085:8000 --name win-paddleocr --restart always crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest
-```
-验证：
-打开 网址 `http://127.0.0.1:8050/docs#/` ，可以正确显示页面即部署成功。
+1. **下载程序**：
+   - 前往本项目的 [GitHub Releases 页面](https://github.com/chao-eng/AutoController/releases) 下载支持一键开启 OCR 服务的 EXE 启动文件（`ocr_service.exe`）。
+2. **启动运行**：
+   - 下载后双击运行程序（例如双击 `ocr_service.exe`）。
+   - 看到控制台输出显示服务已在本地 `8050` 端口成功运行即可。整个服务离线运行，安全可靠。
+3. **软件配置与联调**：
+   - **验证**：打开浏览器访问 `http://127.0.0.1:8050`，若能正确显示 API 文档页面即部署成功。
+   - 打开 **AutoController** 应用，切换至系统配置页面的 **OCR 自动化配置** 区域。
+   - 将 OCR 引擎切换为 `PaddleOCR (HTTP API)`。
+   - 在接口地址输入框中填写默认地址：`http://127.0.0.1:8050/ocr`。
 
-### 4. 软件配置与联调
-- 打开 AutoController 应用，切换至系统配置页面， **OCR 自动化配置**区域。
-- 将 OCR 引擎切换为 `PaddleOCR (HTTP API)`。
-- 在接口地址输入框中填写PaddleOCR URL 地址：`http://127.0.0.1:8050/ocr`。
+---
+
+### 🐳 方案 B：Docker 容器化部署
+适合习惯使用 Docker 开发或已在本地安装 Docker 服务的用户。
+
+1. **准备工作：启用 WSL 2**（若未安装）：
+   - 以管理员身份打开 PowerShell，运行以下命令安装 WSL：
+     ```powershell
+     wsl --install
+     ```
+   - 安装完成后，请重启电脑以使配置生效。
+2. **安装 Docker Desktop**（若未安装）：
+   - [前往 Docker 官方网站](https://www.docker.com/products/docker-desktop/) 下载最新的 Docker Desktop for Windows 安装包，按照指引完成安装并启动。
+3. **拉取并运行 PaddleOCR 镜像**：
+   - 在 PowerShell 或 CMD 中运行以下指令拉取并后台启动 OCR 服务（该镜像已发布于阿里云容器仓库，国内直连拉取速度极快，我们将主机端口映射到了默认的 `8050`）：
+     ```powershell
+     docker run -d -p 8050:8000 --name win-paddleocr --restart always crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest
+     ```
+4. **验证与联调**：
+   - **验证**：打开浏览器访问 `http://127.0.0.1:8050/docs#/`，若能正确显示 API 文档页面即部署成功。
+   - **配置**：打开 **AutoController** 应用，切换至系统配置页面的 **OCR 自动化配置**，将引擎切换为 `PaddleOCR (HTTP API)`，输入地址 `http://127.0.0.1:8050/ocr`。
 
 </details>
 
@@ -207,7 +198,7 @@ docker run -d -p 8085:8000 --name win-paddleocr --restart always crpi-a1liy20beo
     *   Asynchronous logging powered by Rust's `tracing` library with log-rotation, reloadable filters, and CSV/JSON exports.
 *   **🔍 Intelligent Screen OCR Text Recognition**
     *   **Dual-Engine Architecture**: Seamlessly switch between zero-dependency, ultra-fast **Windows Native (WinRT OCR)** and high-precision **External PaddleOCR (HTTP API)**.
-    *   **PaddleOCR Container Deployment**: Highly optimized container image is available at `crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest` for one-click setup of local HTTP OCR service.
+    *   **Flexible PaddleOCR Deployment**: Supports both **One-Click EXE Deployment** (zero-dependency, double-click to run, available on GitHub Releases) and **Docker Containerization** (via highly-optimized registry image).
     *   **Multi-Region Calibration & Scripting APIs**: Frame and select multiple target regions on the UI, and query screen text instantly via `ocr()`, `ocr(index)`, or `ocr(x,y,w,h)` scripts.
     *   **Adaptive Image Enhancing**: Automatically scales smaller bounding boxes (<600px) using GDI HALFTONE interpolation to guarantee outstanding text clarity and accuracy.
 *   **🔔 Multi-Channel Notification Dispatcher**
@@ -261,65 +252,56 @@ AutoController/
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Usage Guide
 
-### 1. Prerequisites
-Before setting up the project, make sure the following are installed on your Windows machine:
-*   **Windows 10/11**
-*   **ViGEmBus Driver**: [Download and install from the official release page](https://github.com/ViGEm/ViGEmBus/releases)
-*   **Node.js** (v24.x or higher)
-*   **Rust toolchain** (Rust 1.95+ and Cargo)
+### 1. Download & Install
+- Go to the [GitHub Releases page](https://github.com/chao-eng/AutoController/releases) and download the latest Windows installer (e.g., `.msi` or standalone `.exe`).
+- Follow the wizard to complete the installation. The required **ViGEmBus** kernel driver is **fully bundled with the software** and will be configured automatically—**no manual driver installation is required** for end-users.
 
-### 2. Fetch Source & Install Frontend Dependencies
-```bash
-# Navigate to the core application folder (assuming repository is cloned)
-cd AutoController/app
-
-# Install Node modules
-npm install
-```
-
-### 3. Run Development Mode
-Launch the application with live reloading:
-```bash
-# Starts both frontend development server and Tauri webview window
-npm run tauri dev
-```
-
-### 4. Build Production Bundle
-Build a highly optimized Windows installer package:
-```bash
-# Builds the app (output .msi / .exe will be stored in app/src-tauri/target/release/bundle/)
-npm run tauri build
-```
+### 2. Running & Configuring
+- **Standard Mode**: Double-click the **AutoController** desktop icon to start simulating controllers, recording macros, or writing QuickJS scripts.
+- **Administrator Mode (Recommended 🛡️)**: If the target game runs under elevated privileges or if you wish to use the **Prevent Focus Loss (No Focus Loss)** injection feature, right-click the shortcut and select **"Run as Administrator"**.
+- **OCR Integration**: If your automation scripts require high-precision screen text detection, follow the [🐳 PaddleOCR Local Service Deployment Guide](#🐳-paddleocr-local-service-deployment-guide-exe--docker) below to set up your local OCR endpoint.
 
 ---
 
-## 🐳 PaddleOCR Local Deployment Guide (Docker)
-To utilize the PaddleOCR HTTP dual-engine system, we recommend deploying a local OCR service inside a Docker container on Windows:
+## 🐳 PaddleOCR Local Service Deployment Guide (EXE / Docker)
 
-### 1. Prerequisites: Enable WSL 2
-Docker Desktop on Windows runs optimally using the **WSL 2** engine.
-- Open PowerShell as Administrator, and run:
-  ```powershell
-  wsl --install
-  ```
-- Restart your computer after installation to apply the changes.
+To utilize the higher-precision PaddleOCR engine in your scripts, you need to deploy a local OCR HTTP service. We provide two flexible options:
 
-### 2. Install Docker Desktop
-- Visit [Docker Desktop for Windows Official Page](https://www.docker.com/products/docker-desktop/) to download the installer.
-- Run the installer, ensure that the **Use the WSL 2 based engine** option is checked, and complete the setup.
+### 💡 Option A: One-Click EXE Deployment (Recommended 🌟)
+This is the simplest, zero-dependency, and fastest deployment method, suitable for most Windows users.
 
-### 3. Pull and Run the PaddleOCR Image
-Execute the following command in PowerShell/CMD to pull and run the OCR container in the background (hosted on Aliyun ACR with excellent bandwidth):
-```powershell
-docker run -d -p 9982:9982 --name win-paddleocr --restart always crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest
-```
+1. **Download the Service**:
+   - Go to the [GitHub Releases page](https://github.com/chao-eng/AutoController/releases) of this repository and download the Windows OCR service package (e.g., `win-paddleocr.zip` or `ocr_service.exe`).
+2. **Launch & Run**:
+   - Extract and double-click the executable (e.g., `ocr_service.exe`) to start the service.
+   - The terminal console will spin up the local server on the default port `8050`. Keep this window open while using OCR.
+3. **Connect in AutoController**:
+   - Open **AutoController**, navigate to the **OCR Configuration** tab.
+   - Select the OCR engine to `PaddleOCR (HTTP API)`.
+   - Input the local OCR API endpoint: `http://127.0.0.1:8050/ocr` and click **Test Connection**.
 
-### 4. Connect in AutoController
-- Launch AutoController and navigate to the **OCR Configuration** tab.
-- Switch the OCR engine to `PaddleOCR (HTTP API)`.
-- Input the local OCR API endpoint: `http://127.0.0.1:9982/ocr`.
-- Click **Test Connection**. When it reports success, your high-precision OCR engine is ready for action!
+---
+
+### 🐳 Option B: Docker Container Deployment
+Ideal for developers who prefer containerized services or already have Docker Desktop configured.
+
+1. **Prerequisites: Enable WSL 2** (if not installed):
+   - Open PowerShell as Administrator, and run:
+     ```powershell
+     wsl --install
+     ```
+   - Restart your computer after installation to apply the changes.
+2. **Install Docker Desktop** (if not installed):
+   - Visit [Docker Desktop for Windows Official Page](https://www.docker.com/products/docker-desktop/) to download and complete the setup.
+3. **Pull and Run the PaddleOCR Image**:
+   - Run the following command in PowerShell/CMD to pull and run the OCR container in the background (mapping to the default `8050` port):
+     ```powershell
+     docker run -d -p 8050:8000 --name win-paddleocr --restart always crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest
+     ```
+4. **Verification & Configuration**:
+   - **Verify**: Open your browser and navigate to `http://127.0.0.1:8050/docs#/` to view the API documentation page.
+   - **Configure**: In **AutoController**'s **OCR Configuration** tab, switch engine to `PaddleOCR (HTTP API)` and input endpoint: `http://127.0.0.1:8050/ocr`. Click **Test Connection**.
 
 </details>
