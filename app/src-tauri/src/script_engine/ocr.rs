@@ -12,11 +12,28 @@ use windows::Win32::Graphics::Gdi::*;
 pub static OCR_ENGINE: OnceLock<Mutex<OcrLite>> = OnceLock::new();
 
 fn strip_unc_prefix(path: std::path::PathBuf) -> std::path::PathBuf {
-    let s = path.to_string_lossy();
-    if s.starts_with(r"\\?\") {
-        std::path::PathBuf::from(&s[4..])
-    } else {
-        path
+    use std::path::{Component, Prefix};
+
+    let mut components = path.components();
+    match components.next() {
+        Some(Component::Prefix(prefix_component)) => {
+            match prefix_component.kind() {
+                Prefix::VerbatimDisk(disk) => {
+                    let mut new_path = std::path::PathBuf::from(format!("{}:", disk as char));
+                    new_path.push(components.as_path());
+                    new_path
+                }
+                Prefix::VerbatimUNC(server, share) => {
+                    let mut new_path = std::path::PathBuf::from(r"\\");
+                    new_path.push(server);
+                    new_path.push(share);
+                    new_path.push(components.as_path());
+                    new_path
+                }
+                _ => path,
+            }
+        }
+        _ => path,
     }
 }
 
