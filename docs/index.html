@@ -711,175 +711,156 @@
       transform: translateX(-50%);
     }
 
-    /* Button section mimicking actual controller view */
-    .buttons-section {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex: 1;
+    /* Upgraded modern two-column dashboard structure */
+    .monitor-dashboard {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
     }
 
-    .controller-layout-box {
+    @media (max-width: 1024px) {
+      .monitor-dashboard {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .dashboard-left {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+    }
+
+    .dashboard-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-card {
       background: var(--color-surface-elevated);
       border: 1px solid var(--color-border);
-      border-radius: 20px;
-      padding: 10px 20px 16px;
-      min-width: 330px;
-      user-select: none;
+      border-radius: var(--radius-xl);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
     }
 
-    .shoulder-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding: 0 4px;
+    .panel-card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+      box-shadow: var(--shadow-md);
     }
 
-    .main-row {
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
-      justify-content: space-between;
-    }
-
-    .left-side {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      min-width: 90px;
-    }
-
-    .center-side {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 8px;
-      padding-top: 24px;
-    }
-
-    .right-side {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      min-width: 90px;
-    }
-
-    .dpad-cluster,
-    .abxy-cluster {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-
-    .dpad-row,
-    .abxy-row {
-      display: flex;
-      gap: 2px;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .dpad-center-spacer,
-    .abxy-center-spacer {
-      width: 26px;
-      height: 26px;
-    }
-
-    .game-btn {
-      width: 30px;
-      height: 30px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--color-border);
-      background: #FFFFFF;
-      color: var(--color-text-dim);
-      font-size: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.1s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      outline: none;
-    }
-
-    .game-btn:hover {
-      background: var(--color-background);
-      color: var(--color-text);
-    }
-
-    .game-btn.pressed {
-      border-color: var(--color-cta);
-      background: rgba(59, 130, 246, 0.1);
-      color: var(--color-cta);
-    }
-
-    .game-btn.shoulder-btn {
-      width: 44px;
-      height: 20px;
-      font-size: 8.5px;
-      border-radius: var(--radius-sm) var(--radius-sm) var(--radius-md) var(--radius-md);
-    }
-
-    .game-btn.dpad-btn {
-      width: 26px;
-      height: 26px;
+    .card-title {
       font-size: 12px;
-      border-radius: 4px;
+      font-weight: 700;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
     }
 
-    .game-btn.stick-btn {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      font-size: 9.5px;
-      border: 2px solid var(--color-border);
+    /* Left controller SVG container styling */
+    .controller-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 420px;
+      padding: 24px 16px 16px;
+      position: relative;
+      border-radius: var(--radius-xl);
     }
 
-    .game-btn.guide-btn {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      font-size: 13px;
-      border: 2px solid var(--color-border);
+    .card-inner {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
     }
 
-    .game-btn.misc-btn {
-      width: 34px;
-      height: 18px;
-      font-size: 7px;
-      border-radius: 10px;
-      letter-spacing: 0.2px;
+    .controller-svg {
+      width: 100%;
+      height: auto;
+      filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.05));
+      transition: transform 0.1s ease;
     }
 
-    /* Colored highlights matching vue */
-    .game-btn.a-btn.pressed {
-      background: rgba(16, 185, 129, 0.12);
-      color: var(--color-success);
-      border-color: var(--color-success);
+    /* Interactive SVG color schemes & classes mapping to dynamic theme colors */
+    .fill-body {
+      fill: var(--color-surface);
+      transition: fill 0.2s ease;
+    }
+    .stroke-body {
+      stroke: var(--color-border);
+      stroke-width: 3px;
+      transition: stroke 0.2s ease;
     }
 
-    .game-btn.b-btn.pressed {
-      background: rgba(239, 68, 68, 0.12);
-      color: var(--color-error);
-      border-color: var(--color-error);
+    .fill-well {
+      fill: var(--color-background);
+      transition: fill 0.2s ease;
+    }
+    .stroke-well {
+      stroke: var(--color-border);
+      stroke-width: 2px;
+      transition: stroke 0.2s ease;
     }
 
-    .game-btn.x-btn.pressed {
-      background: rgba(59, 130, 246, 0.12);
-      color: var(--color-cta);
-      border-color: var(--color-cta);
+    .card-footer {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--color-text-dim);
+      border-top: 1px dashed var(--color-border);
+      padding-top: 8px;
+      margin-top: 16px;
     }
 
-    .game-btn.y-btn.pressed {
-      background: rgba(245, 158, 11, 0.12);
-      color: var(--color-warning);
-      border-color: var(--color-warning);
+    .tip-tag {
+      background: rgba(99, 102, 241, 0.1);
+      color: #6366f1;
+      padding: 1px 6px;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 10px;
+    }
+
+    /* Precision circle visualizers grid layout */
+    .stick-visualizers-grid {
+      display: flex;
+      justify-content: space-around;
+      gap: 16px;
+      padding: 8px 0;
+    }
+
+    .trigger-bars-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Fix text cursor showing up over SVG texts */
+    .controller-svg text {
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* Ensure all clickable areas display the hand cursor natively */
+    .cursor-pointer,
+    .cursor-pointer * {
+      cursor: pointer !important;
+    }
+
+    .cursor-grab,
+    .cursor-grab * {
+      cursor: grab !important;
+    }
+
+    .cursor-ns-resize,
+    .cursor-ns-resize * {
+      cursor: ns-resize !important;
     }
 
     /* Script Editor layout */
@@ -2339,6 +2320,11 @@
           <path d="M8 17h8" />
         </svg>
       ),
+      Activity: ({ size = 18, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+      ),
       Gamepad: ({ size = 14, ...props }) => (
         <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
           <line x1="6" x2="10" y1="12" y2="12" />
@@ -2933,6 +2919,119 @@ fn main() {
         UP: 0x0001, DOWN: 0x0002, LEFT: 0x0004, RIGHT: 0x0008
       };
 
+      // SVG pointer dragging states
+      const [svgDraggingL, setSvgDraggingL] = useState(false);
+      const [svgDraggingR, setSvgDraggingR] = useState(false);
+      const [svgDraggingLT, setSvgDraggingLT] = useState(false);
+      const [svgDraggingRT, setSvgDraggingRT] = useState(false);
+
+      const updateSvgStick = (e, type) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const cxRatio = type === 'L' ? (113 / 441) : (278 / 441);
+        const cyRatio = type === 'L' ? (160 / 383) : (238 / 383);
+        const centerClientX = rect.left + cxRatio * rect.width;
+        const centerClientY = rect.top + cyRatio * rect.height;
+
+        const dx = e.clientX - centerClientX;
+        const dy = -(e.clientY - centerClientY);
+
+        const maxDistClient = (37.5 / 441) * rect.width;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const ratio = dist > maxDistClient ? maxDistClient / dist : 1;
+
+        const x = parseFloat(((dx * ratio) / maxDistClient).toFixed(2));
+        const y = parseFloat(((dy * ratio) / maxDistClient).toFixed(2));
+
+        const deadzone = 0.05;
+        const finalX = Math.abs(x) < deadzone ? 0 : x;
+        const finalY = Math.abs(y) < deadzone ? 0 : y;
+
+        setDevices(prev => prev.map(d => {
+          if (d.id === selectedDeviceId) {
+            return type === 'L'
+              ? { ...d, lx: finalX, ly: finalY }
+              : { ...d, rx: finalX, ry: finalY };
+          }
+          return d;
+        }));
+      };
+
+      const handleSvgStickPointerDown = (e, type) => {
+        const activeDev = devices.find(d => d.id === selectedDeviceId);
+        if (!activeDev || !activeDev.connected) return;
+        if (type === 'L') setSvgDraggingL(true);
+        else setSvgDraggingR(true);
+        e.currentTarget.setPointerCapture(e.pointerId);
+        updateSvgStick(e, type);
+      };
+
+      const handleSvgStickPointerMove = (e, type) => {
+        if (type === 'L' && !svgDraggingL) return;
+        if (type === 'R' && !svgDraggingR) return;
+        updateSvgStick(e, type);
+      };
+
+      const handleSvgStickPointerUp = (e, type) => {
+        if (type === 'L') {
+          if (!svgDraggingL) return;
+          setSvgDraggingL(false);
+          setDevices(prev => prev.map(d => d.id === selectedDeviceId ? { ...d, lx: 0, ly: 0 } : d));
+          appendLog('debug', 'virtual_gamepad', 'L 摇杆回弹复位至 (0, 0)');
+        } else {
+          if (!svgDraggingR) return;
+          setSvgDraggingR(false);
+          setDevices(prev => prev.map(d => d.id === selectedDeviceId ? { ...d, rx: 0, ry: 0 } : d));
+          appendLog('debug', 'virtual_gamepad', 'R 摇杆回弹复位至 (0, 0)');
+        }
+        try {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+      };
+
+      const updateSvgTrigger = (e, side) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = (e.clientY - rect.top) / rect.height;
+        const val = parseFloat(Math.max(0, Math.min(1, 1 - y)).toFixed(2));
+        setDevices(prev => prev.map(d => {
+          if (d.id === selectedDeviceId) {
+            return side === 'L' ? { ...d, lt: val } : { ...d, rt: val };
+          }
+          return d;
+        }));
+      };
+
+      const handleSvgTriggerPointerDown = (e, side) => {
+        const activeDev = devices.find(d => d.id === selectedDeviceId);
+        if (!activeDev || !activeDev.connected) return;
+        if (side === 'L') setSvgDraggingLT(true);
+        else setSvgDraggingRT(true);
+        e.currentTarget.setPointerCapture(e.pointerId);
+        updateSvgTrigger(e, side);
+      };
+
+      const handleSvgTriggerPointerMove = (e, side) => {
+        if (side === 'L' && !svgDraggingLT) return;
+        if (side === 'R' && !svgDraggingRT) return;
+        updateSvgTrigger(e, side);
+      };
+
+      const handleSvgTriggerPointerUp = (e, side) => {
+        if (side === 'L') {
+          if (!svgDraggingLT) return;
+          setSvgDraggingLT(false);
+          setDevices(prev => prev.map(d => d.id === selectedDeviceId ? { ...d, lt: 0 } : d));
+          appendLog('debug', 'virtual_gamepad', '左扳机释放复位至 0');
+        } else {
+          if (!svgDraggingRT) return;
+          setSvgDraggingRT(false);
+          setDevices(prev => prev.map(d => d.id === selectedDeviceId ? { ...d, rt: 0 } : d));
+          appendLog('debug', 'virtual_gamepad', '右扳机释放复位至 0');
+        }
+        try {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        } catch (err) {}
+      };
+
       const toggleButtonPress = (btnKey) => {
         const mask = BTN_MASKS[btnKey];
         setDevices(prev => prev.map(d => {
@@ -2940,6 +3039,20 @@ fn main() {
             const currentPressed = (d.buttons & mask) !== 0;
             const nextButtons = currentPressed ? (d.buttons & ~mask) : (d.buttons | mask);
             appendLog('debug', 'virtual_gamepad', `虚拟手柄按钮 ${btnKey} ${!currentPressed ? '按下' : '释放'}`);
+            return { ...d, buttons: nextButtons };
+          }
+          return d;
+        }));
+      };
+
+      const setButtonState = (btnKey, pressed) => {
+        const mask = BTN_MASKS[btnKey];
+        setDevices(prev => prev.map(d => {
+          if (d.id === selectedDeviceId) {
+            const currentPressed = (d.buttons & mask) !== 0;
+            if (currentPressed === pressed) return d;
+            const nextButtons = pressed ? (d.buttons | mask) : (d.buttons & ~mask);
+            appendLog('debug', 'virtual_gamepad', `虚拟手柄按钮 ${btnKey} ${pressed ? '按下' : '释放'}`);
             return { ...d, buttons: nextButtons };
           }
           return d;
@@ -3212,210 +3325,481 @@ fn main() {
 
                     {/* Lower Interactive Control Panel */}
                     {devices.find(d => d.id === selectedDeviceId) && (
-                      <div className="control-panel">
+                      <div className={`control-panel ${!devices.find(d => d.id === selectedDeviceId)?.connected ? 'is-offline' : ''}`}>
                         <div className="control-header">
-                          <h3>输入控制 — 设备 #{selectedDeviceId}</h3>
+                          <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Icons.Activity size={16} style={{ color: '#6366f1' }} />
+                            <h3>输入控制 — 虚拟手柄 #{devices.find(d => d.id === selectedDeviceId)?.id}</h3>
+                          </div>
                           {!devices.find(d => d.id === selectedDeviceId)?.connected && (
                             <span className="offline-badge">已断开连接（保留在列表）</span>
                           )}
                         </div>
 
-                        <div className="control-grid" style={{ opacity: devices.find(d => d.id === selectedDeviceId)?.connected ? 1 : 0.4, pointerEvents: devices.find(d => d.id === selectedDeviceId)?.connected ? 'auto' : 'none' }}>
+                        <div className="monitor-dashboard" style={{ opacity: devices.find(d => d.id === selectedDeviceId)?.connected ? 1 : 0.45, pointerEvents: devices.find(d => d.id === selectedDeviceId)?.connected ? 'auto' : 'none' }}>
+                          {/* Left Side: Interactive SVG Controller */}
+                          <div className="dashboard-left">
+                            <div className="controller-card">
+                              <div className="card-inner">
+                                <svg viewBox="0 0 441 383" className="controller-svg">
+                                  <g id="XboxController">
+                                    {/* Left main shell */}
+                                    <path d="M220.5 294.5C220.5 294.5 195 294.5 150 294.5C105 294.5 81.5 378.5 49.5 378.5C17.5 378.5 4 363.9 4 317.5C4 271.1 43.5 165.5 55 137.5C66.5 109.5 95.5 92.0001 128 92.0001C154 92.0001 200.5 92.0001 220.5 92.0001" className="fill-body stroke-body" />
+                                    {/* Right main shell */}
+                                    <path d="M220 294.5C220 294.5 245.5 294.5 290.5 294.5C335.5 294.5 359 378.5 391 378.5C423 378.5 436.5 363.9 436.5 317.5C436.5 271.1 397 165.5 385.5 137.5C374 109.5 345 92.0001 312.5 92.0001C286.5 92.0001 240 92.0001 220 92.0001" className="fill-body stroke-body" />
+                                    
+                                    {/* Left Trigger (LT) */}
+                                    <path 
+                                      onPointerDown={(e) => handleSvgTriggerPointerDown(e, 'L')}
+                                      onPointerMove={(e) => handleSvgTriggerPointerMove(e, 'L')}
+                                      onPointerUp={(e) => handleSvgTriggerPointerUp(e, 'L')}
+                                      onPointerCancel={(e) => handleSvgTriggerPointerUp(e, 'L')}
+                                      d="m152.5,52.97c0,4.61 -3.35,8.36 -7.5,8.36l-13,0c-4.14,0 -7.5,-3.74 -7.5,-8.36l0,-22.86c0,-8.62 6.27,-15.61 14,-15.61c7.73,0 14,6.99 14,15.61l0,22.86z" 
+                                      style={{ 
+                                        fill: `rgba(99, 102, 241, ${0.15 + (devices.find(d => d.id === selectedDeviceId)?.lt || 0) * 0.85})`,
+                                        stroke: (devices.find(d => d.id === selectedDeviceId)?.lt || 0) > 0 ? '#6366f1' : 'var(--color-border)',
+                                        strokeWidth: '2px'
+                                      }}
+                                      className="transition-colors duration-100 cursor-ns-resize" 
+                                    />
+                                    
+                                    {/* Right Trigger (RT) */}
+                                    <path 
+                                      onPointerDown={(e) => handleSvgTriggerPointerDown(e, 'R')}
+                                      onPointerMove={(e) => handleSvgTriggerPointerMove(e, 'R')}
+                                      onPointerUp={(e) => handleSvgTriggerPointerUp(e, 'R')}
+                                      onPointerCancel={(e) => handleSvgTriggerPointerUp(e, 'R')}
+                                      d="m316.83,53.44c0,4.64 -3.44,8.39 -7.68,8.39l-13.31,0c-4.24,0 -7.68,-3.76 -7.68,-8.39l0,-22.94c0,-8.65 6.42,-15.67 14.33,-15.67c7.92,0 14.33,7.01 14.33,15.67l0,22.94z" 
+                                      style={{ 
+                                        fill: `rgba(99, 102, 241, ${0.15 + (devices.find(d => d.id === selectedDeviceId)?.rt || 0) * 0.85})`,
+                                        stroke: (devices.find(d => d.id === selectedDeviceId)?.rt || 0) > 0 ? '#6366f1' : 'var(--color-border)',
+                                        strokeWidth: '2px'
+                                      }}
+                                      className="transition-colors duration-100 cursor-ns-resize" 
+                                    />
 
-                          {/* Draggable Joysticks */}
-                          <div className="stick-section">
-                            <div className="stick-container">
-                              <span className="stick-label">L 摇杆</span>
-                              <div
-                                className="stick-visualizer-box"
-                                ref={stickRefL}
-                                onMouseDown={(e) => startDraggingStick(e, 'L')}
-                              >
-                                <div className="stick-axis-line stick-axis-h"></div>
-                                <div className="stick-axis-line stick-axis-v"></div>
-                                <div
-                                  className="stick-knob"
-                                  style={{ transform: `translate(${devices.find(d => d.id === selectedDeviceId).lx * 36}px, ${devices.find(d => d.id === selectedDeviceId).ly * -36}px)` }}
-                                />
-                              </div>
-                              <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
-                                X:{devices.find(d => d.id === selectedDeviceId).lx.toFixed(2)} Y:{devices.find(d => d.id === selectedDeviceId).ly.toFixed(2)}
-                              </span>
-                            </div>
+                                    {/* Left Bumper (LB) */}
+                                    <g 
+                                      onMouseDown={() => setButtonState('LB', true)}
+                                      onMouseUp={() => setButtonState('LB', false)}
+                                      onMouseLeave={() => setButtonState('LB', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('LB', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('LB', false); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <rect 
+                                        x="116.8" y="66.8" width="43.3" height="17" rx="4" 
+                                        style={{ 
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LB') ? '#6366f1' : 'var(--color-surface-elevated)', 
+                                          stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LB') ? '#4f46e5' : 'var(--color-border)',
+                                          strokeWidth: '2px'
+                                        }} 
+                                        className="transition-all duration-200" 
+                                      />
+                                      <text 
+                                        x="138.5" y="79" textAnchor="middle" 
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LB') ? '#ffffff' : 'var(--color-text-muted)', fontSize: '10px', fontWeight: 'bold' }} 
+                                        className="pointer-events-none transition-colors duration-200"
+                                      >LB</text>
+                                    </g>
 
-                            <div className="stick-container">
-                              <span className="stick-label">R 摇杆</span>
-                              <div
-                                className="stick-visualizer-box"
-                                ref={stickRefR}
-                                onMouseDown={(e) => startDraggingStick(e, 'R')}
-                              >
-                                <div className="stick-axis-line stick-axis-h"></div>
-                                <div className="stick-axis-line stick-axis-v"></div>
-                                <div
-                                  className="stick-knob"
-                                  style={{ transform: `translate(${devices.find(d => d.id === selectedDeviceId).rx * 36}px, ${devices.find(d => d.id === selectedDeviceId).ry * -36}px)` }}
-                                />
+                                    {/* Right Bumper (RB) */}
+                                    <g 
+                                      onMouseDown={() => setButtonState('RB', true)}
+                                      onMouseUp={() => setButtonState('RB', false)}
+                                      onMouseLeave={() => setButtonState('RB', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('RB', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('RB', false); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <rect 
+                                        x="281.3" y="67" width="42.6" height="17" rx="4" 
+                                        style={{ 
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RB') ? '#6366f1' : 'var(--color-surface-elevated)', 
+                                          stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RB') ? '#4f46e5' : 'var(--color-border)',
+                                          strokeWidth: '2px'
+                                        }} 
+                                        className="transition-all duration-200" 
+                                      />
+                                      <text 
+                                        x="302.5" y="79" text-anchor="middle" 
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RB') ? '#ffffff' : 'var(--color-text-muted)', fontSize: '10px', fontWeight: 'bold' }} 
+                                        className="pointer-events-none transition-colors duration-200"
+                                      >RB</text>
+                                    </g>
+
+                                    {/* Left Stick well and interactive pointer drag knob */}
+                                    <g 
+                                      onPointerDown={(e) => handleSvgStickPointerDown(e, 'L')} 
+                                      onPointerMove={(e) => handleSvgStickPointerMove(e, 'L')} 
+                                      onPointerUp={(e) => handleSvgStickPointerUp(e, 'L')} 
+                                      onPointerCancel={(e) => handleSvgStickPointerUp(e, 'L')}
+                                      className="interactive-stick select-none"
+                                    >
+                                      <circle cx="113" cy="160" r="37.5" className="fill-well stroke-well" />
+                                      <g transform={`translate(${(devices.find(d => d.id === selectedDeviceId)?.lx || 0) * 12}, ${(devices.find(d => d.id === selectedDeviceId)?.ly || 0) * -12})`} className="transition-transform duration-75">
+                                        <circle 
+                                          cx="113" cy="160" r="28" 
+                                          style={{ 
+                                            fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LS') ? '#6366f1' : 'var(--color-text-dim)', 
+                                            stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LS') ? '#4f46e5' : 'var(--color-surface)',
+                                            strokeWidth: '2px'
+                                          }} 
+                                          className="transition-colors duration-100" 
+                                        />
+                                        <circle cx="113" cy="160" r="22" className="fill-none stroke-black/5 dark:stroke-white/5 stroke-2" />
+                                        <circle cx="113" cy="160" r="10" className="fill-stone-400/50 stroke-none" />
+                                      </g>
+                                      {/* Transparent helper target circle to extend click space */}
+                                      <circle cx="113" cy="160" r="42" fill="transparent" className="cursor-grab" />
+                                    </g>
+
+                                    {/* Right Stick well and interactive pointer drag knob */}
+                                    <g 
+                                      onPointerDown={(e) => handleSvgStickPointerDown(e, 'R')} 
+                                      onPointerMove={(e) => handleSvgStickPointerMove(e, 'R')} 
+                                      onPointerUp={(e) => handleSvgStickPointerUp(e, 'R')} 
+                                      onPointerCancel={(e) => handleSvgStickPointerUp(e, 'R')}
+                                      className="interactive-stick select-none"
+                                    >
+                                      <circle cx="278" cy="238" r="37.5" className="fill-well stroke-well" />
+                                      <g transform={`translate(${(devices.find(d => d.id === selectedDeviceId)?.rx || 0) * 12}, ${(devices.find(d => d.id === selectedDeviceId)?.ry || 0) * -12})`} className="transition-transform duration-75">
+                                        <circle 
+                                          cx="278" cy="238" r="28" 
+                                          style={{ 
+                                            fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RS') ? '#6366f1' : 'var(--color-text-dim)', 
+                                            stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RS') ? '#4f46e5' : 'var(--color-surface)',
+                                            strokeWidth: '2px'
+                                          }} 
+                                          className="transition-colors duration-100" 
+                                        />
+                                        <circle cx="278" cy="238" r="22" className="fill-none stroke-black/5 dark:stroke-white/5 stroke-2" />
+                                        <circle cx="278" cy="238" r="10" className="fill-stone-400/50 stroke-none" />
+                                      </g>
+                                      {/* Transparent helper target circle to extend click space */}
+                                      <circle cx="278" cy="238" r="42" fill="transparent" className="cursor-grab" />
+                                    </g>
+
+                                    {/* D-pad well and four directional rects */}
+                                    <circle cx="166" cy="238" r="37.5" className="fill-well stroke-well" />
+                                    
+                                    <rect 
+                                      onMouseDown={() => setButtonState('UP', true)}
+                                      onMouseUp={() => setButtonState('UP', false)}
+                                      onMouseLeave={() => setButtonState('UP', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('UP', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('UP', false); }}
+                                      x="159" y="211" width="14" height="20" 
+                                      style={{ 
+                                        fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'UP') ? '#6366f1' : 'var(--color-surface)',
+                                        stroke: 'var(--color-border)',
+                                        strokeWidth: '1.5px'
+                                      }} 
+                                      className="transition-all duration-100 cursor-pointer" 
+                                    />
+                                    <rect 
+                                      onMouseDown={() => setButtonState('DOWN', true)}
+                                      onMouseUp={() => setButtonState('DOWN', false)}
+                                      onMouseLeave={() => setButtonState('DOWN', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('DOWN', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('DOWN', false); }}
+                                      x="159" y="239" width="14" height="20" 
+                                      style={{ 
+                                        fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'DOWN') ? '#6366f1' : 'var(--color-surface)',
+                                        stroke: 'var(--color-border)',
+                                        strokeWidth: '1.5px'
+                                      }} 
+                                      className="transition-all duration-100 cursor-pointer" 
+                                    />
+                                    <rect 
+                                      onMouseDown={() => setButtonState('LEFT', true)}
+                                      onMouseUp={() => setButtonState('LEFT', false)}
+                                      onMouseLeave={() => setButtonState('LEFT', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('LEFT', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('LEFT', false); }}
+                                      x="142" y="228" width="20" height="14" 
+                                      style={{ 
+                                        fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LEFT') ? '#6366f1' : 'var(--color-surface)',
+                                        stroke: 'var(--color-border)',
+                                        strokeWidth: '1.5px'
+                                      }} 
+                                      className="transition-all duration-100 cursor-pointer" 
+                                    />
+                                    <rect 
+                                      onMouseDown={() => setButtonState('RIGHT', true)}
+                                      onMouseUp={() => setButtonState('RIGHT', false)}
+                                      onMouseLeave={() => setButtonState('RIGHT', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('RIGHT', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('RIGHT', false); }}
+                                      x="170" y="228" width="20" height="14" 
+                                      style={{ 
+                                        fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RIGHT') ? '#6366f1' : 'var(--color-surface)',
+                                        stroke: 'var(--color-border)',
+                                        strokeWidth: '1.5px'
+                                      }} 
+                                      className="transition-all duration-100 cursor-pointer" 
+                                    />
+                                    {/* Dpad Center */}
+                                    <rect 
+                                      x="159" y="228" width="14" height="14" 
+                                      style={{ 
+                                        fill: 'var(--color-surface)',
+                                        stroke: 'var(--color-border)',
+                                        strokeWidth: '1.5px'
+                                      }} 
+                                    />
+
+                                     {/* ABXY well */}
+                                    <circle cx="329" cy="160" r="42" className="fill-well stroke-well" />
+                                    
+                                    {/* Y Button (Yellow) */}
+                                    <g 
+                                      onMouseDown={() => setButtonState('Y', true)}
+                                      onMouseUp={() => setButtonState('Y', false)}
+                                      onMouseLeave={() => setButtonState('Y', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('Y', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('Y', false); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <circle 
+                                        cx="329" cy="136" r="13" 
+                                        style={{ 
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'Y') ? '#f59e0b' : 'rgba(245, 158, 11, 0.18)', 
+                                          stroke: '#f59e0b', 
+                                          strokeWidth: '2px' 
+                                        }} 
+                                        className="transition-all duration-100" 
+                                      />
+                                      <text 
+                                        x="329" y="140" textAnchor="middle" 
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'Y') ? '#ffffff' : '#f59e0b', fontSize: '12px', fontWeight: '900' }} 
+                                        className="pointer-events-none transition-colors duration-100"
+                                      >Y</text>
+                                    </g>
+
+                                    {/* X Button (Blue) */}
+                                    <g 
+                                      onMouseDown={() => setButtonState('X', true)}
+                                      onMouseUp={() => setButtonState('X', false)}
+                                      onMouseLeave={() => setButtonState('X', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('X', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('X', false); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <circle 
+                                        cx="305" cy="160" r="13" 
+                                        style={{ 
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'X') ? '#3b82f6' : 'rgba(59, 130, 246, 0.18)', 
+                                          stroke: '#3b82f6', 
+                                          strokeWidth: '2px' 
+                                        }} 
+                                        className="transition-all duration-100" 
+                                      />
+                                      <text 
+                                        x="305" y="164" text-anchor="middle" 
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'X') ? '#ffffff' : '#3b82f6', fontSize: '12px', fontWeight: '900' }} 
+                                        className="pointer-events-none transition-colors duration-100"
+                                      >X</text>
+                                    </g>
+
+                                    {/* B Button (Red) */}
+                                    <g 
+                                      onMouseDown={() => setButtonState('B', true)}
+                                      onMouseUp={() => setButtonState('B', false)}
+                                      onMouseLeave={() => setButtonState('B', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('B', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('B', false); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <circle 
+                                        cx="353" cy="160" r="13" 
+                                        style={{ 
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'B') ? '#ef4444' : 'rgba(239, 68, 68, 0.18)', 
+                                          stroke: '#ef4444', 
+                                          strokeWidth: '2px' 
+                                        }} 
+                                        className="transition-all duration-100" 
+                                      />
+                                      <text 
+                                        x="353" y="164" text-anchor="middle" 
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'B') ? '#ffffff' : '#ef4444', fontSize: '12px', fontWeight: '900' }} 
+                                        className="pointer-events-none transition-colors duration-100"
+                                      >B</text>
+                                    </g>
+
+                                    {/* A Button (Green) */}
+                                    <g 
+                                      onMouseDown={() => setButtonState('A', true)}
+                                      onMouseUp={() => setButtonState('A', false)}
+                                      onMouseLeave={() => setButtonState('A', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('A', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('A', false); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <circle 
+                                        cx="329" cy="184" r="13" 
+                                        style={{ 
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'A') ? '#10b981' : 'rgba(16, 185, 129, 0.18)', 
+                                          stroke: '#10b981', 
+                                          strokeWidth: '2px' 
+                                        }} 
+                                        className="transition-all duration-100" 
+                                      />
+                                      <text 
+                                        x="329" y="188" text-anchor="middle" 
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'A') ? '#ffffff' : '#10b981', fontSize: '12px', fontWeight: '900' }} 
+                                        className="pointer-events-none transition-colors duration-100"
+                                      >A</text>
+                                    </g>
+
+                                    {/* View/Back Button */}
+                                    <g 
+                                      onMouseDown={() => setButtonState('BACK', true)}
+                                      onMouseUp={() => setButtonState('BACK', false)}
+                                      onMouseLeave={() => setButtonState('BACK', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('BACK', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('BACK', false); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <circle cx="188" cy="162" r="10" style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'BACK') ? '#6366f1' : 'var(--color-surface-elevated)' }} className="transition-all duration-200" />
+                                      <rect x="184" y="158" width="8" height="8" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'BACK') ? '#ffffff' : 'var(--color-text-muted)' }} className="pointer-events-none transition-colors duration-200" />
+                                    </g>
+
+                                    {/* Menu/Start Button */}
+                                    <g 
+                                      onMouseDown={() => setButtonState('START', true)}
+                                      onMouseUp={() => setButtonState('START', false)}
+                                      onMouseLeave={() => setButtonState('START', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('START', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('START', false); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <circle cx="253" cy="162" r="10" style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'START') ? '#6366f1' : 'var(--color-surface-elevated)' }} className="transition-all duration-200" />
+                                      <path d="M249 158 H257 M249 162 H257 M249 166 H257" stroke="currentColor" strokeWidth="1.5" style={{ stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'START') ? '#ffffff' : 'var(--color-text-muted)' }} className="pointer-events-none transition-colors duration-200" />
+                                    </g>
+
+                                    {/* Share Button (Visual only) */}
+                                    <g style={{ opacity: 0.7 }}>
+                                      <rect x="208" y="178" width="24" height="14" rx="7" className="fill-well" />
+                                      <path d="M220 180 V186 M218 182 L220 180 L222 182 M217 188 H223" stroke="currentColor" strokeWidth="1.5" className="pointer-events-none" style={{ stroke: 'var(--color-text-dim)' }} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                                    </g>
+
+                                    {/* Guide Button (Home logo) */}
+                                    <g 
+                                      onMouseDown={() => setButtonState('GUIDE', true)}
+                                      onMouseUp={() => setButtonState('GUIDE', false)}
+                                      onMouseLeave={() => setButtonState('GUIDE', false)}
+                                      onTouchStart={(e) => { e.preventDefault(); setButtonState('GUIDE', true); }}
+                                      onTouchEnd={(e) => { e.preventDefault(); setButtonState('GUIDE', false); }}
+                                      className="cursor-pointer"
+                                    >
+                                      <circle cx="220.5" cy="125" r="16" style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'GUIDE') ? '#6366f1' : 'var(--color-surface-elevated)' }} className="transition-all duration-200" />
+                                      <path d="M216 120 L225 130 M225 120 L216 130" strokeWidth="3" strokeLinecap="round" style={{ stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'GUIDE') ? '#ffffff' : 'var(--color-text-muted)' }} className="transition-colors duration-200" />
+                                    </g>
+                                  </g>
+                                </svg>
                               </div>
-                              <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
-                                X:{devices.find(d => d.id === selectedDeviceId).rx.toFixed(2)} Y:{devices.find(d => d.id === selectedDeviceId).ry.toFixed(2)}
-                              </span>
+                              <div className="card-footer">
+                                <span className="tip-tag">提示</span>
+                                <span>可以直接在手柄上拖拽摇杆、按压扳机或点击按钮进行交互测试</span>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Trigger slider bars */}
-                          <div className="trigger-section">
-                            <div className="trigger-bar-wrapper">
-                              <div className="trigger-bar-label">
-                                <span>L扳机</span>
-                                <span>{Math.round(devices.find(d => d.id === selectedDeviceId).lt * 255)}</span>
-                              </div>
-                              <div
-                                className="trigger-bar-track"
-                                ref={triggerRefL}
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  setIsDraggingTriggerL(true);
-                                  handleTriggerDrag(e, 'L');
-                                }}
-                              >
-                                <div className="trigger-bar-fill" style={{ width: `${devices.find(d => d.id === selectedDeviceId).lt * 100}%` }}></div>
-                                <div className="trigger-bar-knob" style={{ left: `${devices.find(d => d.id === selectedDeviceId).lt * 100}%` }}></div>
+                          {/* Right Side: Diagnostics, Precision Panels */}
+                          <div className="dashboard-right">
+                            {/* Stick Coordinates circles */}
+                            <div className="panel-card">
+                              <h4 className="card-title">摇杆高精视窗 (±1.00)</h4>
+                              <div className="stick-visualizers-grid">
+                                {/* L Stick */}
+                                <div className="stick-container">
+                                  <span className="stick-label">L 摇杆</span>
+                                  <div
+                                    className="stick-visualizer-box"
+                                    ref={stickRefL}
+                                    onMouseDown={(e) => startDraggingStick(e, 'L')}
+                                  >
+                                    <div className="stick-axis-line stick-axis-h"></div>
+                                    <div className="stick-axis-line stick-axis-v"></div>
+                                    <div
+                                      className="stick-knob"
+                                      style={{ transform: `translate(${(devices.find(d => d.id === selectedDeviceId)?.lx || 0) * 36}px, ${(devices.find(d => d.id === selectedDeviceId)?.ly || 0) * -36}px)` }}
+                                    />
+                                  </div>
+                                  <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
+                                    X:{(devices.find(d => d.id === selectedDeviceId)?.lx || 0).toFixed(2)} Y:{(devices.find(d => d.id === selectedDeviceId)?.ly || 0).toFixed(2)}
+                                  </span>
+                                </div>
+
+                                {/* R Stick */}
+                                <div className="stick-container">
+                                  <span className="stick-label">R 摇杆</span>
+                                  <div
+                                    className="stick-visualizer-box"
+                                    ref={stickRefR}
+                                    onMouseDown={(e) => startDraggingStick(e, 'R')}
+                                  >
+                                    <div className="stick-axis-line stick-axis-h"></div>
+                                    <div className="stick-axis-line stick-axis-v"></div>
+                                    <div
+                                      className="stick-knob"
+                                      style={{ transform: `translate(${(devices.find(d => d.id === selectedDeviceId)?.rx || 0) * 36}px, ${(devices.find(d => d.id === selectedDeviceId)?.ry || 0) * -36}px)` }}
+                                    />
+                                  </div>
+                                  <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
+                                    X:{(devices.find(d => d.id === selectedDeviceId)?.rx || 0).toFixed(2)} Y:{(devices.find(d => d.id === selectedDeviceId)?.ry || 0).toFixed(2)}
+                                  </span>
+                                </div>
                               </div>
                             </div>
 
-                            <div className="trigger-bar-wrapper">
-                              <div className="trigger-bar-label">
-                                <span>R扳机</span>
-                                <span>{Math.round(devices.find(d => d.id === selectedDeviceId).rt * 255)}</span>
-                              </div>
-                              <div
-                                className="trigger-bar-track"
-                                ref={triggerRefR}
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  setIsDraggingTriggerR(true);
-                                  handleTriggerDrag(e, 'R');
-                                }}
-                              >
-                                <div className="trigger-bar-fill" style={{ width: `${devices.find(d => d.id === selectedDeviceId).rt * 100}%` }}></div>
-                                <div className="trigger-bar-knob" style={{ left: `${devices.find(d => d.id === selectedDeviceId).rt * 100}%` }}></div>
-                              </div>
-                            </div>
-
-                            <span style={{ fontSize: '10px', color: 'var(--color-text-dim)', lineHeight: '1.2' }}>提示: 鼠标拖拽圆盘控制摇杆，点击或拖拽滑槽模拟扳机拉伸。</span>
-                          </div>
-
-                          {/* Controller Button Panel exact replication */}
-                          <div className="buttons-section">
-                            <div className="controller-layout-box">
-                              <div className="shoulder-row">
-                                <button
-                                  className={`game-btn shoulder-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LB') ? 'pressed' : ''}`}
-                                  onMouseDown={() => toggleButtonPress('LB')}
-                                  onMouseUp={() => toggleButtonPress('LB')}
-                                >LB</button>
-                                <button
-                                  className={`game-btn guide-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'GUIDE') ? 'pressed' : ''}`}
-                                  onMouseDown={() => toggleButtonPress('GUIDE')}
-                                  onMouseUp={() => toggleButtonPress('GUIDE')}
-                                >⌂</button>
-                                <button
-                                  className={`game-btn shoulder-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RB') ? 'pressed' : ''}`}
-                                  onMouseDown={() => toggleButtonPress('RB')}
-                                  onMouseUp={() => toggleButtonPress('RB')}
-                                >RB</button>
-                              </div>
-
-                              <div className="main-row">
-                                <div className="left-side">
-                                  <button
-                                    className={`game-btn stick-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LS') ? 'pressed' : ''}`}
-                                    onClick={() => toggleButtonPress('LS')}
-                                  >LS</button>
-
-                                  <div className="dpad-cluster">
-                                    <div className="dpad-row">
-                                      <button
-                                        className={`game-btn dpad-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'UP') ? 'pressed' : ''}`}
-                                        onMouseDown={() => toggleButtonPress('UP')}
-                                        onMouseUp={() => toggleButtonPress('UP')}
-                                      >↑</button>
-                                    </div>
-                                    <div className="dpad-row">
-                                      <button
-                                        className={`game-btn dpad-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LEFT') ? 'pressed' : ''}`}
-                                        onMouseDown={() => toggleButtonPress('LEFT')}
-                                        onMouseUp={() => toggleButtonPress('LEFT')}
-                                      >←</button>
-                                      <div className="dpad-center-spacer"></div>
-                                      <button
-                                        className={`game-btn dpad-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RIGHT') ? 'pressed' : ''}`}
-                                        onMouseDown={() => toggleButtonPress('RIGHT')}
-                                        onMouseUp={() => toggleButtonPress('RIGHT')}
-                                      >→</button>
-                                    </div>
-                                    <div className="dpad-row">
-                                      <button
-                                        className={`game-btn dpad-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'DOWN') ? 'pressed' : ''}`}
-                                        onMouseDown={() => toggleButtonPress('DOWN')}
-                                        onMouseUp={() => toggleButtonPress('DOWN')}
-                                      >↓</button>
-                                    </div>
+                            {/* Trigger pressure visualizers */}
+                            <div className="panel-card">
+                              <h4 className="card-title">扳机键压力指示 (0 - 1)</h4>
+                              <div className="trigger-bars-layout">
+                                {/* L Trigger */}
+                                <div className="trigger-bar-wrapper">
+                                  <div className="trigger-bar-label">
+                                    <span>L扳机 (LT)</span>
+                                    <span>{Math.round((devices.find(d => d.id === selectedDeviceId)?.lt || 0) * 255)}</span>
+                                  </div>
+                                  <div
+                                    className="trigger-bar-track"
+                                    ref={triggerRefL}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setIsDraggingTriggerL(true);
+                                      handleTriggerDrag(e, 'L');
+                                    }}
+                                  >
+                                    <div className="trigger-bar-fill" style={{ width: `${(devices.find(d => d.id === selectedDeviceId)?.lt || 0) * 100}%` }}></div>
+                                    <div className="trigger-bar-knob" style={{ left: `${(devices.find(d => d.id === selectedDeviceId)?.lt || 0) * 100}%` }}></div>
                                   </div>
                                 </div>
 
-                                <div className="center-side">
-                                  <button
-                                    className={`game-btn misc-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'BACK') ? 'pressed' : ''}`}
-                                    onClick={() => toggleButtonPress('BACK')}
-                                  >BACK</button>
-                                  <button
-                                    className={`game-btn misc-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'START') ? 'pressed' : ''}`}
-                                    onClick={() => toggleButtonPress('START')}
-                                  >START</button>
-                                </div>
-
-                                <div className="right-side">
-                                  <div className="abxy-cluster">
-                                    <div className="abxy-row">
-                                      <button
-                                        className={`game-btn y-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'Y') ? 'pressed' : ''}`}
-                                        onMouseDown={() => toggleButtonPress('Y')}
-                                        onMouseUp={() => toggleButtonPress('Y')}
-                                      >Y</button>
-                                    </div>
-                                    <div className="abxy-row">
-                                      <button
-                                        className={`game-btn x-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'X') ? 'pressed' : ''}`}
-                                        onMouseDown={() => toggleButtonPress('X')}
-                                        onMouseUp={() => toggleButtonPress('X')}
-                                      >X</button>
-                                      <div className="abxy-center-spacer"></div>
-                                      <button
-                                        className={`game-btn b-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'B') ? 'pressed' : ''}`}
-                                        onMouseDown={() => toggleButtonPress('B')}
-                                        onMouseUp={() => toggleButtonPress('B')}
-                                      >B</button>
-                                    </div>
-                                    <div className="abxy-row">
-                                      <button
-                                        className={`game-btn a-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'A') ? 'pressed' : ''}`}
-                                        onMouseDown={() => toggleButtonPress('A')}
-                                        onMouseUp={() => toggleButtonPress('A')}
-                                      >A</button>
-                                    </div>
+                                {/* R Trigger */}
+                                <div className="trigger-bar-wrapper">
+                                  <div className="trigger-bar-label">
+                                    <span>R扳机 (RT)</span>
+                                    <span>{Math.round((devices.find(d => d.id === selectedDeviceId)?.rt || 0) * 255)}</span>
                                   </div>
-
-                                  <button
-                                    className={`game-btn stick-btn ${isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RS') ? 'pressed' : ''}`}
-                                    onClick={() => toggleButtonPress('RS')}
-                                  >RS</button>
+                                  <div
+                                    className="trigger-bar-track"
+                                    ref={triggerRefR}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setIsDraggingTriggerR(true);
+                                      handleTriggerDrag(e, 'R');
+                                    }}
+                                  >
+                                    <div className="trigger-bar-fill" style={{ width: `${(devices.find(d => d.id === selectedDeviceId)?.rt || 0) * 100}%` }}></div>
+                                    <div className="trigger-bar-knob" style={{ left: `${(devices.find(d => d.id === selectedDeviceId)?.rt || 0) * 100}%` }}></div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-
                         </div>
                       </div>
                     )}
