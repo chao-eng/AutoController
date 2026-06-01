@@ -607,7 +607,7 @@ impl ScriptRuntime {
             let eid_ocr_params = eid.clone();
             let sid_ocr_params = sid.clone();
             engine.register_fn("ocr", move |context: rhai::NativeCallContext, x: i64, y: i64, w: i64, h: i64| -> String {
-                let (ocr_engine, paddleocr_url) = {
+                let (ocr_engine, paddleocr_url, opt_handle) = {
                     let handle_guard = handle_ocr_params.lock();
                     if let Some(ref handle) = *handle_guard {
                         if let Some(line) = context.call_position().line() {
@@ -620,13 +620,13 @@ impl ScriptRuntime {
                         use tauri::Manager;
                         let config_mgr = handle.state::<crate::config::AppConfigManager>();
                         let config = config_mgr.get();
-                        (config.ocr_engine.clone(), config.paddleocr_url.clone())
+                        (config.ocr_engine.clone(), config.paddleocr_url.clone(), Some(handle.clone()))
                     } else {
-                        ("winocr".to_string(), "http://127.0.0.1:8050/ocr".to_string())
+                        ("winocr".to_string(), "http://127.0.0.1:8050/ocr".to_string(), None)
                     }
                 };
 
-                match crate::script_engine::ocr::ocr_region_sync(x as i32, y as i32, w as i32, h as i32, &ocr_engine, &paddleocr_url) {
+                match crate::script_engine::ocr::ocr_region_sync(x as i32, y as i32, w as i32, h as i32, &ocr_engine, &paddleocr_url, opt_handle.as_ref()) {
                     Ok(text) => text,
                     Err(e) => {
                         tracing::error!(target: "script", "OCR 识别出错: {}", e);
@@ -663,7 +663,7 @@ impl ScriptRuntime {
                         if let Some(region) = target_region {
                             let ocr_engine = config.ocr_engine.clone();
                             let paddleocr_url = config.paddleocr_url.clone();
-                            return match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h, &ocr_engine, &paddleocr_url) {
+                            return match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h, &ocr_engine, &paddleocr_url, Some(handle)) {
                                 Ok(text) => text,
                                 Err(e) => {
                                     tracing::error!(target: "script", "OCR 默认区域 #1 识别出错: {}", e);
@@ -707,7 +707,7 @@ impl ScriptRuntime {
                             let region = &config.ocr_regions[u_idx];
                             let ocr_engine = config.ocr_engine.clone();
                             let paddleocr_url = config.paddleocr_url.clone();
-                            return match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h, &ocr_engine, &paddleocr_url) {
+                            return match crate::script_engine::ocr::ocr_region_sync(region.x, region.y, region.w, region.h, &ocr_engine, &paddleocr_url, Some(handle)) {
                                 Ok(text) => text,
                                 Err(e) => {
                                     tracing::error!(target: "script", "OCR 区域 #{} 识别出错: {}", index, e);

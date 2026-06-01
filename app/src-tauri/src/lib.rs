@@ -183,6 +183,7 @@ pub fn run() {
             config_cmd::config_set,
             config_cmd::open_ocr_viewfinder,
             config_cmd::save_ocr_region,
+            config_cmd::run_ocr,
             log_cmd::log_query,
             log_cmd::log_export,
             notify::send_aggregated_notification,

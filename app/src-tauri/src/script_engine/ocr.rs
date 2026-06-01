@@ -1,114 +1,158 @@
 use std::cmp::min;
+use std::sync::OnceLock;
+use parking_lot::Mutex;
+use paddle_ocr_rs::ocr_lite::OcrLite;
 use windows::core::HSTRING;
 use windows::Globalization::Language;
-use windows::Graphics::Imaging::{BitmapPixelFormat, SoftwareBitmap, BitmapEncoder};
+use windows::Graphics::Imaging::{BitmapPixelFormat, SoftwareBitmap};
 use windows::Media::Ocr::OcrEngine;
-use windows::Storage::Streams::{DataWriter, InMemoryRandomAccessStream, DataReader};
+use windows::Storage::Streams::DataWriter;
 use windows::Win32::Graphics::Gdi::*;
 
-/// 使用 WinRT BitmapEncoder 将 SoftwareBitmap 编码为标准的 PNG 二进制字节流，零额外第三方库依赖。
-fn encode_software_bitmap_to_png_bytes(bitmap: &SoftwareBitmap) -> Result<Vec<u8>, String> {
-    let stream = InMemoryRandomAccessStream::new()
-        .map_err(|e| format!("无法创建内存流: {}", e))?;
+pub static OCR_ENGINE: OnceLock<Mutex<OcrLite>> = OnceLock::new();
 
-    let encoder_guid = BitmapEncoder::PngEncoderId()
-        .map_err(|e| format!("无法获取 PngEncoderId: {}", e))?;
-
-    let encoder = BitmapEncoder::CreateAsync(encoder_guid, &stream)
-        .map_err(|e| format!("无法创建 Png 编码器: {}", e))?
-        .get()
-        .map_err(|e| format!("无法初始化 Png 编码器: {}", e))?;
-
-    encoder.SetSoftwareBitmap(bitmap)
-        .map_err(|e| format!("无法设置 SoftwareBitmap 到编码器: {}", e))?;
-
-    encoder.FlushAsync()
-        .map_err(|e| format!("Flush 编码器失败: {}", e))?
-        .get()
-        .map_err(|e| format!("获取 Flush 编码器结果失败: {}", e))?;
-
-    let size = stream.Size().map_err(|e| format!("无法获取内存流大小: {}", e))? as u32;
-    stream.Seek(0).map_err(|e| format!("内存流 Seek 失败: {}", e))?;
-
-    let reader = DataReader::CreateDataReader(&stream)
-        .map_err(|e| format!("无法创建 DataReader: {}", e))?;
-
-    reader.LoadAsync(size)
-        .map_err(|e| format!("加载数据流失败: {}", e))?
-        .get()
-        .map_err(|e| format!("获取加载数据流结果失败: {}", e))?;
-
-    let mut bytes = vec![0u8; size as usize];
-    reader.ReadBytes(&mut bytes)
-        .map_err(|e| format!("从 DataReader 读取字节失败: {}", e))?;
-
-    Ok(bytes)
+fn strip_unc_prefix(path: std::path::PathBuf) -> std::path::PathBuf {
+    let s = path.to_string_lossy();
+    if s.starts_with(r"\\?\") {
+        std::path::PathBuf::from(&s[4..])
+    } else {
+        path
+    }
 }
 
-/// 发送截屏 PNG 图片到外部 PaddleOCR HTTP 接口。
-fn call_paddleocr_http(bitmap: &SoftwareBitmap, paddleocr_url: &str) -> Result<String, String> {
-    let png_bytes = encode_software_bitmap_to_png_bytes(bitmap)?;
-
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| format!("无法创建 HTTP 客户端: {}", e))?;
-
-    let part = reqwest::blocking::multipart::Part::bytes(png_bytes)
-        .file_name("screenshot.png")
-        .mime_str("image/png")
-        .map_err(|e| format!("创建 multipart Part 失败: {}", e))?;
-
-    let form = reqwest::blocking::multipart::Form::new()
-        .part("file", part);
-
-    let resp = client.post(paddleocr_url)
-        .multipart(form)
-        .send()
-        .map_err(|e| format!("发送 PaddleOCR HTTP 请求失败: {}", e))?;
-
-    let status = resp.status();
-    if !status.is_success() {
-        return Err(format!("PaddleOCR 接口返回 HTTP 状态错误: {}", status));
+/// 初始化并获取全局缓存的 PaddleOCR 推理引擎实例
+pub fn get_or_init_ocr(app_handle: &tauri::AppHandle) -> Result<&Mutex<OcrLite>, String> {
+    if let Some(engine) = OCR_ENGINE.get() {
+        return Ok(engine);
     }
 
-    #[derive(serde::Deserialize)]
-    struct PaddleOcrResultItem {
-        text: String,
-    }
+    use tauri::Manager;
+    use tauri::path::BaseDirectory;
 
-    #[derive(serde::Deserialize)]
-    struct PaddleOcrResponse {
-        status: String,
-        results: Option<Vec<PaddleOcrResultItem>>,
-    }
-
-    let ocr_resp: PaddleOcrResponse = resp.json()
-        .map_err(|e| format!("解析 PaddleOCR 响应 JSON 失败: {}", e))?;
-
-    if ocr_resp.status != "success" {
-        return Err(format!("PaddleOCR 识别失败，接口返回状态: {}", ocr_resp.status));
-    }
-
-    let mut recognized_text = String::new();
-    if let Some(items) = ocr_resp.results {
-        for item in items {
-            recognized_text.push_str(&item.text);
+    // ★ 关键步骤：在首次初始化前设置 ORT_DYLIB_PATH 环境变量，
+    // 使 ort crate 的 load-dynamic 特性能在运行时找到 onnxruntime.dll，
+    // 从而完全绕过静态链接（解决 MSVC 14.35 工具链兼容性问题）。
+    if std::env::var("ORT_DYLIB_PATH").is_err() {
+        // 优先尝试 Tauri 资源路径（打包后生效）
+        if let Ok(dll_path) = app_handle.path().resolve("resources/onnxruntime/onnxruntime.dll", BaseDirectory::Resource) {
+            let dll_path = strip_unc_prefix(dll_path);
+            if dll_path.exists() {
+                tracing::info!("设置 ORT_DYLIB_PATH = {:?}", dll_path);
+                std::env::set_var("ORT_DYLIB_PATH", &dll_path);
+            }
+        }
+        // 开发模式回退：直接使用项目 resources 目录中的 DLL
+        if std::env::var("ORT_DYLIB_PATH").is_err() {
+            let dev_dll = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("resources")
+                .join("onnxruntime")
+                .join("onnxruntime.dll");
+            if dev_dll.exists() {
+                tracing::info!("(开发模式) 设置 ORT_DYLIB_PATH = {:?}", dev_dll);
+                std::env::set_var("ORT_DYLIB_PATH", &dev_dll);
+            }
         }
     }
 
-    Ok(recognized_text)
+    let mut det_path = strip_unc_prefix(
+        app_handle
+            .path()
+            .resolve("resources/ocr_models/det/det_model.onnx", BaseDirectory::Resource)
+            .map_err(|e| format!("无法解析检测模型路径: {}", e))?
+    );
+
+
+    let mut cls_path = strip_unc_prefix(
+        app_handle
+            .path()
+            .resolve("resources/ocr_models/cls/cls_model.onnx", BaseDirectory::Resource)
+            .map_err(|e| format!("无法解析分类模型路径: {}", e))?
+    );
+
+
+    let mut rec_path = strip_unc_prefix(
+        app_handle
+            .path()
+            .resolve("resources/ocr_models/rec/rec_model.onnx", BaseDirectory::Resource)
+            .map_err(|e| format!("无法解析识别模型路径: {}", e))?
+    );
+
+
+    tracing::info!("正在初始化本地 PaddleOCR V4 引擎...\n检测模型: {:?}\n分类模型: {:?}\n识别模型: {:?}", det_path, cls_path, rec_path);
+
+    if !det_path.exists() || !cls_path.exists() || !rec_path.exists() {
+        return Err("OCR 模型文件不存在，请确保模型已部署在 resources/ocr_models 目录中".to_string());
+    }
+
+    let mut ocr = OcrLite::new();
+    ocr.init_models(
+        &det_path.to_string_lossy(),
+        &cls_path.to_string_lossy(),
+        &rec_path.to_string_lossy(),
+        4, // 限制内部并行线程数为 4，杜绝多核 CPU 线程暴涨卡顿
+    ).map_err(|e| format!("初始化 PaddleOCR 模型失败: {:?}", e))?;
+
+    let _ = OCR_ENGINE.set(Mutex::new(ocr));
+
+    Ok(OCR_ENGINE.get().unwrap())
 }
 
-/// 截取屏幕上的指定矩形区域，并使用指定的 OCR 引擎（Windows 原生或外部 PaddleOCR）进行识别。
-/// 
-/// 优化特性 (对齐 AutoDrive_ocr 项目的最小边长 = 600 以及最多 5 倍放大规则)：
-/// 1. 原生 GDI 像素级极速屏幕截图；
-/// 2. DPI 感知与原始像素处理；
-/// 3. 如果识别区域短边小于 600 像素，自动使用 GDI StretchBlt (HALFTONE 插值) 进行高清晰度放大，最高放大 5 倍；
-/// 4. 无其他多余的对比度拉伸或锐化滤波，保持图像原始色彩；
-/// 5. 过滤所有空白字符，输出干净统一的文案以方便做包含匹配。
-pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32, ocr_engine: &str, paddleocr_url: &str) -> Result<String, String> {
+/// 将截屏 BGRA 像素转换为 RgbImage 并调用本地 PaddleOCR 推理接口
+fn call_paddleocr_native(
+    pixel_bytes: Vec<u8>,
+    w: i32,
+    h: i32,
+    app_handle: &tauri::AppHandle,
+) -> Result<String, String> {
+    // 1. 无缝将 BGRA32 字节流提取并转换为 RgbImage，零临时文件 I/O，极其快速
+    let mut rgb_bytes = Vec::with_capacity((w * h * 3) as usize);
+    for chunk in pixel_bytes.chunks_exact(4) {
+        let b = chunk[0];
+        let g = chunk[1];
+        let r = chunk[2];
+        rgb_bytes.push(r);
+        rgb_bytes.push(g);
+        rgb_bytes.push(b);
+    }
+
+    let rgb_img = image::RgbImage::from_raw(w as u32, h as u32, rgb_bytes)
+        .ok_or_else(|| "无法从原始字节创建 RgbImage".to_string())?;
+
+    // 2. 线程安全调用全局共享的 OcrLite 推理会话
+    let ocr_mutex = get_or_init_ocr(app_handle)?;
+    let mut ocr = ocr_mutex.lock();
+
+    // 3. 执行识别推理（angle_classification: false, rotate: false）
+    let res = ocr.detect(
+        &rgb_img,
+        50,    // padding
+        1024,  // max_side_len
+        0.5,   // box_score_thresh
+        0.3,   // box_thresh
+        1.6,   // unclip_ratio
+        false, // do angle classification (针对常规水平文本，不需要多余的角度纠正)
+        false, // do rotate
+    ).map_err(|e| format!("PaddleOCR 本地推理失败: {:?}", e))?;
+
+    // 4. 提取和拼接识别出来的所有文本块
+    let mut text = String::new();
+    for block in res.text_blocks {
+        text.push_str(&block.text);
+    }
+
+    Ok(text)
+}
+
+/// 截取屏幕上的指定矩形区域，并使用指定的 OCR 引擎进行识别。
+pub fn ocr_region_sync(
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    ocr_engine: &str,
+    _paddleocr_url: &str,
+    app_handle: Option<&tauri::AppHandle>,
+) -> Result<String, String> {
     if w <= 0 || h <= 0 {
         return Err("识别区域的宽度和高度必须大于 0".to_string());
     }
@@ -218,23 +262,24 @@ pub fn ocr_region_sync(x: i32, y: i32, w: i32, h: i32, ocr_engine: &str, paddleo
         Ok::<Vec<u8>, String>(bytes)
     }?;
 
-    // 4. 将像素载入内存 DataWriter，以输出 WinRT 的 IBuffer
-    let data_writer = DataWriter::new().map_err(|e| format!("创建 DataWriter 失败: {}", e))?;
-    data_writer.WriteBytes(&pixel_bytes).map_err(|e| format!("写入像素字节失败: {}", e))?;
-    let ibuffer = data_writer.DetachBuffer().map_err(|e| format!("分离数据缓冲区失败: {}", e))?;
-
-    // 5. 从 IBuffer 载入并创建 SoftwareBitmap
-    let software_bitmap = SoftwareBitmap::CreateCopyFromBuffer(
-        &ibuffer,
-        BitmapPixelFormat::Bgra8,
-        new_w,
-        new_h
-    ).map_err(|e| format!("创建 SoftwareBitmap 失败: {}", e))?;
-
     let recognized_text = if ocr_engine == "paddleocr" {
-        // 调用外部 PaddleOCR API
-        call_paddleocr_http(&software_bitmap, paddleocr_url)?
+        // 调用本地原生 PaddleOCR 引擎进行识别
+        let handle = app_handle.ok_or_else(|| "本地 PaddleOCR 推理需要有效的 AppHandle 传入".to_string())?;
+        call_paddleocr_native(pixel_bytes, new_w, new_h, handle)?
     } else {
+        // 4. 将像素载入内存 DataWriter，以输出 WinRT 的 IBuffer
+        let data_writer = DataWriter::new().map_err(|e| format!("创建 DataWriter 失败: {}", e))?;
+        data_writer.WriteBytes(&pixel_bytes).map_err(|e| format!("写入像素字节失败: {}", e))?;
+        let ibuffer = data_writer.DetachBuffer().map_err(|e| format!("分离数据缓冲区失败: {}", e))?;
+
+        // 5. 从 IBuffer 载入并创建 SoftwareBitmap
+        let software_bitmap = SoftwareBitmap::CreateCopyFromBuffer(
+            &ibuffer,
+            BitmapPixelFormat::Bgra8,
+            new_w,
+            new_h
+        ).map_err(|e| format!("创建 SoftwareBitmap 失败: {}", e))?;
+
         // 6. 初始化本地 OcrEngine 进行识别
         let lang = Language::CreateLanguage(&HSTRING::from("zh-Hans-CN"))
             .map_err(|e| format!("创建语言包（zh-Hans-CN）失败: {}", e))?;

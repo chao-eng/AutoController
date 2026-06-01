@@ -790,6 +790,7 @@
       fill: var(--color-surface);
       transition: fill 0.2s ease;
     }
+
     .stroke-body {
       stroke: var(--color-border);
       stroke-width: 3px;
@@ -800,6 +801,7 @@
       fill: var(--color-background);
       transition: fill 0.2s ease;
     }
+
     .stroke-well {
       stroke: var(--color-border);
       stroke-width: 2px;
@@ -1875,7 +1877,7 @@
     .warning-content p {
       margin-bottom: 3px;
     }
-    
+
     .warning-content p:last-child {
       margin-bottom: 0;
     }
@@ -2985,7 +2987,7 @@ fn main() {
         }
         try {
           e.currentTarget.releasePointerCapture(e.pointerId);
-        } catch (err) {}
+        } catch (err) { }
       };
 
       const updateSvgTrigger = (e, side) => {
@@ -3029,7 +3031,7 @@ fn main() {
         }
         try {
           e.currentTarget.releasePointerCapture(e.pointerId);
-        } catch (err) {}
+        } catch (err) { }
       };
 
       const toggleButtonPress = (btnKey) => {
@@ -3347,39 +3349,39 @@ fn main() {
                                     <path d="M220.5 294.5C220.5 294.5 195 294.5 150 294.5C105 294.5 81.5 378.5 49.5 378.5C17.5 378.5 4 363.9 4 317.5C4 271.1 43.5 165.5 55 137.5C66.5 109.5 95.5 92.0001 128 92.0001C154 92.0001 200.5 92.0001 220.5 92.0001" className="fill-body stroke-body" />
                                     {/* Right main shell */}
                                     <path d="M220 294.5C220 294.5 245.5 294.5 290.5 294.5C335.5 294.5 359 378.5 391 378.5C423 378.5 436.5 363.9 436.5 317.5C436.5 271.1 397 165.5 385.5 137.5C374 109.5 345 92.0001 312.5 92.0001C286.5 92.0001 240 92.0001 220 92.0001" className="fill-body stroke-body" />
-                                    
+
                                     {/* Left Trigger (LT) */}
-                                    <path 
+                                    <path
                                       onPointerDown={(e) => handleSvgTriggerPointerDown(e, 'L')}
                                       onPointerMove={(e) => handleSvgTriggerPointerMove(e, 'L')}
                                       onPointerUp={(e) => handleSvgTriggerPointerUp(e, 'L')}
                                       onPointerCancel={(e) => handleSvgTriggerPointerUp(e, 'L')}
-                                      d="m152.5,52.97c0,4.61 -3.35,8.36 -7.5,8.36l-13,0c-4.14,0 -7.5,-3.74 -7.5,-8.36l0,-22.86c0,-8.62 6.27,-15.61 14,-15.61c7.73,0 14,6.99 14,15.61l0,22.86z" 
-                                      style={{ 
+                                      d="m152.5,52.97c0,4.61 -3.35,8.36 -7.5,8.36l-13,0c-4.14,0 -7.5,-3.74 -7.5,-8.36l0,-22.86c0,-8.62 6.27,-15.61 14,-15.61c7.73,0 14,6.99 14,15.61l0,22.86z"
+                                      style={{
                                         fill: `rgba(99, 102, 241, ${0.15 + (devices.find(d => d.id === selectedDeviceId)?.lt || 0) * 0.85})`,
                                         stroke: (devices.find(d => d.id === selectedDeviceId)?.lt || 0) > 0 ? '#6366f1' : 'var(--color-border)',
                                         strokeWidth: '2px'
                                       }}
-                                      className="transition-colors duration-100 cursor-ns-resize" 
+                                      className="transition-colors duration-100 cursor-ns-resize"
                                     />
-                                    
+
                                     {/* Right Trigger (RT) */}
-                                    <path 
+                                    <path
                                       onPointerDown={(e) => handleSvgTriggerPointerDown(e, 'R')}
                                       onPointerMove={(e) => handleSvgTriggerPointerMove(e, 'R')}
                                       onPointerUp={(e) => handleSvgTriggerPointerUp(e, 'R')}
                                       onPointerCancel={(e) => handleSvgTriggerPointerUp(e, 'R')}
-                                      d="m316.83,53.44c0,4.64 -3.44,8.39 -7.68,8.39l-13.31,0c-4.24,0 -7.68,-3.76 -7.68,-8.39l0,-22.94c0,-8.65 6.42,-15.67 14.33,-15.67c7.92,0 14.33,7.01 14.33,15.67l0,22.94z" 
-                                      style={{ 
+                                      d="m316.83,53.44c0,4.64 -3.44,8.39 -7.68,8.39l-13.31,0c-4.24,0 -7.68,-3.76 -7.68,-8.39l0,-22.94c0,-8.65 6.42,-15.67 14.33,-15.67c7.92,0 14.33,7.01 14.33,15.67l0,22.94z"
+                                      style={{
                                         fill: `rgba(99, 102, 241, ${0.15 + (devices.find(d => d.id === selectedDeviceId)?.rt || 0) * 0.85})`,
                                         stroke: (devices.find(d => d.id === selectedDeviceId)?.rt || 0) > 0 ? '#6366f1' : 'var(--color-border)',
                                         strokeWidth: '2px'
                                       }}
-                                      className="transition-colors duration-100 cursor-ns-resize" 
+                                      className="transition-colors duration-100 cursor-ns-resize"
                                     />
 
                                     {/* Left Bumper (LB) */}
-                                    <g 
+                                    <g
                                       onMouseDown={() => setButtonState('LB', true)}
                                       onMouseUp={() => setButtonState('LB', false)}
                                       onMouseLeave={() => setButtonState('LB', false)}
@@ -3387,24 +3389,24 @@ fn main() {
                                       onTouchEnd={(e) => { e.preventDefault(); setButtonState('LB', false); }}
                                       className="cursor-pointer"
                                     >
-                                      <rect 
-                                        x="116.8" y="66.8" width="43.3" height="17" rx="4" 
-                                        style={{ 
-                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LB') ? '#6366f1' : 'var(--color-surface-elevated)', 
+                                      <rect
+                                        x="116.8" y="66.8" width="43.3" height="17" rx="4"
+                                        style={{
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LB') ? '#6366f1' : 'var(--color-surface-elevated)',
                                           stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LB') ? '#4f46e5' : 'var(--color-border)',
                                           strokeWidth: '2px'
-                                        }} 
-                                        className="transition-all duration-200" 
+                                        }}
+                                        className="transition-all duration-200"
                                       />
-                                      <text 
-                                        x="138.5" y="79" textAnchor="middle" 
-                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LB') ? '#ffffff' : 'var(--color-text-muted)', fontSize: '10px', fontWeight: 'bold' }} 
+                                      <text
+                                        x="138.5" y="79" textAnchor="middle"
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LB') ? '#ffffff' : 'var(--color-text-muted)', fontSize: '10px', fontWeight: 'bold' }}
                                         className="pointer-events-none transition-colors duration-200"
                                       >LB</text>
                                     </g>
 
                                     {/* Right Bumper (RB) */}
-                                    <g 
+                                    <g
                                       onMouseDown={() => setButtonState('RB', true)}
                                       onMouseUp={() => setButtonState('RB', false)}
                                       onMouseLeave={() => setButtonState('RB', false)}
@@ -3412,40 +3414,40 @@ fn main() {
                                       onTouchEnd={(e) => { e.preventDefault(); setButtonState('RB', false); }}
                                       className="cursor-pointer"
                                     >
-                                      <rect 
-                                        x="281.3" y="67" width="42.6" height="17" rx="4" 
-                                        style={{ 
-                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RB') ? '#6366f1' : 'var(--color-surface-elevated)', 
+                                      <rect
+                                        x="281.3" y="67" width="42.6" height="17" rx="4"
+                                        style={{
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RB') ? '#6366f1' : 'var(--color-surface-elevated)',
                                           stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RB') ? '#4f46e5' : 'var(--color-border)',
                                           strokeWidth: '2px'
-                                        }} 
-                                        className="transition-all duration-200" 
+                                        }}
+                                        className="transition-all duration-200"
                                       />
-                                      <text 
-                                        x="302.5" y="79" text-anchor="middle" 
-                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RB') ? '#ffffff' : 'var(--color-text-muted)', fontSize: '10px', fontWeight: 'bold' }} 
+                                      <text
+                                        x="302.5" y="79" text-anchor="middle"
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RB') ? '#ffffff' : 'var(--color-text-muted)', fontSize: '10px', fontWeight: 'bold' }}
                                         className="pointer-events-none transition-colors duration-200"
                                       >RB</text>
                                     </g>
 
                                     {/* Left Stick well and interactive pointer drag knob */}
-                                    <g 
-                                      onPointerDown={(e) => handleSvgStickPointerDown(e, 'L')} 
-                                      onPointerMove={(e) => handleSvgStickPointerMove(e, 'L')} 
-                                      onPointerUp={(e) => handleSvgStickPointerUp(e, 'L')} 
+                                    <g
+                                      onPointerDown={(e) => handleSvgStickPointerDown(e, 'L')}
+                                      onPointerMove={(e) => handleSvgStickPointerMove(e, 'L')}
+                                      onPointerUp={(e) => handleSvgStickPointerUp(e, 'L')}
                                       onPointerCancel={(e) => handleSvgStickPointerUp(e, 'L')}
                                       className="interactive-stick select-none"
                                     >
                                       <circle cx="113" cy="160" r="37.5" className="fill-well stroke-well" />
                                       <g transform={`translate(${(devices.find(d => d.id === selectedDeviceId)?.lx || 0) * 12}, ${(devices.find(d => d.id === selectedDeviceId)?.ly || 0) * -12})`} className="transition-transform duration-75">
-                                        <circle 
-                                          cx="113" cy="160" r="28" 
-                                          style={{ 
-                                            fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LS') ? '#6366f1' : 'var(--color-text-dim)', 
+                                        <circle
+                                          cx="113" cy="160" r="28"
+                                          style={{
+                                            fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LS') ? '#6366f1' : 'var(--color-text-dim)',
                                             stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LS') ? '#4f46e5' : 'var(--color-surface)',
                                             strokeWidth: '2px'
-                                          }} 
-                                          className="transition-colors duration-100" 
+                                          }}
+                                          className="transition-colors duration-100"
                                         />
                                         <circle cx="113" cy="160" r="22" className="fill-none stroke-black/5 dark:stroke-white/5 stroke-2" />
                                         <circle cx="113" cy="160" r="10" className="fill-stone-400/50 stroke-none" />
@@ -3455,23 +3457,23 @@ fn main() {
                                     </g>
 
                                     {/* Right Stick well and interactive pointer drag knob */}
-                                    <g 
-                                      onPointerDown={(e) => handleSvgStickPointerDown(e, 'R')} 
-                                      onPointerMove={(e) => handleSvgStickPointerMove(e, 'R')} 
-                                      onPointerUp={(e) => handleSvgStickPointerUp(e, 'R')} 
+                                    <g
+                                      onPointerDown={(e) => handleSvgStickPointerDown(e, 'R')}
+                                      onPointerMove={(e) => handleSvgStickPointerMove(e, 'R')}
+                                      onPointerUp={(e) => handleSvgStickPointerUp(e, 'R')}
                                       onPointerCancel={(e) => handleSvgStickPointerUp(e, 'R')}
                                       className="interactive-stick select-none"
                                     >
                                       <circle cx="278" cy="238" r="37.5" className="fill-well stroke-well" />
                                       <g transform={`translate(${(devices.find(d => d.id === selectedDeviceId)?.rx || 0) * 12}, ${(devices.find(d => d.id === selectedDeviceId)?.ry || 0) * -12})`} className="transition-transform duration-75">
-                                        <circle 
-                                          cx="278" cy="238" r="28" 
-                                          style={{ 
-                                            fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RS') ? '#6366f1' : 'var(--color-text-dim)', 
+                                        <circle
+                                          cx="278" cy="238" r="28"
+                                          style={{
+                                            fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RS') ? '#6366f1' : 'var(--color-text-dim)',
                                             stroke: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RS') ? '#4f46e5' : 'var(--color-surface)',
                                             strokeWidth: '2px'
-                                          }} 
-                                          className="transition-colors duration-100" 
+                                          }}
+                                          className="transition-colors duration-100"
                                         />
                                         <circle cx="278" cy="238" r="22" className="fill-none stroke-black/5 dark:stroke-white/5 stroke-2" />
                                         <circle cx="278" cy="238" r="10" className="fill-stone-400/50 stroke-none" />
@@ -3482,78 +3484,78 @@ fn main() {
 
                                     {/* D-pad well and four directional rects */}
                                     <circle cx="166" cy="238" r="37.5" className="fill-well stroke-well" />
-                                    
-                                    <rect 
+
+                                    <rect
                                       onMouseDown={() => setButtonState('UP', true)}
                                       onMouseUp={() => setButtonState('UP', false)}
                                       onMouseLeave={() => setButtonState('UP', false)}
                                       onTouchStart={(e) => { e.preventDefault(); setButtonState('UP', true); }}
                                       onTouchEnd={(e) => { e.preventDefault(); setButtonState('UP', false); }}
-                                      x="159" y="211" width="14" height="20" 
-                                      style={{ 
+                                      x="159" y="211" width="14" height="20"
+                                      style={{
                                         fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'UP') ? '#6366f1' : 'var(--color-surface)',
                                         stroke: 'var(--color-border)',
                                         strokeWidth: '1.5px'
-                                      }} 
-                                      className="transition-all duration-100 cursor-pointer" 
+                                      }}
+                                      className="transition-all duration-100 cursor-pointer"
                                     />
-                                    <rect 
+                                    <rect
                                       onMouseDown={() => setButtonState('DOWN', true)}
                                       onMouseUp={() => setButtonState('DOWN', false)}
                                       onMouseLeave={() => setButtonState('DOWN', false)}
                                       onTouchStart={(e) => { e.preventDefault(); setButtonState('DOWN', true); }}
                                       onTouchEnd={(e) => { e.preventDefault(); setButtonState('DOWN', false); }}
-                                      x="159" y="239" width="14" height="20" 
-                                      style={{ 
+                                      x="159" y="239" width="14" height="20"
+                                      style={{
                                         fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'DOWN') ? '#6366f1' : 'var(--color-surface)',
                                         stroke: 'var(--color-border)',
                                         strokeWidth: '1.5px'
-                                      }} 
-                                      className="transition-all duration-100 cursor-pointer" 
+                                      }}
+                                      className="transition-all duration-100 cursor-pointer"
                                     />
-                                    <rect 
+                                    <rect
                                       onMouseDown={() => setButtonState('LEFT', true)}
                                       onMouseUp={() => setButtonState('LEFT', false)}
                                       onMouseLeave={() => setButtonState('LEFT', false)}
                                       onTouchStart={(e) => { e.preventDefault(); setButtonState('LEFT', true); }}
                                       onTouchEnd={(e) => { e.preventDefault(); setButtonState('LEFT', false); }}
-                                      x="142" y="228" width="20" height="14" 
-                                      style={{ 
+                                      x="142" y="228" width="20" height="14"
+                                      style={{
                                         fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'LEFT') ? '#6366f1' : 'var(--color-surface)',
                                         stroke: 'var(--color-border)',
                                         strokeWidth: '1.5px'
-                                      }} 
-                                      className="transition-all duration-100 cursor-pointer" 
+                                      }}
+                                      className="transition-all duration-100 cursor-pointer"
                                     />
-                                    <rect 
+                                    <rect
                                       onMouseDown={() => setButtonState('RIGHT', true)}
                                       onMouseUp={() => setButtonState('RIGHT', false)}
                                       onMouseLeave={() => setButtonState('RIGHT', false)}
                                       onTouchStart={(e) => { e.preventDefault(); setButtonState('RIGHT', true); }}
                                       onTouchEnd={(e) => { e.preventDefault(); setButtonState('RIGHT', false); }}
-                                      x="170" y="228" width="20" height="14" 
-                                      style={{ 
+                                      x="170" y="228" width="20" height="14"
+                                      style={{
                                         fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'RIGHT') ? '#6366f1' : 'var(--color-surface)',
                                         stroke: 'var(--color-border)',
                                         strokeWidth: '1.5px'
-                                      }} 
-                                      className="transition-all duration-100 cursor-pointer" 
+                                      }}
+                                      className="transition-all duration-100 cursor-pointer"
                                     />
                                     {/* Dpad Center */}
-                                    <rect 
-                                      x="159" y="228" width="14" height="14" 
-                                      style={{ 
+                                    <rect
+                                      x="159" y="228" width="14" height="14"
+                                      style={{
                                         fill: 'var(--color-surface)',
                                         stroke: 'var(--color-border)',
                                         strokeWidth: '1.5px'
-                                      }} 
+                                      }}
                                     />
 
-                                     {/* ABXY well */}
+                                    {/* ABXY well */}
                                     <circle cx="329" cy="160" r="42" className="fill-well stroke-well" />
-                                    
+
                                     {/* Y Button (Yellow) */}
-                                    <g 
+                                    <g
                                       onMouseDown={() => setButtonState('Y', true)}
                                       onMouseUp={() => setButtonState('Y', false)}
                                       onMouseLeave={() => setButtonState('Y', false)}
@@ -3561,24 +3563,24 @@ fn main() {
                                       onTouchEnd={(e) => { e.preventDefault(); setButtonState('Y', false); }}
                                       className="cursor-pointer"
                                     >
-                                      <circle 
-                                        cx="329" cy="136" r="13" 
-                                        style={{ 
-                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'Y') ? '#f59e0b' : 'rgba(245, 158, 11, 0.18)', 
-                                          stroke: '#f59e0b', 
-                                          strokeWidth: '2px' 
-                                        }} 
-                                        className="transition-all duration-100" 
+                                      <circle
+                                        cx="329" cy="136" r="13"
+                                        style={{
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'Y') ? '#f59e0b' : 'rgba(245, 158, 11, 0.18)',
+                                          stroke: '#f59e0b',
+                                          strokeWidth: '2px'
+                                        }}
+                                        className="transition-all duration-100"
                                       />
-                                      <text 
-                                        x="329" y="140" textAnchor="middle" 
-                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'Y') ? '#ffffff' : '#f59e0b', fontSize: '12px', fontWeight: '900' }} 
+                                      <text
+                                        x="329" y="140" textAnchor="middle"
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'Y') ? '#ffffff' : '#f59e0b', fontSize: '12px', fontWeight: '900' }}
                                         className="pointer-events-none transition-colors duration-100"
                                       >Y</text>
                                     </g>
 
                                     {/* X Button (Blue) */}
-                                    <g 
+                                    <g
                                       onMouseDown={() => setButtonState('X', true)}
                                       onMouseUp={() => setButtonState('X', false)}
                                       onMouseLeave={() => setButtonState('X', false)}
@@ -3586,24 +3588,24 @@ fn main() {
                                       onTouchEnd={(e) => { e.preventDefault(); setButtonState('X', false); }}
                                       className="cursor-pointer"
                                     >
-                                      <circle 
-                                        cx="305" cy="160" r="13" 
-                                        style={{ 
-                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'X') ? '#3b82f6' : 'rgba(59, 130, 246, 0.18)', 
-                                          stroke: '#3b82f6', 
-                                          strokeWidth: '2px' 
-                                        }} 
-                                        className="transition-all duration-100" 
+                                      <circle
+                                        cx="305" cy="160" r="13"
+                                        style={{
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'X') ? '#3b82f6' : 'rgba(59, 130, 246, 0.18)',
+                                          stroke: '#3b82f6',
+                                          strokeWidth: '2px'
+                                        }}
+                                        className="transition-all duration-100"
                                       />
-                                      <text 
-                                        x="305" y="164" text-anchor="middle" 
-                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'X') ? '#ffffff' : '#3b82f6', fontSize: '12px', fontWeight: '900' }} 
+                                      <text
+                                        x="305" y="164" text-anchor="middle"
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'X') ? '#ffffff' : '#3b82f6', fontSize: '12px', fontWeight: '900' }}
                                         className="pointer-events-none transition-colors duration-100"
                                       >X</text>
                                     </g>
 
                                     {/* B Button (Red) */}
-                                    <g 
+                                    <g
                                       onMouseDown={() => setButtonState('B', true)}
                                       onMouseUp={() => setButtonState('B', false)}
                                       onMouseLeave={() => setButtonState('B', false)}
@@ -3611,24 +3613,24 @@ fn main() {
                                       onTouchEnd={(e) => { e.preventDefault(); setButtonState('B', false); }}
                                       className="cursor-pointer"
                                     >
-                                      <circle 
-                                        cx="353" cy="160" r="13" 
-                                        style={{ 
-                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'B') ? '#ef4444' : 'rgba(239, 68, 68, 0.18)', 
-                                          stroke: '#ef4444', 
-                                          strokeWidth: '2px' 
-                                        }} 
-                                        className="transition-all duration-100" 
+                                      <circle
+                                        cx="353" cy="160" r="13"
+                                        style={{
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'B') ? '#ef4444' : 'rgba(239, 68, 68, 0.18)',
+                                          stroke: '#ef4444',
+                                          strokeWidth: '2px'
+                                        }}
+                                        className="transition-all duration-100"
                                       />
-                                      <text 
-                                        x="353" y="164" text-anchor="middle" 
-                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'B') ? '#ffffff' : '#ef4444', fontSize: '12px', fontWeight: '900' }} 
+                                      <text
+                                        x="353" y="164" text-anchor="middle"
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'B') ? '#ffffff' : '#ef4444', fontSize: '12px', fontWeight: '900' }}
                                         className="pointer-events-none transition-colors duration-100"
                                       >B</text>
                                     </g>
 
                                     {/* A Button (Green) */}
-                                    <g 
+                                    <g
                                       onMouseDown={() => setButtonState('A', true)}
                                       onMouseUp={() => setButtonState('A', false)}
                                       onMouseLeave={() => setButtonState('A', false)}
@@ -3636,24 +3638,24 @@ fn main() {
                                       onTouchEnd={(e) => { e.preventDefault(); setButtonState('A', false); }}
                                       className="cursor-pointer"
                                     >
-                                      <circle 
-                                        cx="329" cy="184" r="13" 
-                                        style={{ 
-                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'A') ? '#10b981' : 'rgba(16, 185, 129, 0.18)', 
-                                          stroke: '#10b981', 
-                                          strokeWidth: '2px' 
-                                        }} 
-                                        className="transition-all duration-100" 
+                                      <circle
+                                        cx="329" cy="184" r="13"
+                                        style={{
+                                          fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'A') ? '#10b981' : 'rgba(16, 185, 129, 0.18)',
+                                          stroke: '#10b981',
+                                          strokeWidth: '2px'
+                                        }}
+                                        className="transition-all duration-100"
                                       />
-                                      <text 
-                                        x="329" y="188" text-anchor="middle" 
-                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'A') ? '#ffffff' : '#10b981', fontSize: '12px', fontWeight: '900' }} 
+                                      <text
+                                        x="329" y="188" text-anchor="middle"
+                                        style={{ fill: isButtonPressed(devices.find(d => d.id === selectedDeviceId), 'A') ? '#ffffff' : '#10b981', fontSize: '12px', fontWeight: '900' }}
                                         className="pointer-events-none transition-colors duration-100"
                                       >A</text>
                                     </g>
 
                                     {/* View/Back Button */}
-                                    <g 
+                                    <g
                                       onMouseDown={() => setButtonState('BACK', true)}
                                       onMouseUp={() => setButtonState('BACK', false)}
                                       onMouseLeave={() => setButtonState('BACK', false)}
@@ -3666,7 +3668,7 @@ fn main() {
                                     </g>
 
                                     {/* Menu/Start Button */}
-                                    <g 
+                                    <g
                                       onMouseDown={() => setButtonState('START', true)}
                                       onMouseUp={() => setButtonState('START', false)}
                                       onMouseLeave={() => setButtonState('START', false)}
@@ -3685,7 +3687,7 @@ fn main() {
                                     </g>
 
                                     {/* Guide Button (Home logo) */}
-                                    <g 
+                                    <g
                                       onMouseDown={() => setButtonState('GUIDE', true)}
                                       onMouseUp={() => setButtonState('GUIDE', false)}
                                       onMouseLeave={() => setButtonState('GUIDE', false)}
@@ -4219,7 +4221,7 @@ fn main() {
                     {/* Header */}
                     <div className="page-header">
                       <div className="page-header-left">
-                        <h2>防止游戏/窗口失去焦点 (No Focus Loss) <span className="version-badge">v0.4.0</span></h2>
+                        <h2>防止游戏/窗口失去焦点 (No Focus Loss) <span className="version-badge">v0.5.0</span></h2>
                       </div>
                       <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
                         <button className={`btn btn-secondary ${noFocusShowFeatureGuide ? 'active' : ''}`} onClick={() => setNoFocusShowFeatureGuide(!noFocusShowFeatureGuide)}>
@@ -4237,7 +4239,7 @@ fn main() {
                           ]);
                           appendLog('info', 'injector_service', '已成功刷新当前活动窗口及进程列表。');
                         }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" /></svg>
                           <span>刷新进程</span>
                         </button>
                       </div>
@@ -4247,7 +4249,7 @@ fn main() {
                     {!noFocusIsAdmin ? (
                       <div className={`admin-tip-banner warning-admin ${noFocusAdminTipCollapsed ? 'collapsed' : ''}`}>
                         <div className="admin-tip-title">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                           <span className="title-text">推荐以管理员权限运行 (Administrator Privileges Recommended)</span>
                           {noFocusAdminTipCollapsed && <span className="collapsed-summary">：未以管理员权限启动，注入高权限游戏可能会失败。</span>}
                           <button className="btn-text-toggle" onClick={() => setNoFocusAdminTipCollapsed(!noFocusAdminTipCollapsed)}>
@@ -4263,7 +4265,7 @@ fn main() {
                     ) : (
                       <div className={`admin-tip-banner success-admin ${noFocusAdminTipCollapsed ? 'collapsed' : ''}`}>
                         <div className="admin-tip-title">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                           <span className="title-text">已以管理员权限运行 (Running with Administrator Privileges)</span>
                           {noFocusAdminTipCollapsed && <span className="collapsed-summary">：已具备完整的系统高权限，可顺利附加注入。</span>}
                           <button className="btn-text-toggle" onClick={() => setNoFocusAdminTipCollapsed(!noFocusAdminTipCollapsed)}>
@@ -4281,7 +4283,7 @@ fn main() {
                     {/* Foldable Warning Banner */}
                     <div className={`warning-banner ${noFocusWarningCollapsed ? 'collapsed' : ''}`}>
                       <div className="warning-title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><line x1="12" x2="12" y1="9" y2="13" /><line x1="12" x2="12.01" y1="17" y2="17" /></svg>
                         <span className="title-text">高危安全警告与免责声明 (Ban Risk Warning)</span>
                         {noFocusWarningCollapsed && <span className="collapsed-summary">：跨进程注入在多人网游中有封号风险，严禁在网游中使用！</span>}
                         <button className="btn-text-toggle" onClick={() => setNoFocusWarningCollapsed(!noFocusWarningCollapsed)}>
@@ -4303,7 +4305,7 @@ fn main() {
                         <div className="feature-guide-header">
                           <Icons.Help size={16} />
                           <h4>防止游戏失焦功能使用指南 (No Focus Loss Feature Guide)</h4>
-                          <span className="badge version-badge">核心版本: v0.4.0</span>
+                          <span className="badge version-badge">核心版本: v0.5.0</span>
                         </div>
                         <div className="feature-guide-steps">
                           <p style={{ marginBottom: 8 }}>
@@ -4326,7 +4328,7 @@ fn main() {
                     {noFocusShowGuide && (
                       <div className="guide-panel">
                         <div className="guide-header">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                           <h4>Windows Defender 杀软拦截修复指引</h4>
                         </div>
                         <div className="guide-steps">
@@ -4369,7 +4371,7 @@ fn main() {
                                 { pid: 22344, name: 'WeChat.exe', window_title: '微信', is_64bit: true }
                               ]);
                             }}>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" /></svg>
                             </button>
                           </div>
                         </div>
@@ -4377,7 +4379,7 @@ fn main() {
                         <div className="process-list-container">
                           {noFocusInjectable.filter(p => p.name.toLowerCase().includes(noFocusSearch.toLowerCase()) || p.window_title.toLowerCase().includes(noFocusSearch.toLowerCase())).length === 0 ? (
                             <div className="empty-state">
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="16" y2="12" /><line x1="12" x2="12.01" y1="8" y2="8" /></svg>
                               <p>未找到符合条件的活动窗口</p>
                             </div>
                           ) : (
@@ -4397,7 +4399,7 @@ fn main() {
                                     setNoFocusInjected([...noFocusInjected, p]);
                                     appendLog('success', 'injector_service', `成功向进程「${p.name}」(PID: ${p.pid}) 注入 NoFocusLoss 核心 Hook。`);
                                   }}>
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
                                     <span>注入 Hook</span>
                                   </button>
                                 </div>
@@ -4421,7 +4423,7 @@ fn main() {
                         <div className="process-list-container">
                           {noFocusInjected.length === 0 ? (
                             <div className="empty-state">
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m19 2 1 1-1 1M22.5 5.5l.5.5-.5.5M16 2.5l-.5-.5.5-.5M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10c0-1.85-.5-3.58-1.39-5.07l-.7.71A8.93 8.93 0 0 1 21 12c0 5-4 9-9 9s-9-4-9-9 4-9 9-9c1.6 0 3.12.42 4.44 1.15l.71-.71A10.05 10.05 0 0 0 12 2Zm7 13.5v-7h-1.5v7H19Z"/></svg>
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m19 2 1 1-1 1M22.5 5.5l.5.5-.5.5M16 2.5l-.5-.5.5-.5M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10c0-1.85-.5-3.58-1.39-5.07l-.7.71A8.93 8.93 0 0 1 21 12c0 5-4 9-9 9s-9-4-9-9 4-9 9-9c1.6 0 3.12.42 4.44 1.15l.71-.71A10.05 10.05 0 0 0 12 2Zm7 13.5v-7h-1.5v7H19Z" /></svg>
                               <p>当前无附加 Hook 状态 of 进程</p>
                               <span className="empty-hint">在左侧列表中选择进程并点击“注入 Hook”</span>
                             </div>
@@ -4442,7 +4444,7 @@ fn main() {
                                     setNoFocusInjectable([...noFocusInjectable, p]);
                                     appendLog('info', 'injector_service', `已从进程「${p.name}」(PID: ${p.pid}) 中安全卸载 NoFocusLoss 模块。`);
                                   }}>
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" x2="12" y1="2" y2="12"/></svg>
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" x2="12" y1="2" y2="12" /></svg>
                                     <span>安全卸载</span>
                                   </button>
                                 </div>
@@ -4525,7 +4527,7 @@ fn main() {
                     <span>MEM: 42 MB</span>
                   </div>
                   <div className="status-item">
-                    <span>v0.4.0</span>
+                    <span>v0.5.0</span>
                   </div>
                 </div>
               </footer>

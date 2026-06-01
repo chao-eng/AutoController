@@ -286,3 +286,33 @@ pub fn save_ocr_region(
     
     Ok(())
 }
+
+#[tauri::command]
+pub async fn run_ocr(
+    app_handle: tauri::AppHandle,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+) -> Result<String, String> {
+    use tauri::Manager;
+    let config_mgr = app_handle.state::<crate::config::AppConfigManager>();
+    let config = config_mgr.get();
+    let ocr_engine = config.ocr_engine.clone();
+    let paddleocr_url = config.paddleocr_url.clone();
+
+    // 在 tokio 线程池的独立线程中执行，杜绝 UI 渲染卡顿
+    tokio::task::spawn_blocking(move || {
+        crate::script_engine::ocr::ocr_region_sync(
+            x,
+            y,
+            w,
+            h,
+            &ocr_engine,
+            &paddleocr_url,
+            Some(&app_handle),
+        )
+    })
+    .await
+    .map_err(|e| format!("OCR 线程执行异常中断: {}", e))?
+}

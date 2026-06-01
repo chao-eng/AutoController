@@ -1,6 +1,6 @@
 [package]
 name = "autocontroller"
-version = "0.4.0"
+version = "0.5.0"
 description = "AutoController - 高性能游戏手柄宏录制与脚本化自动化工具"
 authors = ["AutoController Team"]
 edition = "2021"
@@ -58,6 +58,9 @@ windows = { version = "0.58.0", features = [
     "Win32_System_LibraryLoader"
 ] }
 reqwest = { version = "0.12", features = ["json", "blocking", "multipart"] }
+paddle-ocr-rs = "0.6.1"
+image = "0.25"
+ort = { version = "=2.0.0-rc.10", default-features = false, features = ["load-dynamic"] }
 
 
 

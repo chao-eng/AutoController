@@ -372,12 +372,12 @@ function handleImport(event: Event) {
             <label>OCR 识别引擎</label>
             <select v-model="store.config.ocr_engine" class="input">
               <option value="winocr">Windows 原生 (WinRT OCR)</option>
-              <option value="paddleocr">外部 PaddleOCR (HTTP)</option>
+              <option value="paddleocr">内置 PaddleOCR (极速本地引擎)</option>
             </select>
           </div>
-          <div v-if="store.config.ocr_engine === 'paddleocr'" class="config-item">
-            <label>PaddleOCR URL 地址</label>
-            <input type="text" v-model="store.config.paddleocr_url" class="input url-input" placeholder="http://127.0.0.1:8050/ocr" />
+          <div v-if="store.config.ocr_engine === 'paddleocr'" class="ocr-native-badge">
+            <span class="badge-icon">⚡</span>
+            <span class="badge-text">已启用内置 PaddleOCR V4 本地推理引擎（免配置，零延迟，100% 离线）</span>
           </div>
         </div>
 
@@ -1457,6 +1457,33 @@ function handleImport(event: Event) {
   margin-bottom: var(--space-md);
   border-bottom: 1px dashed var(--color-border);
   padding-bottom: var(--space-md);
+}
+
+.ocr-native-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(34, 197, 94, 0.05);
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-sm);
+  animation: pulse-glow 3s infinite alternate;
+}
+
+.badge-icon {
+  font-size: 14px;
+}
+
+.badge-text {
+  font-size: 12px;
+  color: #22c55e;
+  font-weight: 500;
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.05); }
+  100% { box-shadow: 0 0 15px rgba(34, 197, 94, 0.15); }
 }
 
 .url-input {
