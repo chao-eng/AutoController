@@ -33,6 +33,34 @@ function handleConfirm() {
 function handleCancel() {
   uiStore.closeDialog()
 }
+
+// 轻量级自研安全 Markdown 解析渲染器，专门在 Dialog/Modal 中渲染更新日志等排版
+function renderDialogMessage(message: string): string {
+  if (!message) return ''
+  
+  // 1. 转义 HTML 字符，防范 XSS 漏洞
+  let safeText = message
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  // 2. 解析标题 (支持 H1-H4)
+  safeText = safeText.replace(/^#### (.*$)/gim, '<h4 style="margin: 10px 0 4px 0; font-size: 12.5px; font-weight: 700; color: var(--color-text);">$1</h4>')
+  safeText = safeText.replace(/^### (.*$)/gim, '<h3 style="margin: 14px 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--color-text); border-left: 3px solid var(--color-cta); padding-left: 8px;">$1</h3>')
+  safeText = safeText.replace(/^## (.*$)/gim, '<h2 style="margin: 16px 0 8px 0; font-size: 14.5px; font-weight: 700; color: var(--color-text);">$1</h2>')
+  safeText = safeText.replace(/^# (.*$)/gim, '<h1 style="margin: 18px 0 10px 0; font-size: 15.5px; font-weight: 700; color: var(--color-text);">$1</h1>')
+
+  // 3. 解析加粗 **text**
+  safeText = safeText.replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600; color: var(--color-text);">$1</strong>')
+
+  // 4. 解析列表项 - text 或者 * text
+  safeText = safeText.replace(/^\s*[-*]\s+(.*$)/gim, '<div style="display: flex; align-items: flex-start; gap: 6px; margin: 6px 0 6px 12px; font-size: 12px; line-height: 1.5; color: var(--color-text-muted);"><span style="color: var(--color-cta); margin-top: 2px;">•</span><span>$1</span></div>')
+
+  // 5. 换行符替换为网页 br 换行
+  safeText = safeText.replace(/\n/g, '<br />')
+
+  return safeText
+}
 </script>
 
 <template>
@@ -79,7 +107,7 @@ function handleCancel() {
           </div>
 
           <div class="dialog-body">
-            <p class="dialog-message">{{ uiStore.activeDialog.message }}</p>
+            <p class="dialog-message" v-html="renderDialogMessage(uiStore.activeDialog.message)"></p>
             
             <!-- Input field for prompt dialog type -->
             <div v-if="uiStore.activeDialog.type === 'prompt'" class="prompt-input-wrapper">
@@ -310,7 +338,7 @@ function handleCancel() {
   color: var(--color-text-muted);
   line-height: 1.5;
   margin: 0;
-  white-space: pre-wrap;
+  white-space: normal;
 }
 
 .prompt-input-wrapper {
