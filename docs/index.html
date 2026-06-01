@@ -2263,6 +2263,33 @@
       color: var(--color-text-dim);
       margin-top: 4px;
     }
+
+    .ocr-native-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.18);
+      border-radius: var(--radius-md);
+      margin-top: 8px;
+      animation: pulse-glow 3s infinite alternate;
+    }
+
+    .badge-icon {
+      font-size: 14px;
+    }
+
+    .badge-text {
+      font-size: 11.5px;
+      color: #10B981;
+      font-weight: 500;
+    }
+
+    @keyframes pulse-glow {
+      0% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.05); }
+      100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.15); }
+    }
   </style>
 </head>
 
@@ -2791,7 +2818,7 @@ fn main() {
         { time: '11:00:01', level: 'info', module: 'tauri_app', msg: 'ViGEmBus 内核模拟驱动连接成功，接口版本 v1.17。' },
         { time: '11:00:02', level: 'info', module: 'tauri_app', msg: '初始化虚拟 Xbox 360 手柄实例成功，分配编号槽 #0' },
         { time: '11:00:05', level: 'debug', module: 'config_manager', msg: '成功加载系统配置文件 settings.json。' },
-        { time: '11:00:10', level: 'info', module: 'ocr_service', msg: 'OCR 屏幕文本识别引擎启动成功 (外部 PaddleOCR: 127.0.0.1:8050)。' }
+        { time: '11:00:10', level: 'info', module: 'ocr_service', msg: '内置 PaddleOCR V4 本地推理引擎初始化成功，模型载入就绪。' }
       ]);
       const [logFilter, setLogFilter] = useState('all');
 
@@ -3995,18 +4022,13 @@ fn main() {
                           <span className="config-row-label">OCR 识别引擎</span>
                           <select className="config-input-select" value={ocrEngine} onChange={(e) => setOcrEngine(e.target.value)}>
                             <option value="winocr">Windows 原生 (WinRT OCR)</option>
-                            <option value="paddleocr">外部 PaddleOCR (HTTP)</option>
+                            <option value="paddleocr">内置 PaddleOCR (极速本地引擎)</option>
                           </select>
                         </div>
                         {ocrEngine === 'paddleocr' && (
-                          <div className="config-row">
-                            <span className="config-row-label">PaddleOCR URL 地址</span>
-                            <input
-                              type="text"
-                              className="config-input-text"
-                              value={paddleUrl}
-                              onChange={(e) => setPaddleUrl(e.target.value)}
-                            />
+                          <div className="ocr-native-badge">
+                            <span className="badge-icon">⚡</span>
+                            <span className="badge-text">已启用内置 PaddleOCR V4 本地推理引擎（免配置，零延迟，100% 离线）</span>
                           </div>
                         )}
 

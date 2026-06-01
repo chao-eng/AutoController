@@ -622,7 +622,7 @@ impl ScriptRuntime {
                         let config = config_mgr.get();
                         (config.ocr_engine.clone(), config.paddleocr_url.clone(), Some(handle.clone()))
                     } else {
-                        ("winocr".to_string(), "http://127.0.0.1:8050/ocr".to_string(), None)
+                        ("paddleocr".to_string(), "http://127.0.0.1:8050/ocr".to_string(), None)
                     }
                 };
 

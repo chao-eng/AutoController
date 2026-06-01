@@ -44,7 +44,7 @@ pub struct NotificationChannel {
 }
 
 fn default_ocr_engine() -> String {
-    "winocr".to_string()
+    "paddleocr".to_string()
 }
 
 fn default_paddleocr_url() -> String {
