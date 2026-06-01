@@ -301,7 +301,7 @@ pub async fn run_ocr(
     let ocr_engine = config.ocr_engine.clone();
     let paddleocr_url = config.paddleocr_url.clone();
 
-    // 在 tokio 线程池的独立线程中执行，杜绝 UI 渲染卡顿
+    // 在 tokio 线程池 of 独立线程中执行，杜绝 UI 渲染卡顿
     tokio::task::spawn_blocking(move || {
         crate::script_engine::ocr::ocr_region_sync(
             x,
@@ -315,4 +315,65 @@ pub async fn run_ocr(
     })
     .await
     .map_err(|e| format!("OCR 线程执行异常中断: {}", e))?
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct BackupPayload {
+    pub config: Option<serde_json::Value>,
+    pub macros: Option<serde_json::Value>,
+    pub scripts: Option<serde_json::Value>,
+    pub tasks: Option<serde_json::Value>,
+}
+
+#[tauri::command]
+pub fn export_backup_data() -> Result<BackupPayload, String> {
+    let data_dir = crate::persistence::DataDir::new();
+    let config = data_dir.load::<serde_json::Value>("config");
+    let macros = data_dir.load::<serde_json::Value>("macros");
+    let scripts = data_dir.load::<serde_json::Value>("scripts");
+    let tasks = data_dir.load::<serde_json::Value>("tasks");
+    
+    Ok(BackupPayload {
+        config,
+        macros,
+        scripts,
+        tasks,
+    })
+}
+
+#[tauri::command]
+pub fn import_backup_data(
+    app_handle: tauri::AppHandle,
+    backup: BackupPayload,
+) -> Result<(), String> {
+    use tauri::Manager;
+    let data_dir = crate::persistence::DataDir::new();
+    
+    // 1. 覆盖写入 macros.json
+    if let Some(ref val) = backup.macros {
+        data_dir.save("macros", val).map_err(|e| format!("无法保存 macros 配置: {}", e))?;
+    }
+    
+    // 2. 覆盖写入 scripts.json
+    if let Some(ref val) = backup.scripts {
+        data_dir.save("scripts", val).map_err(|e| format!("无法保存 scripts 配置: {}", e))?;
+    }
+    
+    // 3. 覆盖写入 tasks.json
+    if let Some(ref val) = backup.tasks {
+        data_dir.save("tasks", val).map_err(|e| format!("无法保存 tasks 配置: {}", e))?;
+    }
+
+    // 4. 覆盖写入 config.json，并更新运行时的全局 AppConfig 状态管理实例！
+    if let Some(ref val) = backup.config {
+        let app_config: AppConfig = serde_json::from_value(val.clone())
+            .map_err(|e| format!("备份数据中 config 段反序列化失败: {}", e))?;
+        
+        data_dir.save("config", val).map_err(|e| format!("无法保存 config 配置: {}", e))?;
+        
+        let manager = app_handle.state::<crate::config::AppConfigManager>();
+        manager.set(app_config);
+    }
+    
+    Ok(())
 }

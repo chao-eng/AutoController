@@ -151,6 +151,20 @@ export const useControllerStore = defineStore('controller', () => {
     }
   }
 
+  async function reconnectViGEm() {
+    try {
+      loading.value = true
+      await controller.reconnectViGEm()
+      await fetchViGEmStatus()
+      await fetchDevices()
+    } catch (e) {
+      error.value = String(e)
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     devices,
     loading,
@@ -166,5 +180,6 @@ export const useControllerStore = defineStore('controller', () => {
     setThumb,
     setTrigger,
     toggleConnection,
+    reconnectViGEm,
   }
 })

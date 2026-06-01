@@ -2287,8 +2287,13 @@
     }
 
     @keyframes pulse-glow {
-      0% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.05); }
-      100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.15); }
+      0% {
+        box-shadow: 0 0 5px rgba(16, 185, 129, 0.05);
+      }
+
+      100% {
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+      }
     }
   </style>
 </head>
@@ -4243,7 +4248,7 @@ fn main() {
                     {/* Header */}
                     <div className="page-header">
                       <div className="page-header-left">
-                        <h2>防止游戏/窗口失去焦点 (No Focus Loss) <span className="version-badge">v0.5.0</span></h2>
+                        <h2>防止游戏/窗口失去焦点 (No Focus Loss) </h2>
                       </div>
                       <div className="header-actions" style={{ display: 'flex', gap: 8 }}>
                         <button className={`btn btn-secondary ${noFocusShowFeatureGuide ? 'active' : ''}`} onClick={() => setNoFocusShowFeatureGuide(!noFocusShowFeatureGuide)}>
@@ -4327,7 +4332,7 @@ fn main() {
                         <div className="feature-guide-header">
                           <Icons.Help size={16} />
                           <h4>防止游戏失焦功能使用指南 (No Focus Loss Feature Guide)</h4>
-                          <span className="badge version-badge">核心版本: v0.5.0</span>
+                          <span className="badge version-badge">核心版本: v0.6.0</span>
                         </div>
                         <div className="feature-guide-steps">
                           <p style={{ marginBottom: 8 }}>
@@ -4549,7 +4554,7 @@ fn main() {
                     <span>MEM: 42 MB</span>
                   </div>
                   <div className="status-item">
-                    <span>v0.5.0</span>
+                    <span>v0.6.0</span>
                   </div>
                 </div>
               </footer>

@@ -109,4 +109,34 @@ pub fn check_is_admin() -> bool {
     }
 }
 
+#[tauri::command]
+pub fn add_defender_exclusion() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        let current_exe = std::env::current_exe().map_err(|e| format!("无法获取当前可执行文件路径: {}", e))?;
+        let dir = current_exe.parent().ok_or("无法获取当前程序的运行目录")?;
+        let path_str = dir.to_string_lossy();
+        
+        let mut cmd = std::process::Command::new("powershell");
+        cmd.arg("-Command")
+           .arg(format!("Add-MpPreference -ExclusionPath '{}'", path_str));
+        
+        // 隐藏命令行窗口
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        
+        let output = cmd.output().map_err(|e| format!("启动 PowerShell 失败: {}", e))?;
+        if output.status.success() {
+            Ok(())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            Err(format!("PowerShell 执行失败: {}", stderr))
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("此功能仅在 Windows 系统中可用".to_string())
+    }
+}
+
 

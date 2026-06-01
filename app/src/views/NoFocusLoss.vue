@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useUIStore } from '../stores/ui'
 import { 
   AlertTriangle, 
   RefreshCw, 
@@ -131,6 +132,17 @@ async function unloadHook(proc: ProcessInfo) {
   }
 }
 
+
+const uiStore = useUIStore()
+
+async function handleAutoExclude() {
+  try {
+    await invoke('add_defender_exclusion')
+    uiStore.showToast('🚀 成功将软件运行文件夹添加至 Windows Defender 排除目录！', 'success')
+  } catch (err: any) {
+    uiStore.showAlert('自动添加失败', `自动排除失败：${err.toString()}\n\n您也可以手动按照下方步骤进行配置。`)
+  }
+}
 
 async function checkAdminStatus() {
   try {
@@ -265,6 +277,18 @@ onMounted(() => {
         </div>
         <div class="guide-steps">
           <p>由于本功能采用<strong>“物理隔离”</strong>技术（由独立子进程 <code>injector.exe</code> 动态解密并执行注入，彻底避免主程序崩溃或被报毒），Windows Defender 或杀毒软件可能会对 <code>injector.exe</code> 进行警报或拦截。请按照以下步骤添加排除项：</p>
+          
+          <!-- 管理员快捷自动白名单按钮 -->
+          <div v-if="isAdmin" class="auto-exclude-box" style="margin: 10px 0 16px 0; padding: 12px; background: rgba(51, 112, 255, 0.06); border-radius: var(--radius-md); border: 1px dashed rgba(51, 112, 255, 0.25); display: flex; align-items: center; justify-content: space-between; gap: var(--space-md);">
+            <div style="font-size: 12px; color: var(--color-text-muted); line-height: 1.5;">
+              <strong style="color: var(--color-text);">🛡️ 已检测到管理员权限：</strong><br />
+              支持一键调用 PowerShell 静默将本软件当前运行目录自动添加至 Defender 信任区。
+            </div>
+            <button class="btn-primary" @click="handleAutoExclude" style="flex-shrink: 0; padding: 6px 12px; font-size: 11px; height: auto; border-radius: var(--radius-md); background: var(--color-cta); color: white; border: none; cursor: pointer; font-weight: 600;">
+              ⚡ 一键自动添加信任排除
+            </button>
+          </div>
+
           <ol>
             <li>打开 Windows 的 <strong>「安全中心」</strong> ➔ <strong>「病毒和威胁防护」</strong>。</li>
             <li>点击 <strong>「“病毒和威胁防护”设置」</strong> 下方的 <strong>「管理设置」</strong>。</li>

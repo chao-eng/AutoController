@@ -1,5 +1,18 @@
 # AutoController 更新日志
 
+## v0.6.0 — 2026-06-01
+
+### 🚀 优化与增强
+
+#### 四大硬核联动：系统级防杀毒排障、代码智能补全、数据统一备份与驱动热自愈
+
+- **Windows Defender 一键信任排除（物理级防隔离）**：针对注入进程（NoFocusLoss）极易被杀软拦截的痛点，新增一键信任排除功能。在管理员权限下，一键静默拉起隐藏的 PowerShell 窗口并执行 `Add-MpPreference -ExclusionPath`，自动将软件运行根目录添加至 Windows Defender 排除项，化解物理查杀困扰。
+- **Monaco Rhai 智能提示与 Hover 气泡**：极大打磨了 IDE 级脚本开发体验。扩展注册了 `monaco.languages.registerHoverProvider`，在光标悬浮至 `press`, `release`, `set_thumb`, `set_trigger`, `sleep`, `ocr`, `log` 等核心 API 上时，将弹出以精美 Markdown 排版的参数说明、中文详细介绍与标准示例代码；同时开启了编辑器悬浮气泡原生支持，并为 `ocr()`、`ocr(index)`、`ocr(x,y,w,h)` 提供了高容错自动补齐 Snippet。
+- **配置数据统一备份与免权限安全导出（一键备份恢复）**：将本地 `config.json`, `macros.json`, `scripts.json`, `tasks.json` 四大核心数据打包为统一的 JSON 结构，并采用 HTML5 Blob 机制实现在前端触发本地下载，完美绕开复杂的本地磁盘目录安全读写受限屏障。支持使用 `FileReader` 配合后端进行反序列化强制解包，一键对全部自定义脚本、宏动作、定时任务进行百分百安全覆盖导入与状态同步自愈。
+- **ViGEmBus 内核驱动多维诊断与一键热重连自愈**：深度精细化处理了手柄底层驱动在应用初始化时的连接状态，当前端捕捉到驱动连接断开（`connected === false`）且 DLL 本地存在时，会自动在监控状态条中显示 **「尝试热重连并激活驱动」** 精致操作按钮。一键点击后静默拉起后端重连，并智能识别之前已处于激活状态的手柄并重新系统级挂载，实现驱动级完美修复，免去重启应用的低效体验！
+
+---
+
 ## v0.5.0 — 2026-06-01
 ### 🚀 优化与增强
 #### 虚拟手柄UI重构与 Rust 原生绑定 PaddleOCR 离线集成

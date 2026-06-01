@@ -74,3 +74,10 @@ pub fn controller_toggle_connection(
 ) -> Result<DeviceInfo, String> {
     manager.toggle_device_connection(&device_id)
 }
+
+#[tauri::command]
+pub fn controller_reconnect_vigem(
+    manager: tauri::State<'_, ControllerManager>,
+) -> Result<(), String> {
+    manager.try_connect_vigem()
+}

@@ -1,13 +1,28 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
 import { useControllerStore } from '../stores/controller'
+import { useUIStore } from '../stores/ui'
 import DeviceCard from '../components/controller/DeviceCard.vue'
 import StickVisualizer from '../components/controller/StickVisualizer.vue'
 import TriggerBar from '../components/controller/TriggerBar.vue'
 import { Plus, AlertTriangle, CheckCircle, AlertCircle, Activity } from '@lucide/vue'
 
 const store = useControllerStore()
+const uiStore = useUIStore()
 const selectedDeviceId = ref<string | null>(null)
+const reconnecting = ref(false)
+
+async function handleReconnect() {
+  try {
+    reconnecting.value = true
+    await store.reconnectViGEm()
+    uiStore.showToast('🎉 ViGEmBus 内核驱动热重连成功，已激活虚拟设备！', 'success')
+  } catch (err) {
+    uiStore.showAlert('重连失败', `重连 ViGEmBus 驱动失败，请确认已正确安装驱动。错误: ${err}`)
+  } finally {
+    reconnecting.value = false
+  }
+}
 
 // Dragging interaction states
 const isDraggingLeft = ref(false)
@@ -299,9 +314,14 @@ watch(
     </div>
 
     <div v-if="store.vigemStatus" class="vigem-status-bar" :class="{ connected: store.vigemStatus.connected, disconnected: !store.vigemStatus.connected }">
-      <CheckCircle v-if="store.vigemStatus.connected" :size="14" />
-      <AlertTriangle v-else :size="14" />
-      <span>{{ store.vigemStatus.message }}</span>
+      <div class="status-left">
+        <CheckCircle v-if="store.vigemStatus.connected" :size="14" />
+        <AlertTriangle v-else :size="14" />
+        <span>{{ store.vigemStatus.message }}</span>
+      </div>
+      <button v-if="!store.vigemStatus.connected" class="btn-reconnect-action" @click="handleReconnect" :disabled="reconnecting">
+        <span>{{ reconnecting ? '正在连接...' : '🔄 尝试热重连并激活驱动' }}</span>
+      </button>
     </div>
 
     <div v-if="vigemSuggestion" class="vigem-suggestion-bar">
@@ -787,11 +807,40 @@ watch(
 .vigem-status-bar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-md);
   font-size: 12px;
   margin-bottom: var(--space-md);
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.btn-reconnect-action {
+  background: var(--color-warning);
+  color: #0b0f19;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-reconnect-action:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-0.5px);
+}
+
+.btn-reconnect-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .vigem-status-bar.connected {

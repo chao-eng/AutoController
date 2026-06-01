@@ -331,6 +331,82 @@ function handleImport(event: Event) {
   }
   reader.readAsText(file)
 }
+
+// ── 全局数据打包备份与还原 ────────────────────────────────────
+const backupFileInput = ref<HTMLInputElement | null>(null)
+
+async function exportBackup() {
+  try {
+    const data = await invoke<any>('export_backup_data')
+    const now = new Date()
+    const yyyy = now.getFullYear()
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const dd = String(now.getDate()).padStart(2, '0')
+    const fileName = `autocontroller_backup_${yyyy}${mm}${dd}.json`
+    
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2))
+    const downloadAnchor = document.createElement('a')
+    downloadAnchor.setAttribute("href", dataStr)
+    downloadAnchor.setAttribute("download", fileName)
+    document.body.appendChild(downloadAnchor)
+    downloadAnchor.click()
+    downloadAnchor.remove()
+    
+    uiStore.showAlert(
+      '备份成功',
+      `全局数据已成功打包备份！\n\n📄 备份文件名: ${fileName}\n📁 保存位置: 已保存至您系统或浏览器的默认“下载”目录`
+    )
+  } catch (err) {
+    uiStore.showAlert('备份失败', `无法导出备份数据：${err}`)
+  }
+}
+
+function triggerImportBackup() {
+  backupFileInput.value?.click()
+}
+
+function importBackup(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+
+  const file = input.files[0]
+  const reader = new FileReader()
+  reader.onload = async (e) => {
+    try {
+      const parsed = JSON.parse(e.target?.result as string)
+      if (!parsed.config && !parsed.macros && !parsed.scripts && !parsed.tasks) {
+        uiStore.showAlert('导入失败', '导入失败：JSON 格式不正确，不是合法的备份文件')
+        return
+      }
+
+      const confirmed = await uiStore.showConfirm(
+        '确认恢复备份',
+        '此操作将完全覆盖当前所有的配置、宏数据、脚本和定时任务，且无法撤销！是否确定导入并覆盖？'
+      )
+      if (!confirmed) {
+        input.value = ''
+        return
+      }
+
+      await invoke('import_backup_data', { backup: parsed })
+      
+      await store.fetchConfig()
+      await scriptStore.fetchScripts()
+      
+      uiStore.showToast('🎉 全局数据已成功导入并还原！', 'success')
+      
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
+
+    } catch (err) {
+      uiStore.showAlert('导入失败', `解析或恢复备份文件失败。错误: ${err}`)
+    } finally {
+      input.value = ''
+    }
+  }
+  reader.readAsText(file)
+}
 </script>
 
 <template>
@@ -360,6 +436,23 @@ function handleImport(event: Event) {
             <option value="warn">Warn</option>
             <option value="error">Error</option>
           </select>
+        </div>
+      </section>
+
+      <!-- 数据备份与恢复 -->
+      <section class="config-section">
+        <h3>数据备份与恢复</h3>
+        <div class="backup-info">
+          <p class="backup-desc">一键将程序的所有配置（含识别引擎）、宏录制数据、自定义脚本及定时任务打包备份为单 JSON 文件，或从备份文件还原全部数据资产。</p>
+        </div>
+        <div class="backup-actions">
+          <button class="action-btn primary-btn backup-btn" @click="exportBackup" title="导出打包备份数据">
+            💾 备份全部数据
+          </button>
+          <button class="action-btn text-btn restore-btn" @click="triggerImportBackup" title="导入备份并恢复数据">
+            📂 导入恢复数据
+          </button>
+          <input type="file" ref="backupFileInput" @change="importBackup" accept=".json" class="hidden-input" />
         </div>
       </section>
 
@@ -1554,5 +1647,30 @@ function handleImport(event: Event) {
 .seq-sort-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+.backup-info {
+  margin-bottom: var(--space-md);
+}
+
+.backup-desc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.backup-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.backup-btn {
+  background: var(--color-cta) !important;
+}
+
+.backup-btn:hover {
+  background: var(--color-cta-hover) !important;
 }
 </style>

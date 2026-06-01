@@ -155,6 +155,7 @@ pub fn run() {
             controller_cmd::controller_list,
             controller_cmd::controller_vigem_status,
             controller_cmd::controller_toggle_connection,
+            controller_cmd::controller_reconnect_vigem,
             macro_cmd::macro_start_record,
             macro_cmd::macro_stop_record,
             macro_cmd::macro_play,
@@ -184,6 +185,8 @@ pub fn run() {
             config_cmd::open_ocr_viewfinder,
             config_cmd::save_ocr_region,
             config_cmd::run_ocr,
+            config_cmd::export_backup_data,
+            config_cmd::import_backup_data,
             log_cmd::log_query,
             log_cmd::log_export,
             notify::send_aggregated_notification,
@@ -192,6 +195,7 @@ pub fn run() {
             injector_cmd::inject_focus_hook,
             injector_cmd::unload_focus_hook,
             injector_cmd::check_is_admin,
+            injector_cmd::add_defender_exclusion,
         ])
 
         .run(tauri::generate_context!())

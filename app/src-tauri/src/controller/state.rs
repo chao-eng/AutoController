@@ -527,14 +527,37 @@ impl ControllerManager {
     }
 
     pub fn try_connect_vigem(&self) -> Result<(), String> {
-        let bindings = self.vigem_bindings.lock();
-        if let Some(ref bindings_arc) = *bindings {
+        let mut bindings_lock = self.vigem_bindings.lock();
+        if bindings_lock.is_none() {
+            match ViGEmBindings::load() {
+                Ok(bindings) => {
+                    *bindings_lock = Some(Arc::new(bindings));
+                }
+                Err(e) => {
+                    return Err(format!("加载 ViGEmClient.dll 失败: {}", e));
+                }
+            }
+        }
+        if let Some(ref bindings_arc) = *bindings_lock {
             let client = ViGEmClient::new(bindings_arc.clone())
                 .map_err(|(code, msg)| {
                     let mut error_code = self.vigem_error_code.lock();
                     *error_code = Some(code);
                     msg
                 })?;
+            
+            // 重新挂载那些本应连接但因驱动失效而未激活的设备
+            let mut devices = self.devices.lock();
+            for device in devices.values_mut() {
+                if device.info.connected && device.target.is_none() {
+                    if let Ok(target) = client.create_x360_target() {
+                        device.target = Some(target);
+                        device.info.vigem_connected = true;
+                        tracing::info!(device_id = %device.info.id, "虚拟手柄在驱动重连后已成功挂载到系统");
+                    }
+                }
+            }
+
             let mut vigem = self.vigem.lock();
             *vigem = Some(client);
             {

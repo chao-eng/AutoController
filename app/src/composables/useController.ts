@@ -39,6 +39,10 @@ export function useController() {
     return invoke<DeviceInfo>('controller_toggle_connection', { deviceId })
   }
 
+  async function reconnectViGEm(): Promise<void> {
+    return invoke('controller_reconnect_vigem')
+  }
+
   return {
     createDevice,
     removeDevice,
@@ -49,5 +53,6 @@ export function useController() {
     listDevices,
     getViGEmStatus,
     toggleConnection,
+    reconnectViGEm,
   }
 }
