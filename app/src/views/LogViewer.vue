@@ -2,6 +2,7 @@
 import { useLogStore } from '../stores/log'
 import { Trash2 } from '@lucide/vue'
 import { ref } from 'vue'
+import { Button } from '@/components/ui/button'
 
 const store = useLogStore()
 const levelFilter = ref<string>('')
@@ -13,171 +14,52 @@ function setLevelFilter(level: string) {
 
 function getLevelColor(level: string): string {
   switch (level) {
-    case 'Error': return 'var(--color-error)'
-    case 'Warn': return 'var(--color-warning)'
-    case 'Info': return 'var(--color-info)'
-    case 'Debug': return 'var(--color-text-dim)'
-    case 'Trace': return 'var(--color-text-dim)'
-    default: return 'var(--color-text-muted)'
+    case 'Error': return 'text-red-500'
+    case 'Warn': return 'text-yellow-500'
+    case 'Info': return 'text-blue-500'
+    case 'Debug': return 'text-muted-foreground'
+    case 'Trace': return 'text-muted-foreground'
+    default: return 'text-muted-foreground'
   }
 }
 </script>
 
 <template>
-  <div class="log-viewer">
-    <div class="page-header">
-      <h2>日志查看</h2>
-      <div class="header-actions">
-        <div class="filter-group">
+  <div class="h-full overflow-y-auto p-6 flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold">日志查看</h2>
+      <div class="flex items-center gap-2">
+        <div class="flex gap-0.5 bg-muted rounded-md p-0.5">
           <button
             v-for="level in ['', 'Error', 'Warn', 'Info', 'Debug']"
             :key="level"
-            class="filter-btn"
-            :class="{ active: levelFilter === level }"
+            class="px-2.5 py-1 text-[11px] text-muted-foreground rounded-sm transition-colors hover:text-foreground"
+            :class="{ 'bg-primary text-primary-foreground hover:text-primary-foreground': levelFilter === level }"
             @click="setLevelFilter(level)"
           >
             {{ level || '全部' }}
           </button>
         </div>
-        <button class="icon-btn" @click="store.clearEntries()" title="清空">
+        <Button variant="ghost" size="icon" class="size-7" @click="store.clearEntries()" title="清空">
           <Trash2 :size="14" />
-        </button>
+        </Button>
       </div>
     </div>
 
-    <div class="log-table">
-      <div v-if="store.filteredEntries().length === 0" class="empty-state">
+    <div class="flex-1 overflow-y-auto bg-card border border-border rounded-xl p-2 font-mono text-[11px]">
+      <div v-if="store.filteredEntries().length === 0" class="text-center text-muted-foreground py-12 text-sm">
         暂无日志记录
       </div>
       <div
         v-for="entry in store.filteredEntries().slice(-500).reverse()"
         :key="entry.id"
-        class="log-row"
+        class="flex gap-2 px-2 py-0.5 rounded-sm hover:bg-muted/50"
       >
-        <span class="log-time">{{ new Date(entry.timestamp).toLocaleTimeString() }}</span>
-        <span class="log-level" :style="{ color: getLevelColor(entry.level) }">{{ entry.level }}</span>
-        <span class="log-module">{{ entry.module }}</span>
-        <span class="log-message">{{ entry.message }}</span>
+        <span class="text-muted-foreground min-w-[72px]">{{ new Date(entry.timestamp).toLocaleTimeString() }}</span>
+        <span class="min-w-[40px] font-semibold" :class="getLevelColor(entry.level)">{{ entry.level }}</span>
+        <span class="text-blue-500 min-w-[80px]">{{ entry.module }}</span>
+        <span class="text-muted-foreground flex-1">{{ entry.message }}</span>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.log-viewer {
-  padding: var(--space-lg);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-md);
-}
-
-.page-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.filter-group {
-  display: flex;
-  gap: 2px;
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  padding: 2px;
-}
-
-.filter-btn {
-  padding: 4px 10px;
-  font-size: 11px;
-  color: var(--color-text-dim);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.filter-btn:hover {
-  color: var(--color-text);
-}
-
-.filter-btn.active {
-  background: var(--color-cta);
-  color: white;
-}
-
-.icon-btn {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-dim);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.icon-btn:hover {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-}
-
-.log-table {
-  flex: 1;
-  overflow-y: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-sm);
-  font-family: var(--font-heading);
-  font-size: 11px;
-}
-
-.empty-state {
-  text-align: center;
-  color: var(--color-text-dim);
-  padding: var(--space-2xl);
-  font-size: 13px;
-}
-
-.log-row {
-  display: flex;
-  gap: var(--space-sm);
-  padding: 2px var(--space-sm);
-  border-radius: 2px;
-}
-
-.log-row:hover {
-  background: var(--color-surface-elevated);
-}
-
-.log-time {
-  color: var(--color-text-dim);
-  min-width: 72px;
-}
-
-.log-level {
-  min-width: 40px;
-  font-weight: 600;
-}
-
-.log-module {
-  color: var(--color-info);
-  min-width: 80px;
-}
-
-.log-message {
-  color: var(--color-text-muted);
-  flex: 1;
-}
-</style>

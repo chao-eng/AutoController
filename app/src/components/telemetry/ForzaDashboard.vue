@@ -98,10 +98,10 @@ async function handleToggleTires() {
   <div class="flex h-full w-full flex-col">
     <TopBar
       :use-mph="settings?.useMph ?? true"
-      @on-settings="showSettings = true"
-      @on-sessions="showSessions = !showSessions"
+      :on-settings="() => showSettings = true"
+      :on-sessions="() => showSessions = !showSessions"
       :tires-visible="settings?.tiresVisible ?? true"
-      @on-toggle-tires="handleToggleTires"
+      :on-toggle-tires="handleToggleTires"
     />
     <CompassBar />
 
@@ -117,7 +117,7 @@ async function handleToggleTires() {
       title="轮胎数据"
       :default-width="200"
       :default-top="64"
-      @on-close="async () => { if (settings) await sessionsStore.saveSettings({ ...settings, tiresVisible: false }) }"
+      @close="async () => { if (settings) await sessionsStore.saveSettings({ ...settings, tiresVisible: false }) }"
     >
       <TireWidget
         :tire-temp-cold="settings?.tireTempCold ?? 60"
@@ -133,8 +133,8 @@ async function handleToggleTires() {
 
   <SessionDrawer
     v-if="showSessions"
-    @on-close="showSessions = false"
-    @on-open="(session: SessionRow) => viewerSession = session"
+    @close="showSessions = false"
+    @open="(session: SessionRow) => viewerSession = session"
   />
 
   <SessionViewer

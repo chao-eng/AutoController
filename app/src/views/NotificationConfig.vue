@@ -14,6 +14,13 @@ import {
 } from '@lucide/vue'
 
 import { useUIStore } from '../stores/ui'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const configStore = useConfigStore()
 const uiStore = useUIStore()
@@ -105,14 +112,14 @@ function openEditDialog(channel: NotificationChannel) {
   editingId.value = channel.id
   formName.value = channel.name
   formType.value = channel.config.type
-  
+
   formFeishuUrl.value = channel.config.webhook_url || ''
   formFeishuSecret.value = channel.config.secret || ''
   formServerChanKey.value = channel.config.send_key || ''
   formServerChan3Uid.value = channel.config.uid || ''
   formTelegramToken.value = channel.config.bot_token || ''
   formTelegramChatId.value = channel.config.chat_id || ''
-  
+
   showDialog.value = true
 }
 
@@ -198,18 +205,18 @@ async function handleDelete(id: string) {
 async function handleTest(channel: NotificationChannel) {
   testStatus.value[channel.id] = 'testing'
   testMessage.value = ''
-  
+
   try {
     const payload = {
       title: 'AutoController 测试通知',
       content: `这这是一条来自 AutoController 的测试通知。\n配置通道：${channel.name}\n测试时间：${new Date().toLocaleString()}`
     }
-    
+
     await invoke('send_aggregated_notification', {
       channels: [channel.config],
       payload
     })
-    
+
     testStatus.value[channel.id] = 'success'
     setTimeout(() => {
       testStatus.value[channel.id] = 'idle'
@@ -236,660 +243,245 @@ function getTypeName(type: string): string {
 </script>
 
 <template>
-  <div class="notify-config">
+  <div class="p-6 h-full flex flex-col overflow-y-auto">
     <!-- 头部说明 -->
-    <div class="page-header">
-      <div class="header-title">
-        <h2>聚合通知配置</h2>
-        <p class="subtitle">配置飞书群Webhook、Server酱或Telegram Bot，在定时任务序列执行中断或完成时自动向您分发通知。</p>
+    <div class="flex justify-between items-center mb-6 flex-shrink-0">
+      <div>
+        <h2 class="text-xl font-semibold text-foreground mb-1">聚合通知配置</h2>
+        <p class="text-xs text-muted-foreground max-w-xl">配置飞书群Webhook、Server酱或Telegram Bot，在定时任务序列执行中断或完成时自动向您分发通知。</p>
       </div>
-      <button class="cta-btn" @click="openCreateDialog">
-        <Plus :size="16" />
+      <Button @click="openCreateDialog">
+        <Plus :size="16" class="mr-1" />
         <span>添加通道</span>
-      </button>
+      </Button>
     </div>
 
     <!-- 通道卡片列表 -->
-    <div class="channels-grid">
-      <div 
-        v-if="!configStore.config.notification_channels || configStore.config.notification_channels.length === 0" 
-        class="empty-state"
+    <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6 content-start">
+      <div
+        v-if="!configStore.config.notification_channels || configStore.config.notification_channels.length === 0"
+        class="col-span-full text-center py-16 px-6 text-muted-foreground bg-card border border-dashed border-border rounded-lg flex flex-col items-center gap-2"
       >
-        <BellRing :size="48" class="empty-icon" />
-        <h3>尚未配置通知通道</h3>
-        <p>点击右上角“添加通道”按钮，立即绑定通知分发服务。</p>
-        <button class="cta-btn secondary" @click="openCreateDialog">
+        <BellRing :size="48" class="text-muted-foreground opacity-50 mb-1" />
+        <h3 class="text-base text-foreground font-medium">尚未配置通知通道</h3>
+        <p class="text-xs max-w-xs mx-auto">点击右上角"添加通道"按钮，立即绑定通知分发服务。</p>
+        <Button variant="outline" class="mt-4" @click="openCreateDialog">
           添加首个通道
-        </button>
+        </Button>
       </div>
 
-      <div 
-        v-else 
-        v-for="channel in configStore.config.notification_channels" 
-        :key="channel.id" 
-        class="channel-card"
+      <Card
+        v-else
+        v-for="channel in configStore.config.notification_channels"
+        :key="channel.id"
+        class="transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/50"
       >
-        <div class="card-header">
-          <div class="channel-info">
-            <span class="channel-type-tag" :class="channel.config.type">
+        <CardHeader class="flex flex-row justify-between items-start p-4 pb-2">
+          <div class="flex flex-col gap-1">
+            <Badge :class="channel.config.type === 'feishu' ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/10' : channel.config.type === 'serverchan' ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/10' : channel.config.type === 'serverchan3' ? 'bg-red-500/10 text-red-500 hover:bg-red-500/10' : 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/10'" class="self-start text-[10px] font-semibold px-2 py-0.5 uppercase">
               {{ getTypeName(channel.config.type) }}
-            </span>
-            <h3 class="channel-name">{{ channel.name }}</h3>
+            </Badge>
+            <CardTitle class="text-sm font-semibold text-foreground">{{ channel.name }}</CardTitle>
           </div>
-          <div class="card-actions">
-            <button class="action-icon-btn" @click="openEditDialog(channel)" title="编辑">
+          <div class="flex gap-0.5">
+            <Button variant="ghost" size="icon" class="w-6 h-6" @click="openEditDialog(channel)" title="编辑">
               <Edit2 :size="14" />
-            </button>
-            <button class="action-icon-btn delete" @click="handleDelete(channel.id)" title="删除">
+            </Button>
+            <Button variant="ghost" size="icon" class="w-6 h-6 text-destructive hover:text-destructive hover:bg-destructive/10" @click="handleDelete(channel.id)" title="删除">
               <Trash2 :size="14" />
-            </button>
+            </Button>
           </div>
-        </div>
+        </CardHeader>
 
-        <div class="card-body">
-          <div v-if="channel.config.type === 'feishu'" class="config-summary">
-            <div class="info-row">
-              <span class="label">Webhook URL:</span>
-              <span class="value">{{ maskFeishuUrl(channel.config.webhook_url) }}</span>
+        <CardContent class="px-4 pb-3">
+          <div class="flex flex-col gap-1.5 text-xs">
+            <div v-if="channel.config.type === 'feishu'" class="flex flex-col gap-0.5">
+              <div>
+                <span class="text-muted-foreground text-[11px] block">Webhook URL:</span>
+                <span class="text-muted-foreground block break-all font-mono bg-accent/50 px-2 py-1 rounded border border-border/30 text-[11px]">{{ maskFeishuUrl(channel.config.webhook_url) }}</span>
+              </div>
+              <div v-if="channel.config.secret">
+                <span class="text-muted-foreground text-[11px] block">密钥保护:</span>
+                <span class="text-muted-foreground block font-mono bg-accent/50 px-2 py-1 rounded border border-border/30 text-[11px]">********</span>
+              </div>
             </div>
-            <div v-if="channel.config.secret" class="info-row">
-              <span class="label">密钥保护:</span>
-              <span class="value">********</span>
+            <div v-else-if="channel.config.type === 'serverchan'" class="flex flex-col gap-0.5">
+              <div>
+                <span class="text-muted-foreground text-[11px] block">Send Key:</span>
+                <span class="text-muted-foreground block break-all font-mono bg-accent/50 px-2 py-1 rounded border border-border/30 text-[11px]">{{ maskSendKey(channel.config.send_key) }}</span>
+              </div>
+            </div>
+            <div v-else-if="channel.config.type === 'serverchan3'" class="flex flex-col gap-0.5">
+              <div>
+                <span class="text-muted-foreground text-[11px] block">UID:</span>
+                <span class="text-muted-foreground block break-all font-mono bg-accent/50 px-2 py-1 rounded border border-border/30 text-[11px]">{{ maskUid(channel.config.uid) }}</span>
+              </div>
+              <div>
+                <span class="text-muted-foreground text-[11px] block">Send Key:</span>
+                <span class="text-muted-foreground block break-all font-mono bg-accent/50 px-2 py-1 rounded border border-border/30 text-[11px]">{{ maskSendKey(channel.config.send_key) }}</span>
+              </div>
+            </div>
+            <div v-else-if="channel.config.type === 'telegram'" class="flex flex-col gap-0.5">
+              <div>
+                <span class="text-muted-foreground text-[11px] block">Bot Token:</span>
+                <span class="text-muted-foreground block break-all font-mono bg-accent/50 px-2 py-1 rounded border border-border/30 text-[11px]">{{ maskBotToken(channel.config.bot_token) }}</span>
+              </div>
+              <div>
+                <span class="text-muted-foreground text-[11px] block">Chat ID:</span>
+                <span class="text-muted-foreground block break-all font-mono bg-accent/50 px-2 py-1 rounded border border-border/30 text-[11px]">{{ maskChatId(channel.config.chat_id) }}</span>
+              </div>
             </div>
           </div>
-          <div v-else-if="channel.config.type === 'serverchan'" class="config-summary">
-            <div class="info-row">
-              <span class="label">Send Key:</span>
-              <span class="value">{{ maskSendKey(channel.config.send_key) }}</span>
-            </div>
-          </div>
-          <div v-else-if="channel.config.type === 'serverchan3'" class="config-summary">
-            <div class="info-row">
-              <span class="label">UID:</span>
-              <span class="value">{{ maskUid(channel.config.uid) }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Send Key:</span>
-              <span class="value">{{ maskSendKey(channel.config.send_key) }}</span>
-            </div>
-          </div>
-          <div v-else-if="channel.config.type === 'telegram'" class="config-summary">
-            <div class="info-row">
-              <span class="label">Bot Token:</span>
-              <span class="value">{{ maskBotToken(channel.config.bot_token) }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Chat ID:</span>
-              <span class="value">{{ maskChatId(channel.config.chat_id) }}</span>
-            </div>
-          </div>
-        </div>
+        </CardContent>
 
-        <div class="card-footer">
-          <button 
-            class="test-btn" 
-            :class="testStatus[channel.id]"
+        <CardFooter class="p-4 pt-0">
+          <Button
+            variant="outline"
+            size="sm"
+            class="w-full text-xs"
+            :class="testStatus[channel.id] === 'success' ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10' : testStatus[channel.id] === 'error' ? 'border-destructive text-destructive bg-destructive/10' : ''"
             :disabled="testStatus[channel.id] === 'testing'"
             @click="handleTest(channel)"
           >
-            <span v-if="testStatus[channel.id] === 'testing'" class="loader-container">
-              <span class="mini-loader"></span>
+            <span v-if="testStatus[channel.id] === 'testing'" class="flex items-center gap-1.5">
+              <span class="w-3 h-3 border-2 border-foreground/50 border-t-transparent rounded-full animate-spin"></span>
               <span>正在测试...</span>
             </span>
-            <span v-else-if="testStatus[channel.id] === 'success'" class="success-container">
+            <span v-else-if="testStatus[channel.id] === 'success'" class="flex items-center gap-1.5">
               <CheckCircle2 :size="14" />
               <span>测试成功</span>
             </span>
-            <span v-else-if="testStatus[channel.id] === 'error'" class="error-container">
+            <span v-else-if="testStatus[channel.id] === 'error'" class="flex items-center gap-1.5">
               <AlertCircle :size="14" />
               <span>发送失败</span>
             </span>
-            <span v-else class="normal-container">
+            <span v-else class="flex items-center gap-1.5">
               <Send :size="12" />
               <span>发送测试消息</span>
             </span>
-          </button>
-        </div>
-      </div>
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
 
     <!-- 弹窗配置表单 -->
-    <div v-if="showDialog" class="modal-overlay">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>{{ dialogMode === 'create' ? '新建通知通道' : '编辑通知通道' }}</h3>
-          <button class="close-btn" @click="showDialog = false">&times;</button>
-        </div>
+    <Dialog :open="showDialog" @update:open="showDialog = $event">
+      <DialogContent class="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>{{ dialogMode === 'create' ? '新建通知通道' : '编辑通知通道' }}</DialogTitle>
+          <DialogDescription>配置通知平台连接信息，保存后即可在定时任务中使用。</DialogDescription>
+        </DialogHeader>
 
-        <div class="modal-body">
+        <div class="flex flex-col gap-4 py-2">
           <!-- 名字 -->
-          <div class="form-item">
-            <label>通道名称</label>
-            <input 
-              v-model="formName" 
-              type="text" 
-              placeholder="例如：我的飞书挂机群通知" 
-              class="form-input"
+          <div class="flex flex-col gap-1.5">
+            <Label class="text-xs text-muted-foreground">通道名称</Label>
+            <Input
+              v-model="formName"
+              type="text"
+              placeholder="例如：我的飞书挂机群通知"
             />
           </div>
 
           <!-- 通道类型 -->
-          <div class="form-item">
-            <label>平台类型</label>
-            <select v-model="formType" class="form-select" :disabled="dialogMode === 'edit'">
-              <option value="feishu">飞书群机器人 (Feishu Webhook)</option>
-              <option value="serverchan">Server酱 (Turbo)</option>
-              <option value="serverchan3">Server酱³ (V3)</option>
-              <option value="telegram">Telegram Bot</option>
-            </select>
+          <div class="flex flex-col gap-1.5">
+            <Label class="text-xs text-muted-foreground">平台类型</Label>
+            <Select v-model="formType" :disabled="dialogMode === 'edit'">
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="feishu">飞书群机器人 (Feishu Webhook)</SelectItem>
+                <SelectItem value="serverchan">Server酱 (Turbo)</SelectItem>
+                <SelectItem value="serverchan3">Server酱³ (V3)</SelectItem>
+                <SelectItem value="telegram">Telegram Bot</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <!-- 飞书专属配置 -->
-          <div v-if="formType === 'feishu'" class="platform-specific-fields">
-            <div class="form-item">
-              <label>Webhook URL</label>
-              <input 
-                v-model="formFeishuUrl" 
-                type="text" 
-                placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..." 
-                class="form-input"
+          <div v-if="formType === 'feishu'" class="flex flex-col gap-3 bg-accent/10 border border-border rounded-lg p-4">
+            <div class="flex flex-col gap-1.5">
+              <Label class="text-xs text-muted-foreground">Webhook URL</Label>
+              <Input
+                v-model="formFeishuUrl"
+                type="text"
+                placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."
               />
             </div>
-            <div class="form-item">
-              <label class="label-optional">密钥 Secret (选填)</label>
-              <input 
-                v-model="formFeishuSecret" 
-                type="password" 
-                placeholder="安全设置中勾选签名校验生成的密文" 
-                class="form-input"
+            <div class="flex flex-col gap-1.5">
+              <Label class="text-xs text-muted-foreground">
+                密钥 Secret
+                <span class="text-muted-foreground/60 text-[10px]"> (选填)</span>
+              </Label>
+              <Input
+                v-model="formFeishuSecret"
+                type="password"
+                placeholder="安全设置中勾选签名校验生成的密文"
               />
             </div>
           </div>
 
           <!-- Server酱配置 -->
-          <div v-if="formType === 'serverchan'" class="platform-specific-fields">
-            <div class="form-item">
-              <label>SendKey</label>
-              <input 
-                v-model="formServerChanKey" 
-                type="text" 
-                placeholder="SCT..." 
-                class="form-input"
+          <div v-if="formType === 'serverchan'" class="flex flex-col gap-3 bg-accent/10 border border-border rounded-lg p-4">
+            <div class="flex flex-col gap-1.5">
+              <Label class="text-xs text-muted-foreground">SendKey</Label>
+              <Input
+                v-model="formServerChanKey"
+                type="text"
+                placeholder="SCT..."
               />
             </div>
           </div>
 
           <!-- Server酱³ 配置 -->
-          <div v-if="formType === 'serverchan3'" class="platform-specific-fields">
-            <div class="form-item">
-              <label>UID</label>
-              <input 
-                v-model="formServerChan3Uid" 
-                type="text" 
-                placeholder="从 SendKey 页面获得的 UID，例如 16230" 
-                class="form-input"
+          <div v-if="formType === 'serverchan3'" class="flex flex-col gap-3 bg-accent/10 border border-border rounded-lg p-4">
+            <div class="flex flex-col gap-1.5">
+              <Label class="text-xs text-muted-foreground">UID</Label>
+              <Input
+                v-model="formServerChan3Uid"
+                type="text"
+                placeholder="从 SendKey 页面获得的 UID，例如 16230"
               />
             </div>
-            <div class="form-item">
-              <label>SendKey</label>
-              <input 
-                v-model="formServerChanKey" 
-                type="text" 
-                placeholder="sctp..." 
-                class="form-input"
+            <div class="flex flex-col gap-1.5">
+              <Label class="text-xs text-muted-foreground">SendKey</Label>
+              <Input
+                v-model="formServerChanKey"
+                type="text"
+                placeholder="sctp..."
               />
             </div>
           </div>
 
           <!-- Telegram 配置 -->
-          <div v-if="formType === 'telegram'" class="platform-specific-fields">
-            <div class="form-item">
-              <label>Bot Token</label>
-              <input 
-                v-model="formTelegramToken" 
-                type="password" 
-                placeholder="1234567890:ABCdefGhI..." 
-                class="form-input"
+          <div v-if="formType === 'telegram'" class="flex flex-col gap-3 bg-accent/10 border border-border rounded-lg p-4">
+            <div class="flex flex-col gap-1.5">
+              <Label class="text-xs text-muted-foreground">Bot Token</Label>
+              <Input
+                v-model="formTelegramToken"
+                type="password"
+                placeholder="1234567890:ABCdefGhI..."
               />
             </div>
-            <div class="form-item">
-              <label>Chat ID</label>
-              <input 
-                v-model="formTelegramChatId" 
-                type="text" 
-                placeholder="例如：987654321 或 @my_channel_id" 
-                class="form-input"
+            <div class="flex flex-col gap-1.5">
+              <Label class="text-xs text-muted-foreground">Chat ID</Label>
+              <Input
+                v-model="formTelegramChatId"
+                type="text"
+                placeholder="例如：987654321 或 @my_channel_id"
               />
             </div>
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showDialog = false">取消</button>
-          <button class="btn btn-primary" @click="handleSave">保存</button>
-        </div>
-      </div>
-    </div>
+        <DialogFooter>
+          <DialogClose>
+            <Button variant="outline">取消</Button>
+          </DialogClose>
+          <Button @click="handleSave">保存</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
-
-<style scoped>
-.notify-config {
-  padding: var(--space-lg);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-lg);
-  flex-shrink: 0;
-}
-
-.header-title h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: var(--space-xs);
-}
-
-.subtitle {
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-
-.cta-btn {
-  background: var(--color-cta);
-  color: white;
-  border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-lg);
-  font-size: 13px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.cta-btn:hover {
-  background: #2563EB;
-}
-
-.cta-btn.secondary {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
-  margin: var(--space-md) auto 0 auto;
-}
-
-.cta-btn.secondary:hover {
-  background: var(--color-border);
-}
-
-.channels-grid {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--space-lg);
-  align-content: start;
-}
-
-.empty-state {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: var(--space-2xl) var(--space-lg);
-  color: var(--color-text-dim);
-  background: var(--color-surface);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.empty-icon {
-  color: var(--color-text-dim);
-  opacity: 0.5;
-  margin-bottom: var(--space-sm);
-}
-
-.empty-state h3 {
-  font-size: 16px;
-  color: var(--color-text);
-}
-
-.empty-state p {
-  font-size: 13px;
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-/* 卡片 */
-.channel-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
-}
-
-.channel-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  border-color: var(--color-cta);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  margin-bottom: var(--space-md);
-}
-
-.channel-info {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.channel-type-tag {
-  align-self: start;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  text-transform: uppercase;
-}
-
-.channel-type-tag.feishu {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10B981;
-}
-
-.channel-type-tag.serverchan {
-  background: rgba(245, 158, 11, 0.1);
-  color: #F59E0B;
-}
-
-.channel-type-tag.serverchan3 {
-  background: rgba(239, 68, 68, 0.1);
-  color: #EF4444;
-}
-
-.channel-type-tag.telegram {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3B82F6;
-}
-
-.channel-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.card-actions {
-  display: flex;
-  gap: var(--space-xs);
-}
-
-.action-icon-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-dim);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.action-icon-btn:hover {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-}
-
-.action-icon-btn.delete:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color-error);
-}
-
-.card-body {
-  flex: 1;
-  margin-bottom: var(--space-lg);
-}
-
-.config-summary {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  font-size: 12px;
-}
-
-.info-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.info-row .label {
-  color: var(--color-text-dim);
-  font-size: 11px;
-}
-
-.info-row .value {
-  color: var(--color-text-muted);
-  word-break: break-all;
-  font-family: Consolas, Monaco, monospace;
-  background: var(--color-surface-elevated);
-  padding: 4px var(--space-sm);
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.card-footer {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.test-btn {
-  font-size: 12px;
-  padding: 6px var(--space-md);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
-}
-
-.test-btn:hover:not(:disabled) {
-  background: var(--color-border);
-  color: var(--color-text);
-}
-
-.test-btn.testing {
-  opacity: 0.8;
-  cursor: not-allowed;
-}
-
-.test-btn.success {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: #10B981;
-  color: #10B981;
-}
-
-.test-btn.error {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: var(--color-error);
-  color: var(--color-error);
-}
-
-.loader-container, .success-container, .error-container, .normal-container {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.mini-loader {
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--color-text-dim);
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* 弹窗配置表单 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.modal-content {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 500px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-  animation: modalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-}
-
-@keyframes modalSlide {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.modal-header {
-  padding: var(--space-lg);
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.close-btn {
-  font-size: 24px;
-  color: var(--color-text-dim);
-  cursor: pointer;
-}
-
-.modal-body {
-  padding: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.form-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.form-item label {
-  font-size: 12px;
-  color: var(--color-text-dim);
-}
-
-.form-item .label-optional::after {
-  content: ' (可选)';
-  color: var(--color-text-muted);
-  font-size: 10px;
-}
-
-.form-input, .form-select {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-md);
-  font-size: 13px;
-  color: var(--color-text);
-  outline: none;
-  transition: border-color var(--transition-fast);
-}
-
-.form-input:focus, .form-select:focus {
-  border-color: var(--color-cta);
-}
-
-.platform-specific-fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-}
-
-.modal-footer {
-  padding: var(--space-lg);
-  border-top: 1px solid var(--color-border);
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-sm);
-}
-
-.btn {
-  padding: var(--space-sm) var(--space-lg);
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-secondary {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
-}
-
-.btn-secondary:hover {
-  background: var(--color-border);
-}
-
-.btn-primary {
-  background: var(--color-cta);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #2563EB;
-}
-</style>
