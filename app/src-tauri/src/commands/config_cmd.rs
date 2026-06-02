@@ -42,30 +42,32 @@ pub fn open_ocr_viewfinder(
     manager: tauri::State<'_, AppConfigManager>,
     index: Option<usize>,
 ) -> Result<(), String> {
-    use std::process::Command;
-    use std::os::windows::process::CommandExt;
-    use tauri::Emitter;
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        use std::os::windows::process::CommandExt;
+        use tauri::Emitter;
 
-    // 计算当前是要操作的 1-based 序号 (从 #1 开始)
-    let u_idx = match index {
-        Some(idx) => {
-            if idx == 0 {
-                1
-            } else {
-                idx
+        // 计算当前是要操作的 1-based 序号 (从 #1 开始)
+        let u_idx = match index {
+            Some(idx) => {
+                if idx == 0 {
+                    1
+                } else {
+                    idx
+                }
             }
-        }
-        None => {
-            // 如果未指定序号，则默认追加到当前标定区域列表的末尾 (即 len + 1)
-            manager.get().ocr_regions.len() + 1
-        }
-    };
+            None => {
+                // 如果未指定序号，则默认追加到当前标定区域列表的末尾 (即 len + 1)
+                manager.get().ocr_regions.len() + 1
+            }
+        };
 
-    // 将 1-based 序号动态拼接到提示语中，使用户感知极为精细清晰
-    let title_text = format!("🎯 标定 OCR 识别区域 #{} (鼠标左键拖拽框选，按 ESC 取消)", u_idx);
+        // 将 1-based 序号动态拼接到提示语中，使用户感知极为精细清晰
+        let title_text = format!("🎯 标定 OCR 识别区域 #{} (鼠标左键拖拽框选，按 ESC 取消)", u_idx);
 
-    // 核心安全：将完整的 Windows Forms 极光绿框选脚本作为静态字符串嵌入 Rust
-    let script_content = format!(r#"
+        // 核心安全：将完整的 Windows Forms 极光绿框选脚本作为静态字符串嵌入 Rust
+        let script_content = format!(r#"
 # select_region.ps1
 
 # 强制开启 DPI 感知以获取物理 1:1 坐标，彻底杜绝高分屏缩放下的定位坐标偏移问题
@@ -169,99 +171,106 @@ if ($script:result) {{
 }}
 "#, title_text);
 
-    // 获取 AppConfigManager 克隆以传递到后台进程
-    let config_manager = manager.inner().clone();
-    
-    // 在后台线程异步启动，不阻塞 Tauri 渲染主线程，确保极佳的用户体验与极速响应
-    std::thread::spawn(move || {
-        let temp_dir = std::env::temp_dir();
-        let script_path = temp_dir.join("autocontroller_select_region.ps1");
+        // 获取 AppConfigManager 克隆以传递到后台进程
+        let config_manager = manager.inner().clone();
         
-        if let Err(e) = std::fs::write(&script_path, script_content) {
-            tracing::error!(error = %e, "写入临时标定脚本失败");
-            return;
-        }
-
-        // 启动 PowerShell 执行 native Forms 标定
-        let mut cmd = Command::new("powershell");
-        cmd.arg("-NoProfile")
-           .arg("-ExecutionPolicy")
-           .arg("Bypass")
-           .arg("-File")
-           .arg(&script_path);
-
-        // 在 Windows 平台下强力隐藏后台终端小黑框
-        #[cfg(windows)]
-        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-
-        let output = match cmd.output() {
-            Ok(o) => o,
-            Err(e) => {
-                tracing::error!(error = %e, "运行原生标定工具进程失败");
-                let _ = std::fs::remove_file(&script_path);
+        // 在后台线程异步启动，不阻塞 Tauri 渲染主线程，确保极佳的用户体验与极速响应
+        std::thread::spawn(move || {
+            let temp_dir = std::env::temp_dir();
+            let script_path = temp_dir.join("autocontroller_select_region.ps1");
+            
+            if let Err(e) = std::fs::write(&script_path, script_content) {
+                tracing::error!(error = %e, "写入临时标定脚本失败");
                 return;
             }
-        };
 
-        // 无论如何，清理临时脚本文件以保持操作系统干净
-        let _ = std::fs::remove_file(&script_path);
+            // 启动 PowerShell 执行 native Forms 标定
+            let mut cmd = Command::new("powershell");
+            cmd.arg("-NoProfile")
+               .arg("-ExecutionPolicy")
+               .arg("Bypass")
+               .arg("-File")
+               .arg(&script_path);
 
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        for line in stdout.lines() {
-            if line.starts_with("RESULT:") {
-                let parts: Vec<&str> = line.trim_start_matches("RESULT:").split(',').collect();
-                if parts.len() == 4 {
-                    if let (Ok(x), Ok(y), Ok(w), Ok(h)) = (
-                        parts[0].parse::<i32>(),
-                        parts[1].parse::<i32>(),
-                        parts[2].parse::<i32>(),
-                        parts[3].parse::<i32>(),
-                    ) {
-                        tracing::info!("原生标定 #{} 成功，收到坐标: x={}, y={}, w={}, h={}", u_idx, x, y, w, h);
-                        
-                        // 1. 同步保存配置到全局 TOML 配置文件
-                        let mut config = config_manager.get();
-                        let vec_idx = u_idx - 1;
-                        let new_region = crate::config::OcrRegion { x, y, w, h };
+            // 在 Windows 平台下强力隐藏后台终端小黑框
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
-                        if vec_idx < config.ocr_regions.len() {
-                            // 重新标定已有区域
-                            config.ocr_regions[vec_idx] = new_region;
-                        } else {
-                            // 扩展并填充直到 vec_idx
-                            while config.ocr_regions.len() < vec_idx {
-                                // 填充占位符区域，保证数组连续性
-                                config.ocr_regions.push(crate::config::OcrRegion { x: 0, y: 0, w: 0, h: 0 });
+            let output = match cmd.output() {
+                Ok(o) => o,
+                Err(e) => {
+                    tracing::error!(error = %e, "运行原生标定工具进程失败");
+                    let _ = std::fs::remove_file(&script_path);
+                    return;
+                }
+            };
+
+            // 无论如何，清理临时脚本文件以保持操作系统干净
+            let _ = std::fs::remove_file(&script_path);
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines() {
+                if line.starts_with("RESULT:") {
+                    let parts: Vec<&str> = line.trim_start_matches("RESULT:").split(',').collect();
+                    if parts.len() == 4 {
+                        if let (Ok(x), Ok(y), Ok(w), Ok(h)) = (
+                            parts[0].parse::<i32>(),
+                            parts[1].parse::<i32>(),
+                            parts[2].parse::<i32>(),
+                            parts[3].parse::<i32>(),
+                        ) {
+                            tracing::info!("原生标定 #{} 成功，收到坐标: x={}, y={}, w={}, h={}", u_idx, x, y, w, h);
+                            
+                            // 1. 同步保存配置到全局 TOML 配置文件
+                            let mut config = config_manager.get();
+                            let vec_idx = u_idx - 1;
+                            let new_region = crate::config::OcrRegion { x, y, w, h };
+
+                            if vec_idx < config.ocr_regions.len() {
+                                // 重新标定已有区域
+                                config.ocr_regions[vec_idx] = new_region;
+                            } else {
+                                // 扩展并填充直到 vec_idx
+                                while config.ocr_regions.len() < vec_idx {
+                                    // 填充占位符区域，保证数组连续性
+                                    config.ocr_regions.push(crate::config::OcrRegion { x: 0, y: 0, w: 0, h: 0 });
+                                }
+                                config.ocr_regions.push(new_region);
                             }
-                            config.ocr_regions.push(new_region);
-                        }
 
-                        // 顺便把老字段 ocr_region 同步更新为首个区域，保证完美向前兼容！
-                        if vec_idx == 0 {
-                            config.ocr_region = Some(crate::config::OcrRegion { x, y, w, h });
-                        }
+                            // 顺便把老字段 ocr_region 同步更新为首个区域，保证完美向前兼容！
+                            if vec_idx == 0 {
+                                config.ocr_region = Some(crate::config::OcrRegion { x, y, w, h });
+                            }
 
-                        config_manager.set(config.clone());
-                        tracing::info!("标定坐标 #{} 已持久化保存", u_idx);
+                            config_manager.set(config.clone());
+                            tracing::info!("标定坐标 #{} 已持久化保存", u_idx);
 
-                        // 2. 发送全局事件通知前端卡片刷新与 Toast 浮现
-                        let region_payload = OcrRegionSavedPayload {
-                            index: u_idx,
-                            region: crate::config::OcrRegion { x, y, w, h },
-                            regions: config.ocr_regions.clone(),
-                        };
-                        if let Err(e) = app_handle.emit("ocr-region-saved", region_payload) {
-                            tracing::error!(error = %e, "发送 ocr-region-saved 事件失败");
-                        } else {
-                            tracing::info!("ocr-region-saved 事件已成功广播，更新序号 #{}", u_idx);
+                            // 2. 发送全局事件通知前端卡片刷新与 Toast 浮现
+                            let region_payload = OcrRegionSavedPayload {
+                                index: u_idx,
+                                region: crate::config::OcrRegion { x, y, w, h },
+                                regions: config.ocr_regions.clone(),
+                            };
+                            if let Err(e) = app_handle.emit("ocr-region-saved", region_payload) {
+                                tracing::error!(error = %e, "发送 ocr-region-saved 事件失败");
+                            } else {
+                                tracing::info!("ocr-region-saved 事件已成功广播，更新序号 #{}", u_idx);
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
 
-    Ok(())
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = app_handle;
+        let _ = manager;
+        let _ = index;
+        Err("OCR viewfinder is only supported on Windows".to_string())
+    }
 }
 
 #[tauri::command]

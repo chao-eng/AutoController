@@ -80,7 +80,7 @@ pub fn run() {
             let handle_clone = handle.clone();
             std::thread::spawn(move || {
                 use tauri::Emitter;
-                let pid = std::process::id();
+                let _pid = std::process::id();
                 loop {
                     let mut mem_str = "0 MB".to_string();
                     let mut cpu_str = "0%".to_string();
@@ -91,7 +91,7 @@ pub fn run() {
 
                         // 获取当前进程的内存 WorkingSetSize
                         let mem_output = std::process::Command::new("wmic")
-                            .args(["process", "where", &format!("processid={}", pid), "get", "WorkingSetSize", "/format:value"])
+                            .args(["process", "where", &format!("processid={}", _pid), "get", "WorkingSetSize", "/format:value"])
                             .creation_flags(0x08000000)
                             .output();
                         if let Ok(output) = mem_output {
@@ -107,7 +107,7 @@ pub fn run() {
 
                         // 获取当前进程的 CPU PercentProcessorTime
                         let cpu_output = std::process::Command::new("wmic")
-                            .args(["path", "Win32_PerfFormattedData_PerfProc_Process", "where", &format!("IDProcess={}", pid), "get", "PercentProcessorTime", "/format:value"])
+                            .args(["path", "Win32_PerfFormattedData_PerfProc_Process", "where", &format!("IDProcess={}", _pid), "get", "PercentProcessorTime", "/format:value"])
                             .creation_flags(0x08000000)
                             .output();
                         if let Ok(output) = cpu_output {

@@ -2,22 +2,7 @@
 // 系统底层注入器调用，运行安全的进程扫描，并通过物理隔离的独立进程 injector.exe 执行注入和卸载操作。
 
 use std::collections::HashMap;
-use std::env;
-use std::path::PathBuf;
-use std::process::Command;
 use serde::{Serialize, Deserialize};
-
-use windows::Win32::Foundation::{HWND, LPARAM, BOOL, CloseHandle};
-use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, IsWindowVisible, GetWindowTextW, GetWindowThreadProcessId,
-};
-use windows::Win32::System::Diagnostics::ToolHelp::{
-    CreateToolhelp32Snapshot, Process32FirstW, Process32NextW,
-    TH32CS_SNAPPROCESS, PROCESSENTRY32W,
-};
-use windows::Win32::System::Threading::{
-    OpenProcess, IsWow64Process, PROCESS_QUERY_LIMITED_INFORMATION,
-};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ProcessInfo {
@@ -39,12 +24,28 @@ impl InjectedProcessesState {
     }
 }
 
+#[cfg(target_os = "windows")]
+use windows::Win32::Foundation::{HWND, LPARAM, BOOL, CloseHandle};
+#[cfg(target_os = "windows")]
+use windows::Win32::UI::WindowsAndMessaging::{
+    EnumWindows, IsWindowVisible, GetWindowTextW, GetWindowThreadProcessId,
+};
+#[cfg(target_os = "windows")]
+use windows::Win32::System::Diagnostics::ToolHelp::{
+    CreateToolhelp32Snapshot, Process32FirstW, Process32NextW,
+    TH32CS_SNAPPROCESS, PROCESSENTRY32W,
+};
+#[cfg(target_os = "windows")]
+use windows::Win32::System::Threading::{
+    OpenProcess, IsWow64Process, PROCESS_QUERY_LIMITED_INFORMATION,
+};
 
-// 缓存正在运行的 top-level 窗口及其对应的 PID 映射
+#[cfg(target_os = "windows")]
 struct EnumWindowsData {
     windows: Vec<(u32, String)>,
 }
 
+#[cfg(target_os = "windows")]
 unsafe extern "system" fn enum_windows_callback(hwnd: HWND, lparam: LPARAM) -> BOOL {
     let data = &mut *(lparam.0 as *mut EnumWindowsData);
     
@@ -77,7 +78,7 @@ unsafe extern "system" fn enum_windows_callback(hwnd: HWND, lparam: LPARAM) -> B
     BOOL(1)
 }
 
-// 判断进程架构是否为 64位
+#[cfg(target_os = "windows")]
 fn is_process_64bit(pid: u32) -> bool {
     unsafe {
         if let Ok(h_process) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid) {
@@ -92,7 +93,7 @@ fn is_process_64bit(pid: u32) -> bool {
     true // 默认视为 64位
 }
 
-/// 安全地获取可注入进程列表（无敏感 API，绝不报毒）
+#[cfg(target_os = "windows")]
 pub fn list_windowed_processes() -> Vec<ProcessInfo> {
     let mut process_map = HashMap::new();
     
@@ -168,9 +169,9 @@ pub fn list_windowed_processes() -> Vec<ProcessInfo> {
     }
 }
 
-/// 定位独立的 injector.exe 子进程物理路径
-fn get_injector_exe_path() -> Result<PathBuf, String> {
-    let current_exe = env::current_exe().map_err(|e| format!("无法获取当前程序运行路径: {}", e))?;
+#[cfg(target_os = "windows")]
+fn get_injector_exe_path() -> Result<std::path::PathBuf, String> {
+    let current_exe = std::env::current_exe().map_err(|e| format!("无法获取当前程序运行路径: {}", e))?;
     let dir = current_exe.parent().ok_or("无法获取当前程序的运行目录")?;
     
     // 自适应开发环境（target/debug/）和打包发布安装环境
@@ -191,12 +192,12 @@ fn get_injector_exe_path() -> Result<PathBuf, String> {
     ))
 }
 
-/// 唤起独立子进程执行注入（物理隔离脏活，规避主程序报毒崩溃）
+#[cfg(target_os = "windows")]
 pub fn run_injector_inject(pid: u32, is_64bit: bool) -> Result<(), String> {
     let injector_exe = get_injector_exe_path()?;
     
     // 定位 DLL 路径
-    let current_exe = env::current_exe().map_err(|e| format!("无法获取当前程序路径: {}", e))?;
+    let current_exe = std::env::current_exe().map_err(|e| format!("无法获取当前程序路径: {}", e))?;
     let dir = current_exe.parent().ok_or("无法获取当前程序的运行目录")?;
     
     let dll_name = if is_64bit { "NoFocusLoss64.dll" } else { "NoFocusLoss.dll" };
@@ -210,17 +211,14 @@ pub fn run_injector_inject(pid: u32, is_64bit: bool) -> Result<(), String> {
     }
 
     // 启动独立进程
-    let mut cmd = Command::new(&injector_exe);
+    let mut cmd = std::process::Command::new(&injector_exe);
     cmd.arg("--inject")
        .arg(pid.to_string())
        .arg(dll_path.to_string_lossy().to_string());
 
     // Windows 平台强力隐藏子进程的小黑框命令行窗口
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-    }
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
     let output = cmd.output().map_err(|e| {
         match e.kind() {
@@ -253,21 +251,18 @@ pub fn run_injector_inject(pid: u32, is_64bit: bool) -> Result<(), String> {
     }
 }
 
-/// 唤起独立子进程执行安全卸载
+#[cfg(target_os = "windows")]
 pub fn run_injector_unload(pid: u32, is_64bit: bool) -> Result<(), String> {
     let injector_exe = get_injector_exe_path()?;
     let dll_name = if is_64bit { "NoFocusLoss64.dll" } else { "NoFocusLoss.dll" };
 
-    let mut cmd = Command::new(&injector_exe);
+    let mut cmd = std::process::Command::new(&injector_exe);
     cmd.arg("--unload")
        .arg(pid.to_string())
        .arg(dll_name);
 
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x08000000);
-    }
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x08000000);
 
     let output = cmd.output().map_err(|e| {
         match e.kind() {
@@ -290,4 +285,19 @@ pub fn run_injector_unload(pid: u32, is_64bit: bool) -> Result<(), String> {
         };
         Err(format!("卸载组件返回错误代码 ({}): {}", code, err_desc))
     }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn list_windowed_processes() -> Vec<ProcessInfo> {
+    Vec::new()
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn run_injector_inject(_pid: u32, _is_64bit: bool) -> Result<(), String> {
+    Err("Only supported on Windows".to_string())
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn run_injector_unload(_pid: u32, _is_64bit: bool) -> Result<(), String> {
+    Err("Only supported on Windows".to_string())
 }
