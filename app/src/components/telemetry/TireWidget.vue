@@ -77,7 +77,7 @@ const tires = computed<TireData[]>(() => [
         />
 
         <div class="flex-1 min-w-0 flex flex-col items-center justify-between py-[0.1rem]">
-          <span class="text-[clamp(0.48rem,1.2vw,0.62rem)] font-extrabold text-[var(--tx-xdim)] tracking-wider self-start">
+          <span class="text-[clamp(0.58rem,1.4vw,0.75rem)] font-extrabold text-[var(--tx-xdim)] tracking-wider self-start">
             {{ tire.label }}
           </span>
           <span
@@ -93,7 +93,7 @@ const tires = computed<TireData[]>(() => [
             />
             <span
               v-if="tire.wear !== null"
-              class="text-[clamp(0.45rem,1.1vw,0.6rem)] font-bold tabular-nums"
+              class="text-[clamp(0.55rem,1.3vw,0.72rem)] font-bold tabular-nums"
               :style="{ color: wearColor(tire.wear) }"
             >
               {{ Math.round(tire.wear * 100) }}%

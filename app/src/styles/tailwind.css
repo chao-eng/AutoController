@@ -41,6 +41,23 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    /* Telemetry dashboard custom variables mapped to shadcn tokens */
+    --bg-panel: var(--popover);
+    --bg-elevated: var(--muted);
+    --bg-card: var(--card);
+    --bg-body: var(--background);
+    --bg-track: oklch(0.922 0 0);
+    --bd-dim: oklch(0.922 0 0);
+    --bd-subtle: oklch(0.922 0 0 / 0.5);
+    --bd-muted: oklch(0.87 0 0);
+    --bd-strong: oklch(0.8 0 0);
+    --tx-hi: var(--foreground);
+    --tx-mid: oklch(0.37 0 0);
+    --tx-dim: var(--muted-foreground);
+    --tx-xdim: oklch(0.708 0 0);
+    --tx-lo: oklch(0.556 0 0);
+    --ac: oklch(0.488 0.243 264.376);
   }
   .dark {
     --background: oklch(0.145 0 0);
@@ -75,6 +92,23 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+
+    /* Telemetry dashboard custom variables mapped to shadcn tokens (dark) */
+    --bg-panel: var(--popover);
+    --bg-elevated: var(--muted);
+    --bg-card: var(--card);
+    --bg-body: var(--background);
+    --bg-track: oklch(1 0 0 / 8%);
+    --bd-dim: oklch(1 0 0 / 10%);
+    --bd-subtle: oklch(1 0 0 / 6%);
+    --bd-muted: oklch(1 0 0 / 15%);
+    --bd-strong: oklch(1 0 0 / 20%);
+    --tx-hi: var(--foreground);
+    --tx-mid: oklch(0.87 0 0);
+    --tx-dim: var(--muted-foreground);
+    --tx-xdim: oklch(0.556 0 0);
+    --tx-lo: oklch(0.439 0 0);
+    --ac: oklch(0.584 0.194 264.376);
   }
 }
 

@@ -21,35 +21,35 @@ function formatTime(seconds: number): string {
 <template>
   <div class="flex items-center justify-center h-full bg-[var(--bg-panel)] border-t border-[var(--bd-dim)] px-[clamp(0.5rem,2vw,1.5rem)] overflow-hidden">
     <div class="flex flex-col items-center px-[clamp(0.5rem,2vw,1.5rem)] min-w-0 shrink">
-      <span class="text-[clamp(0.42rem,1vw,0.55rem)] font-bold tracking-wider text-[var(--tx-xdim)] whitespace-nowrap flex items-center gap-0.5">圈数</span>
+      <span class="text-[clamp(0.55rem,1.2vw,0.7rem)] font-bold tracking-wider text-[var(--tx-xdim)] whitespace-nowrap flex items-center gap-0.5">圈数</span>
       <span class="text-[clamp(0.7rem,1.8vw,1.1rem)] font-extrabold tabular-nums text-[var(--tx-mid)] whitespace-nowrap overflow-hidden text-ellipsis">
         {{ pkt ? pkt.lapNumber : '—' }}
       </span>
     </div>
     <div class="w-px h-[clamp(1rem,3vh,2rem)] bg-[var(--bd-subtle)] shrink-0" />
     <div class="flex flex-col items-center px-[clamp(0.5rem,2vw,1.5rem)] min-w-0 shrink">
-      <span class="text-[clamp(0.42rem,1vw,0.55rem)] font-bold tracking-wider text-[var(--tx-xdim)] whitespace-nowrap">当前圈</span>
+      <span class="text-[clamp(0.55rem,1.2vw,0.7rem)] font-bold tracking-wider text-[var(--tx-xdim)] whitespace-nowrap">当前圈</span>
       <span class="text-[clamp(0.7rem,1.8vw,1.1rem)] font-extrabold tabular-nums text-[var(--ac)] whitespace-nowrap overflow-hidden text-ellipsis">
         {{ formatTime(pkt?.currentLap ?? 0) }}
       </span>
     </div>
     <div class="w-px h-[clamp(1rem,3vh,2rem)] bg-[var(--bd-subtle)] shrink-0" />
     <div class="flex flex-col items-center px-[clamp(0.5rem,2vw,1.5rem)] min-w-0 shrink">
-      <span class="text-[clamp(0.42rem,1vw,0.55rem)] font-bold tracking-wider text-[var(--tx-xdim)] whitespace-nowrap">上一圈</span>
+      <span class="text-[clamp(0.55rem,1.2vw,0.7rem)] font-bold tracking-wider text-[var(--tx-xdim)] whitespace-nowrap">上一圈</span>
       <span class="text-[clamp(0.7rem,1.8vw,1.1rem)] font-extrabold tabular-nums text-[var(--tx-mid)] whitespace-nowrap overflow-hidden text-ellipsis">
         {{ formatTime(pkt?.lastLap ?? 0) }}
       </span>
     </div>
     <div class="w-px h-[clamp(1rem,3vh,2rem)] bg-[var(--bd-subtle)] shrink-0" />
     <div class="flex flex-col items-center px-[clamp(0.5rem,2vw,1.5rem)] min-w-0 shrink">
-      <span class="text-[clamp(0.42rem,1vw,0.55rem)] font-bold tracking-wider text-[var(--tx-xdim)] whitespace-nowrap">最快圈</span>
+      <span class="text-[clamp(0.55rem,1.2vw,0.7rem)] font-bold tracking-wider text-[var(--tx-xdim)] whitespace-nowrap">最快圈</span>
       <span class="text-[clamp(0.7rem,1.8vw,1.1rem)] font-extrabold tabular-nums text-purple-500 whitespace-nowrap overflow-hidden text-ellipsis">
         {{ formatTime(pkt?.bestLap ?? 0) }}
       </span>
     </div>
     <div class="w-px h-[clamp(1rem,3vh,2rem)] bg-[var(--bd-subtle)] shrink-0" />
     <div class="flex flex-col items-center px-[clamp(0.5rem,2vw,1.5rem)] min-w-0 shrink">
-      <span class="text-[clamp(0.42rem,1vw,0.55rem)] font-bold tracking-wider text-[var(--tx-xdim)] whitespace-nowrap flex items-center gap-0.5">
+      <span class="text-[clamp(0.55rem,1.2vw,0.7rem)] font-bold tracking-wider text-[var(--tx-xdim)] whitespace-nowrap flex items-center gap-0.5">
         本次会话
         <span v-if="inEvent" class="inline-block w-[5px] h-[5px] rounded-full bg-green-500 shadow-[0_0_4px_#22c55e] shrink-0" />
       </span>

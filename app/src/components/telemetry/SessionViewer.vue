@@ -211,18 +211,18 @@ header {
   background: var(--bg-card); border: 1px solid var(--bd-dim);
   border-radius: 8px; padding: 0.8rem 0.5rem;
 }
-.meta span { color: var(--tx-dim); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.meta span { color: var(--tx-dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
 .meta strong { color: var(--tx-hi); font-size: 1rem; margin-top: 0.25rem; }
 .laps { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 0.15rem; }
 .laps-title {
-  color: var(--tx-dim); font-size: 0.7rem;
+  color: var(--tx-dim); font-size: 0.8rem;
   text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;
 }
 .lap-row {
   display: flex; justify-content: space-between;
   padding: 0.35rem 0.6rem; border-radius: 5px;
   background: var(--bg-card); border: 1px solid var(--bd-dim);
-  color: var(--tx-mid); font-size: 0.82rem;
+  color: var(--tx-mid); font-size: 0.9rem;
 }
 .lap-row.best { border-color: #a855f7; color: #a855f7; font-weight: 700; }
 .lap-time { font-variant-numeric: tabular-nums; }

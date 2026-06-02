@@ -128,11 +128,11 @@ function fmt(idx: number) {
 }
 .badge {
   background: var(--ac); color: #fff;
-  font-size: 0.65rem; font-weight: 700;
+  font-size: 0.78rem; font-weight: 700;
   letter-spacing: 0.06em; padding: 0.15rem 0.4rem; border-radius: 3px;
 }
 .label {
-  color: var(--tx-lo); font-size: 0.78rem;
+  color: var(--tx-lo); font-size: 0.9rem;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .controls {
@@ -150,7 +150,7 @@ function fmt(idx: number) {
   line-height: 1; padding: 0;
 }
 .time {
-  color: var(--tx-dim); font-size: 0.72rem;
+  color: var(--tx-dim); font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
   min-width: 3rem; text-align: center;
 }
@@ -160,7 +160,7 @@ function fmt(idx: number) {
   background: var(--bg-elevated);
   border: 1px solid var(--bd-dim);
   color: var(--tx-dim);
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
   cursor: pointer;
@@ -170,7 +170,7 @@ function fmt(idx: number) {
   background: none;
   border: 1px solid var(--bd-subtle);
   color: var(--tx-lo);
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   padding: 0.35rem 0.7rem;
   border-radius: 4px;
   cursor: pointer;

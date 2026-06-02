@@ -85,8 +85,8 @@ async function handleClearAll() {
             <span class="text-[0.85rem] font-semibold text-[var(--tx-mid)] overflow-hidden text-ellipsis whitespace-nowrap">
               {{ session.name ?? carName(session.carOrdinal) }}
             </span>
-            <span class="text-[0.7rem] text-[var(--tx-dim)]">{{ formatDate(session.startedAt) }}</span>
-            <span class="text-[0.75rem] font-bold text-purple-500">最快: {{ formatTime(session.bestLap ?? 0) }}</span>
+            <span class="text-[0.8rem] text-[var(--tx-dim)]">{{ formatDate(session.startedAt) }}</span>
+            <span class="text-[0.85rem] font-bold text-purple-500">最快: {{ formatTime(session.bestLap ?? 0) }}</span>
           </div>
           <button
             class="bg-none border-none cursor-pointer text-[0.9rem] text-[var(--tx-dim)] shrink-0 hover:text-red-500"

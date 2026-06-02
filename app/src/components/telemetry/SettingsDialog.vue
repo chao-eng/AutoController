@@ -34,7 +34,7 @@ async function save() {
           type="number" min="1024" max="65535"
           class="bg-background border border-border rounded text-foreground px-2 py-1.5 text-[0.9rem] w-full"
         />
-        <span class="text-[0.7rem] text-muted-foreground/70 mt-[0.15rem]">端口更改将在重新启动应用后生效。</span>
+        <span class="text-[0.8rem] text-muted-foreground/70 mt-[0.15rem]">端口更改将在重新启动应用后生效。</span>
       </label>
 
       <label class="flex flex-col gap-0.5 text-muted-foreground text-[0.85rem]">

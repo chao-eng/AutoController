@@ -154,7 +154,7 @@ onUnmounted(() => {
 .fp-grip { color: var(--tx-xdim); font-size: 0.75rem; line-height: 1; }
 .fp-title {
   flex: 1;
-  font-size: 0.55rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--tx-dim);
@@ -162,7 +162,7 @@ onUnmounted(() => {
 .fp-actions { display: flex; align-items: center; gap: 0.35rem; }
 .fp-close {
   background: none; border: none; color: var(--tx-xdim);
-  font-size: 0.65rem; cursor: pointer; padding: 0 0.1rem; line-height: 1;
+  font-size: 0.8rem; cursor: pointer; padding: 0 0.1rem; line-height: 1;
 }
 .fp-close:hover { color: var(--tx-hi); }
 .fp-body { flex: 1; min-height: 0; overflow: hidden; }
