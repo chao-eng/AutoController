@@ -505,7 +505,7 @@ watch(
                             }" 
                             class="transition-colors duration-100" 
                           />
-                          <circle cx="278" cy="238" r="22" class="stroke-black/5 fill-none dark:stroke-white/5" stroke-width="2" />
+                          <circle cx="278" cy="238" r="22"  stroke-width="2" />
                           <circle cx="278" cy="238" r="10"  />
                         </g>
                         <circle cx="278" cy="238" r="42" fill="transparent" class="cursor-grab" />
