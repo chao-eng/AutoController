@@ -10,7 +10,11 @@ import { useSchedulerStore } from './stores/scheduler'
 import { useUIStore } from './stores/ui'
 import { open } from '@tauri-apps/plugin-shell'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+
+const route = useRoute()
+const isMapWindow = computed(() => route.path === '/forza-map')
 
 const logStore = useLogStore()
 const controllerStore = useControllerStore()
@@ -98,13 +102,14 @@ onUnmounted(() => {
 
 <template>
   <div class="app-layout">
-    <AppSidebar />
+    <AppSidebar v-if="!isMapWindow" />
     <div class="app-main">
-      <AppHeader />
+      <AppHeader v-if="!isMapWindow" />
       <div class="app-content">
         <router-view />
       </div>
       <StatusBar
+        v-if="!isMapWindow"
         :deviceCount="deviceCount"
         :cpuUsage="cpuUsage"
         :memUsage="memUsage"
@@ -112,7 +117,7 @@ onUnmounted(() => {
       />
     </div>
     <!-- Custom Dialogs/Toasts overlays -->
-    <AppDialogs />
+    <AppDialogs v-if="!isMapWindow" />
   </div>
 </template>
 

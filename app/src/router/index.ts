@@ -43,6 +43,11 @@ const router = createRouter({
       name: 'logs',
       component: () => import('../views/LogViewer.vue'),
     },
+    {
+      path: '/forza-telemetry',
+      name: 'forza-telemetry',
+      component: () => import('../views/ForzaTelemetry.vue'),
+    },
   ],
 })
 

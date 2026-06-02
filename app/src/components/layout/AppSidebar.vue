@@ -10,6 +10,7 @@ import {
   Bell,
   EyeOff,
 } from '@lucide/vue'
+import ForzaIcon from '../icons/ForzaIcon.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -21,6 +22,7 @@ const navItems = [
   { icon: CalendarClock, label: '任务', path: '/scheduler' },
   { icon: Bell, label: '通知', path: '/notifications' },
   { icon: EyeOff, label: '防失去焦点', path: '/nofocus' },
+  { icon: ForzaIcon, label: 'Forza 遥测', path: '/forza-telemetry' },
   { icon: ScrollText, label: '日志', path: '/logs' },
 ]
 

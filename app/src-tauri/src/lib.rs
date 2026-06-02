@@ -10,6 +10,7 @@ mod logger;
 mod system;
 mod commands;
 pub mod notify;
+mod fh6_telemetry;
 
 
 use tauri::Manager;
@@ -51,6 +52,14 @@ pub fn run() {
     let recorder = controller.macro_recorder();
     let script_runtime = ScriptRuntime::with_controller(controller.clone());
 
+    let loaded_settings = fh6_telemetry::settings::load();
+    let auto_record = loaded_settings.auto_record;
+    let telemetry_state: fh6_telemetry::Shared = std::sync::Arc::new(fh6_telemetry::AppState {
+        db: std::sync::Mutex::new(fh6_telemetry::db::open().expect("failed to open database")),
+        session_manager: std::sync::Mutex::new(fh6_telemetry::session::SessionManager::new(auto_record)),
+        settings: std::sync::Mutex::new(loaded_settings),
+    });
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
@@ -63,6 +72,7 @@ pub fn run() {
         .manage(ProcessMonitor::new())
         .manage(InjectedProcessesState::new())
         .manage(reload_handle)
+        .manage(telemetry_state.clone())
         .setup(move |app| {
             system::tray::setup_tray(app)?;
             let handle = app.handle().clone();
@@ -73,6 +83,9 @@ pub fn run() {
 
             // 启动后台定时任务调度引擎心跳循环
             scheduler::queue::start_scheduler_loop(handle.clone());
+
+            // 启动 Forza 遥测 UDP 接收循环和转发 loop
+            fh6_telemetry::init_telemetry_loop(handle.clone(), telemetry_state.clone());
 
             *log_handle.lock() = Some(handle.clone());
 
@@ -196,6 +209,15 @@ pub fn run() {
             injector_cmd::unload_focus_hook,
             injector_cmd::check_is_admin,
             injector_cmd::add_defender_exclusion,
+            fh6_telemetry::commands::get_sessions,
+            fh6_telemetry::commands::get_session_packets,
+            fh6_telemetry::commands::get_session_laps,
+            fh6_telemetry::commands::delete_session,
+            fh6_telemetry::commands::clear_all_sessions,
+            fh6_telemetry::commands::rename_session,
+            fh6_telemetry::commands::set_session_bookmark,
+            fh6_telemetry::commands::get_settings,
+            fh6_telemetry::commands::save_settings,
         ])
 
         .run(tauri::generate_context!())
