@@ -115,13 +115,13 @@ const handbrakeOn = computed(() => (pkt.value?.handbrake ?? 0) > 127)
       </svg>
     </div>
 
-    <div class="shrink-0 flex items-center gap-[clamp(0.4rem,1.2vw,0.8rem)] px-[clamp(0.4rem,1.2vw,0.8rem)] pb-[clamp(0.3rem,0.8vh,0.6rem)] min-h-0">
+    <div class="shrink-0 flex items-center gap-4 px-4 pb-3 min-h-0 w-full">
       <div class="flex items-center gap-1 shrink-0">
         <div
           class="relative overflow-hidden rounded-full shrink-0"
           :style="{
-            width: 'clamp(50px, 7.5vw, 76px)',
-            height: 'clamp(50px, 7.5vw, 76px)',
+            width: 'clamp(56px, 8vw, 80px)',
+            height: 'clamp(56px, 8vw, 80px)',
             border: '1px solid var(--bd-muted)',
             background: 'radial-gradient(circle, var(--bg-elevated) 0%, var(--bg-panel) 100%)',
           }"
@@ -133,53 +133,61 @@ const handbrakeOn = computed(() => (pkt.value?.handbrake ?? 0) > 127)
         </div>
       </div>
 
-      <div class="flex flex-col gap-0.5 shrink-0">
-        <div class="flex items-center gap-1.5">
-          <span class="text-[clamp(0.48rem,1vw,0.6rem)] font-bold text-[var(--tx-dim)] shrink-0">油门</span>
-          <div class="w-full h-2 bg-[var(--bg-track)] rounded overflow-hidden flex-1">
+      <div class="flex-1 w-full flex flex-col gap-2">
+        <div class="flex items-center gap-3 w-full text-base sm:text-lg">
+          <span class="font-bold text-[var(--tx-dim)] shrink-0 min-w-[36px]">油门</span>
+          <div class="h-3 bg-[var(--bg-track)] rounded overflow-hidden flex-1">
             <div class="h-full bg-green-500 rounded transition-[width] duration-[33ms]" :style="{ width: throttleFrac * 100 + '%' }" />
           </div>
-          <span class="text-[clamp(0.48rem,1vw,0.6rem)] font-bold text-[var(--tx-xdim)] tabular-nums w-7 text-right">{{ pkt ? Math.round(throttleFrac * 100) : '—' }}</span>
+          <span class="font-bold text-[var(--tx-xdim)] tabular-nums w-10 text-right">{{ pkt ? Math.round(throttleFrac * 100) : '—' }}</span>
         </div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-[clamp(0.48rem,1vw,0.6rem)] font-bold text-[var(--tx-dim)] shrink-0">刹车</span>
-          <div class="w-full h-2 bg-[var(--bg-track)] rounded overflow-hidden flex-1">
+
+        <div class="flex items-center gap-3 w-full text-base sm:text-lg">
+          <span class="font-bold text-[var(--tx-dim)] shrink-0 min-w-[36px]">刹车</span>
+          <div class="h-3 bg-[var(--bg-track)] rounded overflow-hidden flex-1">
             <div class="h-full bg-red-500 rounded transition-[width] duration-[33ms]" :style="{ width: brakeFrac * 100 + '%' }" />
           </div>
-          <span class="text-[clamp(0.48rem,1vw,0.6rem)] font-bold text-[var(--tx-xdim)] tabular-nums w-7 text-right">{{ pkt ? Math.round(brakeFrac * 100) : '—' }}</span>
+          <span class="font-bold text-[var(--tx-xdim)] tabular-nums w-10 text-right">{{ pkt ? Math.round(brakeFrac * 100) : '—' }}</span>
         </div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-[clamp(0.48rem,1vw,0.6rem)] font-bold text-[var(--tx-dim)] shrink-0">离合</span>
-          <div class="w-full h-2 bg-[var(--bg-track)] rounded overflow-hidden flex-1">
+
+        <div class="flex items-center gap-3 w-full text-base sm:text-lg">
+          <span class="font-bold text-[var(--tx-dim)] shrink-0 min-w-[36px]">离合</span>
+          <div class="h-3 bg-[var(--bg-track)] rounded overflow-hidden flex-1">
             <div class="h-full bg-slate-400 rounded transition-[width] duration-[33ms]" :style="{ width: clutchFrac * 100 + '%' }" />
           </div>
-          <span class="text-[clamp(0.48rem,1vw,0.6rem)] font-bold text-[var(--tx-xdim)] tabular-nums w-7 text-right">{{ pkt ? Math.round(clutchFrac * 100) : '—' }}</span>
+          <span class="font-bold text-[var(--tx-xdim)] tabular-nums w-10 text-right">{{ pkt ? Math.round(clutchFrac * 100) : '—' }}</span>
         </div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-[clamp(0.48rem,1vw,0.6rem)] font-bold text-[var(--tx-dim)] shrink-0">手刹</span>
-          <div
-            class="w-[18px] h-[18px] rounded-full border-2 transition-colors duration-100"
-            :class="handbrakeOn ? 'bg-orange-500 border-orange-500' : 'border-[var(--bd-muted)]'"
-          />
-          <span class="text-[clamp(0.48rem,1vw,0.6rem)] font-bold tabular-nums w-7 text-right" :class="handbrakeOn ? 'text-orange-500' : 'text-[var(--tx-xdim)]'">
-            {{ handbrakeOn ? '开' : '关' }}
-          </span>
+
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-0.5 text-base sm:text-lg">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-[var(--tx-dim)] shrink-0">手刹</span>
+            <div
+              class="w-5 h-5 rounded-full border-2 transition-colors duration-100"
+              :class="handbrakeOn ? 'bg-orange-500 border-orange-500' : 'border-[var(--bd-muted)]'"
+            />
+            <span class="font-bold tabular-nums w-7 text-left" :class="handbrakeOn ? 'text-orange-500' : 'text-[var(--tx-xdim)]'">
+              {{ handbrakeOn ? '开' : '关' }}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-[var(--tx-dim)] shrink-0">增压</span>
+            <div
+              class="w-5 h-5 rounded-full border-2 transition-colors duration-100"
+              :class="boostActive ? 'bg-yellow-500 border-yellow-500' : 'border-[var(--bd-muted)]'"
+            />
+            <span class="font-bold tabular-nums text-left" :class="boostActive ? 'text-yellow-500' : 'text-[var(--tx-xdim)]'">
+              {{ pkt ? boost.toFixed(1) : '—' }}
+            </span>
+            <span class="text-xs font-bold text-[var(--tx-xdim)] self-end mb-0.5">PSI</span>
+          </div>
+
+          <div v-if="pkt" class="flex items-center gap-1.5 ml-auto">
+            <span class="text-lg font-bold text-[var(--tx-hi)] tabular-nums">{{ Math.round(pkt.currentEngineRpm).toLocaleString() }}</span>
+            <span class="text-xs font-bold text-[var(--tx-xdim)] self-end mb-0.5">RPM</span>
+          </div>
         </div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-[clamp(0.48rem,1vw,0.6rem)] font-bold text-[var(--tx-dim)] shrink-0">增压</span>
-          <div
-            class="w-[18px] h-[18px] rounded-full border-2 transition-colors duration-100"
-            :class="boostActive ? 'bg-yellow-500 border-yellow-500' : 'border-[var(--bd-muted)]'"
-          />
-          <span class="text-[clamp(0.48rem,1vw,0.6rem)] font-bold tabular-nums w-7 text-right" :class="boostActive ? 'text-yellow-500' : 'text-[var(--tx-xdim)]'">
-            {{ pkt ? boost.toFixed(1) : '—' }}
-          </span>
-          <span class="text-[clamp(0.45rem,0.85vw,0.55rem)] font-bold text-[var(--tx-xdim)]">PSI</span>
-        </div>
-        <div v-if="pkt" class="flex items-center gap-1">
-          <span class="text-[clamp(0.6rem,1.2vw,0.75rem)] font-bold text-[var(--tx-hi)] tabular-nums">{{ Math.round(pkt.currentEngineRpm).toLocaleString() }}</span>
-          <span class="text-[clamp(0.45rem,0.85vw,0.55rem)] font-bold text-[var(--tx-xdim)]">RPM</span>
-        </div>
+
       </div>
     </div>
   </div>
