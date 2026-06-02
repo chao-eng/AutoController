@@ -96,14 +96,14 @@ watch(
         :cy="center"
         :r="center - 4"
         fill="none"
-        stroke="oklch(var(--border))"
+        stroke="var(--border)"
         stroke-width="1"
       />
       <circle
         :cx="center"
         :cy="center"
         :r="deadzone"
-        fill="oklch(var(--muted))"
+        fill="var(--muted)"
         opacity="0.5"
       />
       <line
@@ -111,7 +111,7 @@ watch(
         :y1="4"
         :x2="center"
         :y2="containerSize - 4"
-        stroke="oklch(var(--border))"
+        stroke="var(--border)"
         stroke-width="0.5"
         opacity="0.5"
       />
@@ -120,7 +120,7 @@ watch(
         :y1="center"
         :x2="containerSize - 4"
         :y2="center"
-        stroke="oklch(var(--border))"
+        stroke="var(--border)"
         stroke-width="0.5"
         opacity="0.5"
       />
@@ -128,7 +128,7 @@ watch(
         :cx="knobX"
         :cy="knobY"
         :r="knobRadius"
-        fill="oklch(var(--primary))"
+        fill="var(--primary)"
         opacity="0.8"
         class="transition-[cx,cy] duration-50"
       />

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   Monitor,
@@ -22,17 +21,19 @@ const router = useRouter()
 const route = useRoute()
 
 const navItems = [
-  { icon: Monitor, label: '设备', path: '/devices' },
-  { icon: FileCode2, label: '脚本', path: '/scripts' },
-  { icon: Settings, label: '配置', path: '/config' },
-  { icon: CalendarClock, label: '任务', path: '/scheduler' },
-  { icon: Bell, label: '通知', path: '/notifications' },
-  { icon: EyeOff, label: '防失去焦点', path: '/nofocus' },
-  { icon: ForzaIcon, label: 'Forza 遥测', path: '/forza-telemetry' },
-  { icon: ScrollText, label: '日志', path: '/logs' },
+  { icon: Monitor, label: '设备', path: '/devices', name: 'devices' },
+  { icon: FileCode2, label: '脚本', path: '/scripts', name: 'scripts' },
+  { icon: Settings, label: '配置', path: '/config', name: 'config' },
+  { icon: CalendarClock, label: '任务', path: '/scheduler', name: 'scheduler' },
+  { icon: Bell, label: '通知', path: '/notifications', name: 'notifications' },
+  { icon: EyeOff, label: '防失去焦点', path: '/nofocus', name: 'nofocus' },
+  { icon: ForzaIcon, label: 'Forza 遥测', path: '/forza-telemetry', name: 'forza-telemetry' },
+  { icon: ScrollText, label: '日志', path: '/logs', name: 'logs' },
 ]
 
-const activePath = computed(() => route.path)
+const isActive = (item: typeof navItems[number]) => {
+  return route.path === item.path || route.name === item.name
+}
 
 function navigate(path: string) {
   router.push(path)
@@ -85,13 +86,16 @@ function navigate(path: string) {
       <TooltipProvider v-for="item in navItems" :key="item.path">
         <Tooltip>
           <TooltipTrigger as-child>
-            <button
-              class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground"
-              :class="{ 'text-primary bg-primary/10': activePath === item.path }"
-              @click="navigate(item.path)"
-            >
-              <component :is="item.icon" :size="20" :stroke-width="1.5" />
-            </button>
+            <div class="relative">
+              <div v-if="isActive(item)" class="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
+              <button
+                class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground"
+                :class="{ 'text-primary bg-primary/10': isActive(item) }"
+                @click="navigate(item.path)"
+              >
+                <component :is="item.icon" :size="20" :stroke-width="1.5" />
+              </button>
+            </div>
           </TooltipTrigger>
           <TooltipContent side="right">
             <p>{{ item.label }}</p>

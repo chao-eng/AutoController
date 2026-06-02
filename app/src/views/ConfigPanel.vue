@@ -419,12 +419,12 @@ function importBackup(event: Event) {
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto p-6">
-    <div class="mb-6">
+  <div class="flex h-full flex-col gap-4 overflow-y-auto p-4 lg:p-6">
+    <div class="flex items-center justify-between shrink-0">
       <h2 class="text-lg font-semibold">参数配置</h2>
     </div>
 
-    <div class="flex flex-col gap-6 max-w-2xl">
+    <div class="flex flex-col gap-6">
       <!-- 通用设置 -->
       <Card>
         <CardHeader>
