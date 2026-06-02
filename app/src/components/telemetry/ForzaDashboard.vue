@@ -83,15 +83,19 @@ async function handleToggleTires() {
 </script>
 
 <template>
-  <div v-if="pendingUpdate" class="update-bar">
-    <span>Update v{{ pendingUpdate.version }} available</span>
-    <button class="update-install" :disabled="updateInstalling" @click="pendingUpdate?.install()">
+  <div v-if="pendingUpdate" class="fixed top-0 left-0 right-0 z-300 flex items-center gap-3 bg-[#3370FF] px-4 py-[0.35rem] text-xs text-white">
+    <span class="flex-1">Update v{{ pendingUpdate.version }} available</span>
+    <button
+      class="cursor-pointer rounded border border-white/30 bg-white/20 px-[0.65rem] py-[0.2rem] text-xs text-white disabled:opacity-60"
+      :disabled="updateInstalling"
+      @click="pendingUpdate?.install()"
+    >
       {{ updateInstalling ? 'Installing…' : 'Install & restart' }}
     </button>
-    <button class="update-dismiss" @click="pendingUpdate = null">✕</button>
+    <button class="cursor-pointer border-none bg-none px-[0.25rem] text-xs text-white/70 hover:text-white" @click="pendingUpdate = null">✕</button>
   </div>
 
-  <div class="dashboard">
+  <div class="flex h-full w-full flex-col">
     <TopBar
       :use-mph="settings?.useMph ?? true"
       @on-settings="showSettings = true"
@@ -101,8 +105,8 @@ async function handleToggleTires() {
     />
     <CompassBar />
 
-    <div class="main">
-      <div class="center-area">
+    <div class="min-h-0 flex-1 overflow-hidden">
+      <div class="h-full w-full overflow-hidden" :style="{ background: 'var(--bg-body)' }">
         <CenterPanel :use-mph="settings?.useMph ?? true" />
       </div>
     </div>
@@ -122,7 +126,7 @@ async function handleToggleTires() {
       />
     </FloatingPanel>
 
-    <div class="lap-bar">
+    <div class="h-[clamp(2.5rem,5.5vh,4rem)] shrink-0">
       <LapBar />
     </div>
   </div>
@@ -142,63 +146,11 @@ async function handleToggleTires() {
 
   <ReplayBar />
 
-  <div v-if="toasts.length > 0" class="toast-stack">
-    <div v-for="toast in toasts" :key="toast.id" class="toast">{{ toast.message }}</div>
+  <div v-if="toasts.length > 0" class="fixed bottom-16 left-1/2 z-200 flex -translate-x-1/2 flex-col gap-2 pointer-events-none">
+    <div v-for="toast in toasts" :key="toast.id" class="max-w-[420px] rounded-md border border-[#F54A45] bg-white px-4 py-2 text-center text-xs text-[#F54A45] shadow-lg">
+      {{ toast.message }}
+    </div>
   </div>
 
   <SettingsDialog v-if="showSettings" @close="showSettings = false" />
 </template>
-
-<style scoped>
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-}
-.main {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.center-area {
-  background: var(--bg-body);
-  overflow: hidden;
-  width: 100%;
-  height: 100%;
-}
-.lap-bar {
-  height: clamp(2.5rem, 5.5vh, 4rem);
-  flex-shrink: 0;
-}
-.update-bar {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 300;
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 0.35rem 1rem;
-  background: #3370FF; border-bottom: none;
-  font-size: 0.78rem; color: #fff;
-}
-.update-bar span { flex: 1; }
-.update-install {
-  background: rgba(255,255,255,0.2); color: #fff;
-  border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
-  padding: 0.2rem 0.65rem; font-size: 0.75rem; cursor: pointer;
-}
-.update-install:disabled { opacity: 0.6; cursor: default; }
-.update-dismiss {
-  background: none; border: none; color: rgba(255,255,255,0.7);
-  font-size: 0.85rem; cursor: pointer; padding: 0 0.25rem;
-}
-.update-dismiss:hover { color: #fff; }
-.toast-stack {
-  position: fixed; bottom: 4rem; left: 50%; transform: translateX(-50%);
-  display: flex; flex-direction: column; gap: 0.5rem; z-index: 200;
-  pointer-events: none;
-}
-.toast {
-  background: #FFFFFF; border: 1px solid #F54A45; border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(31,35,41,0.1);
-  color: #F54A45; font-size: 0.8rem; padding: 0.5rem 1rem;
-  max-width: 420px; text-align: center;
-}
-</style>

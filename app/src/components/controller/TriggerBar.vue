@@ -39,62 +39,19 @@ function handlePointerMove(e: PointerEvent) {
 </script>
 
 <template>
-  <div class="trigger-bar-container">
-    <span v-if="label" class="trigger-label">{{ label }}</span>
+  <div class="flex items-center gap-2 select-none">
+    <span v-if="label" class="min-w-[38px] text-[11px] text-muted-foreground">{{ label }}</span>
     <div
       ref="trackRef"
-      class="trigger-track"
+      class="relative h-3 flex-1 cursor-ew-resize overflow-hidden rounded-full border border-border bg-muted touch-none"
       @pointerdown="handlePointerDown"
       @pointermove="handlePointerMove"
     >
       <div
-        class="trigger-fill"
+        class="h-full rounded-[5px] bg-primary transition-[width] duration-50"
         :style="{ width: percentage + '%' }"
       ></div>
     </div>
-    <span class="trigger-value">{{ modelValue }}</span>
+    <span class="min-w-[28px] text-right font-mono text-[11px] text-muted-foreground">{{ modelValue }}</span>
   </div>
 </template>
-
-<style scoped>
-.trigger-bar-container {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  user-select: none;
-}
-
-.trigger-label {
-  font-size: 11px;
-  color: var(--color-text-dim);
-  font-family: var(--font-heading);
-  min-width: 38px;
-}
-
-.trigger-track {
-  flex: 1;
-  height: 12px;
-  background: var(--color-surface-elevated);
-  border-radius: 6px;
-  overflow: hidden;
-  cursor: ew-resize;
-  position: relative;
-  border: 1px solid var(--color-border);
-  touch-action: none;
-}
-
-.trigger-fill {
-  height: 100%;
-  background: var(--color-cta);
-  border-radius: 5px;
-  transition: width 0.05s ease;
-}
-
-.trigger-value {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  font-family: var(--font-heading);
-  min-width: 28px;
-  text-align: right;
-}
-</style>

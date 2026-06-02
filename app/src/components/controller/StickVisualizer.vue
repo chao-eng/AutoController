@@ -80,12 +80,12 @@ watch(
 </script>
 
 <template>
-  <div class="stick-visualizer">
-    <span v-if="label" class="stick-label">{{ label }}</span>
+  <div class="flex flex-col items-center gap-1">
+    <span v-if="label" class="text-[11px] text-muted-foreground">{{ label }}</span>
     <svg
       :width="containerSize"
       :height="containerSize"
-      class="stick-svg"
+      class="touch-none cursor-pointer select-none"
       @pointerdown="handlePointerDown"
       @pointermove="handlePointerMove"
       @pointerup="handlePointerUp"
@@ -96,14 +96,14 @@ watch(
         :cy="center"
         :r="center - 4"
         fill="none"
-        stroke="var(--color-border)"
+        stroke="oklch(var(--border))"
         stroke-width="1"
       />
       <circle
         :cx="center"
         :cy="center"
         :r="deadzone"
-        fill="var(--color-surface-elevated)"
+        fill="oklch(var(--muted))"
         opacity="0.5"
       />
       <line
@@ -111,7 +111,7 @@ watch(
         :y1="4"
         :x2="center"
         :y2="containerSize - 4"
-        stroke="var(--color-border)"
+        stroke="oklch(var(--border))"
         stroke-width="0.5"
         opacity="0.5"
       />
@@ -120,7 +120,7 @@ watch(
         :y1="center"
         :x2="containerSize - 4"
         :y2="center"
-        stroke="var(--color-border)"
+        stroke="oklch(var(--border))"
         stroke-width="0.5"
         opacity="0.5"
       />
@@ -128,47 +128,14 @@ watch(
         :cx="knobX"
         :cy="knobY"
         :r="knobRadius"
-        fill="var(--color-cta)"
+        fill="oklch(var(--primary))"
         opacity="0.8"
-        class="stick-knob"
+        class="transition-[cx,cy] duration-50"
       />
     </svg>
-    <div class="stick-values">
+    <div class="flex gap-4 font-mono text-[10px] text-muted-foreground">
       <span>X: {{ normalizedX.toFixed(2) }}</span>
       <span>Y: {{ normalizedY.toFixed(2) }}</span>
     </div>
   </div>
 </template>
-
-<style scoped>
-.stick-visualizer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.stick-label {
-  font-size: 11px;
-  color: var(--color-text-dim);
-  font-family: var(--font-heading);
-}
-
-.stick-svg {
-  cursor: pointer;
-  user-select: none;
-  touch-action: none;
-}
-
-.stick-knob {
-  transition: cx 0.05s ease, cy 0.05s ease;
-}
-
-.stick-values {
-  display: flex;
-  gap: var(--space-md);
-  font-size: 10px;
-  color: var(--color-text-dim);
-  font-family: var(--font-heading);
-}
-</style>
