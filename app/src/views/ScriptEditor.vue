@@ -610,9 +610,10 @@ function saveScriptOrder(orderedScripts: any[]) {
   padding: 2px 7px;
   border-radius: 10px;
   cursor: pointer;
-  border: 1px solid oklch(var(--border));
-  background: oklch(var(--surface-elevated));
-  color: oklch(var(--muted-foreground) / 0.6);
+  border: 1px solid var(--border);
+  background: var(--color-surface-elevated);
+  color: var(--muted-foreground);
+  opacity: 0.6;
   transition: all 0.15s ease;
   white-space: nowrap;
   max-width: 80px;
@@ -621,14 +622,16 @@ function saveScriptOrder(orderedScripts: any[]) {
 }
 
 .filter-pill:hover {
-  color: oklch(var(--foreground));
-  border-color: oklch(var(--muted-foreground));
+  opacity: 1;
+  color: var(--foreground);
+  border-color: var(--muted-foreground);
 }
 
 .filter-pill.active {
+  opacity: 1;
   background: rgba(99, 102, 241, 0.15);
-  border-color: oklch(var(--primary));
-  color: oklch(var(--primary));
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .filter-pill.unbound.active {
