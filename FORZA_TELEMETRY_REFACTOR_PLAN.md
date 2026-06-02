@@ -18,28 +18,28 @@
 - [x] `stores/sessions.ts` (Svelte writable/derived → Pinia)
 
 ### 🟢 P2: Forza Telemetry — 纯展示组件（5 文件）
-- [ ] `components/telemetry/SteeringWheel.vue`
-- [ ] `components/telemetry/AttitudeIndicator.vue`
-- [ ] `components/telemetry/GForceMeter.vue`
-- [ ] `components/telemetry/InputBars.vue`
-- [ ] `components/telemetry/TachometerGauge.vue`
+- [x] `components/telemetry/SteeringWheel.vue`
+- [x] `components/telemetry/AttitudeIndicator.vue`
+- [x] `components/telemetry/GForceMeter.vue`
+- [x] `components/telemetry/InputBars.vue`
+- [x] `components/telemetry/TachometerGauge.vue`
 
 ### 🟢 P3: Forza Telemetry — 复合组件（5 文件）
-- [ ] `components/telemetry/TopBar.vue`
-- [ ] `components/telemetry/CompassBar.vue`
-- [ ] `components/telemetry/CenterPanel.vue`
-- [ ] `components/telemetry/TireWidget.vue`
-- [ ] `components/telemetry/LapBar.vue`
+- [x] `components/telemetry/TopBar.vue`
+- [x] `components/telemetry/CompassBar.vue`
+- [x] `components/telemetry/CenterPanel.vue`
+- [x] `components/telemetry/TireWidget.vue`
+- [x] `components/telemetry/LapBar.vue`
 
 ### 🟢 P4: Forza Telemetry — 交互组件（4 文件）
-- [ ] `components/telemetry/FloatingPanel.vue`
-- [ ] `components/telemetry/SessionDrawer.vue`
-- [ ] `components/telemetry/ReplayBar.vue`
-- [ ] `components/telemetry/SettingsDialog.vue`
+- [x] `components/telemetry/FloatingPanel.vue`
+- [x] `components/telemetry/SessionDrawer.vue`
+- [x] `components/telemetry/ReplayBar.vue`
+- [x] `components/telemetry/SettingsDialog.vue`
 
 ### 🟢 P5: Forza Telemetry — 复杂视图（2 文件）
-- [ ] `components/telemetry/SessionViewer.vue`
-- [ ] `components/telemetry/AnalysisTab.vue`
+- [x] `components/telemetry/SessionViewer.vue`
+- [x] `components/telemetry/AnalysisTab.vue`
 
 ### 🟢 P6: Forza Telemetry — 主视图 + 清理（2 文件）
 - [ ] `components/telemetry/ForzaDashboard.vue`
