@@ -42,10 +42,9 @@ a:hover {
   color: var(--color-cta-hover);
 }
 
-button {
+:where(button) {
   cursor: pointer;
   font-family: var(--font-body);
-  border: none;
   outline: none;
   background: none;
 }
