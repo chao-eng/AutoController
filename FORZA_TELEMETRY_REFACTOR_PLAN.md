@@ -10,7 +10,7 @@
 
 ## 状态
 
-### 🟢 P0: 基础设施（1 文件）
+### 🔵 P0: 基础设施（1 文件）
 - [ ] 统一 App.vue / layout 组件的引用，确保 tailwind.css 优先
 
 ### 🟢 P1: Forza Telemetry — Stores（2 文件）
@@ -42,25 +42,25 @@
 - [x] `components/telemetry/AnalysisTab.vue`
 
 ### 🟢 P6: Forza Telemetry — 主视图 + 清理（2 文件）
-- [ ] `components/telemetry/ForzaDashboard.vue`
-- [ ] `views/ForzaTelemetry.vue`（不再 embed Svelte）
-- [ ] 删除所有 `*.svelte` 文件
+- [x] `components/telemetry/ForzaDashboard.vue`
+- [x] `views/ForzaTelemetry.vue`（不再 embed Svelte）
+- [x] 删除所有 `*.svelte` 文件
 
-### 🔵 P7: DeviceMonitor 页（4 文件）
-- [ ] `views/DeviceMonitor.vue` (scoped CSS → Tailwind + shadcn-vue)
-- [ ] `components/controller/DeviceCard.vue`
-- [ ] `components/controller/StickVisualizer.vue`
-- [ ] `components/controller/TriggerBar.vue`
+### 🟢 P7: DeviceMonitor 页（4 文件）
+- [x] `views/DeviceMonitor.vue` (scoped CSS → Tailwind + shadcn-vue)
+- [x] `components/controller/DeviceCard.vue`
+- [x] `components/controller/StickVisualizer.vue`
+- [x] `components/controller/TriggerBar.vue`
 
-### 🔵 P8: ScriptEditor 页（2 文件）
-- [ ] `views/ScriptEditor.vue` (scoped CSS → Tailwind + shadcn-vue)
-- [ ] `components/script/CodeEditor.vue`
+### 🟢 P8: ScriptEditor 页（2 文件）
+- [x] `views/ScriptEditor.vue` (scoped CSS → Tailwind + shadcn-vue)
+- [x] `components/script/CodeEditor.vue`
 
-### 🔵 P9: ConfigPanel 页（1 文件）
-- [ ] `views/ConfigPanel.vue` (scoped CSS → Tailwind + shadcn-vue)
+### 🟢 P9: ConfigPanel 页（1 文件）
+- [x] `views/ConfigPanel.vue` (scoped CSS → Tailwind + shadcn-vue)
 
-### 🔵 P10: TaskScheduler 页（1 文件）
-- [ ] `views/TaskScheduler.vue` (scoped CSS → Tailwind + shadcn-vue)
+### 🟢 P10: TaskScheduler 页（1 文件）
+- [x] `views/TaskScheduler.vue` (scoped CSS → Tailwind + shadcn-vue)
 
 ### 🔵 P11: LogViewer 页（1 文件）
 - [ ] `views/LogViewer.vue` (scoped CSS → Tailwind + shadcn-vue)

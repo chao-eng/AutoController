@@ -5,6 +5,9 @@ import { useMacroStore } from '../stores/macro'
 import { useUIStore } from '../stores/ui'
 import { useConfigStore } from '../stores/config'
 import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link, BookOpen, ChevronLeft, ChevronRight } from '@lucide/vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import CodeEditor from '../components/script/CodeEditor.vue'
 
 const store = useScriptStore()
@@ -315,67 +318,78 @@ function saveScriptOrder(orderedScripts: any[]) {
 </script>
 
 <template>
-  <div class="script-editor-page" :class="{ 'is-recording': macroStore.isRecording }">
-    <div class="page-header">
-      <h2>脚本编辑器</h2>
-      <div class="header-actions">
-        <!-- 捕获录制按钮 -->
-        <button
+  <div :class="['flex h-full flex-col p-6', macroStore.isRecording ? 'is-recording' : '']">
+    <div class="mb-4 flex items-center justify-between">
+      <h2 class="text-lg font-semibold">脚本编辑器</h2>
+      <div class="flex items-center gap-2">
+        <Button
           v-if="!macroStore.isRecording"
-          class="btn-record"
+          variant="destructive"
+          size="sm"
           @click="startMacroRecording"
         >
           <Circle :size="14" fill="currentColor" />
           <span>物理手柄宏录制</span>
-        </button>
-        <button
+        </Button>
+        <Button
           v-else
-          class="btn-stop-record"
+          size="sm"
+          class="animate-pulse-recording border-orange-500/40 bg-orange-500/15 text-orange-600 hover:bg-orange-500/25 dark:text-orange-400"
           @click="stopMacroRecording"
         >
           <Square :size="14" fill="currentColor" />
           <span>停止录制</span>
-        </button>
+        </Button>
 
-        <button class="btn-primary" @click="createNewScript" :disabled="macroStore.isRecording">
+        <Button variant="default" size="sm" @click="createNewScript" :disabled="macroStore.isRecording">
           <Plus :size="14" />
           <span>新建</span>
-        </button>
-        <button class="btn-secondary" @click="saveScript" :disabled="!store.currentScript || macroStore.isRecording">
+        </Button>
+        <Button variant="outline" size="sm" @click="saveScript" :disabled="!store.currentScript || macroStore.isRecording">
           <Save :size="14" />
           <span>保存</span>
-        </button>
-        <button
-          class="btn-run"
-          :class="{ 'btn-stop': store.executing }"
+        </Button>
+        <Button
+          :variant="store.executing ? 'destructive' : 'default'"
+          size="sm"
           @click="runScript"
           :disabled="!store.currentScript || macroStore.isRecording"
         >
           <Play :size="14" />
           <span>{{ store.executing ? '停止' : '运行' }}</span>
-        </button>
+        </Button>
         <div
           v-if="store.executionStatus !== 'idle'"
-          class="execution-status"
-          :class="store.executionStatus"
+          :class="[
+            'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium animate-fadeIn shrink-0',
+            store.executionStatus === 'running' ? 'bg-blue-500/12 text-blue-400' : '',
+            store.executionStatus === 'success' ? 'bg-green-500/12 text-green-400' : '',
+            store.executionStatus === 'error' ? 'bg-red-500/12 text-red-400' : '',
+          ]"
         >
-          <span class="status-dot"></span>
-          <span class="status-text">{{ store.executionMessage }}</span>
+          <span
+            :class="[
+              'h-1.5 w-1.5 shrink-0 rounded-full',
+              store.executionStatus === 'running' ? 'bg-blue-400 animate-pulse' : '',
+              store.executionStatus === 'success' ? 'bg-green-400' : '',
+              store.executionStatus === 'error' ? 'bg-red-400' : '',
+            ]"
+          ></span>
+          <span class="max-w-[240px] truncate whitespace-nowrap">{{ store.executionMessage }}</span>
         </div>
       </div>
     </div>
 
-    <div class="editor-layout">
-      <div class="script-list-panel">
-        <input
+    <div class="flex min-h-0 flex-1 gap-4">
+      <div class="flex w-[260px] min-w-[260px] flex-col gap-2 overflow-hidden rounded-lg border border-border bg-surface p-2">
+        <Input
           v-model="newScriptName"
-          class="input"
           placeholder="脚本名称"
           :disabled="macroStore.isRecording"
+          class="shrink-0 text-xs"
         />
 
-        <!-- Profile 分类过滤 -->
-        <div class="profile-filter">
+        <div class="flex shrink-0 flex-wrap gap-1">
           <button
             class="filter-pill"
             :class="{ active: profileFilter === '' }"
@@ -396,13 +410,17 @@ function saveScriptOrder(orderedScripts: any[]) {
           >未绑定</button>
         </div>
 
-        <div class="script-list" @dragover.prevent>
-          <div v-if="filteredScripts.length === 0" class="list-empty">无匹配脚本</div>
+        <div class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto" @dragover.prevent>
+          <div v-if="filteredScripts.length === 0" class="py-4 text-center text-[11px] text-muted-foreground/60">无匹配脚本</div>
           <div
             v-for="(script, index) in filteredScripts"
             :key="script.id"
-            class="script-item"
-            :class="{ active: store.currentScript?.id === script.id, disabled: macroStore.isRecording, bound: !!scriptProfileMap[script.id], 'drag-over': dragOverIndex === index }"
+            :class="[
+              'flex items-center justify-between rounded px-2 py-1 transition-colors select-none',
+              store.currentScript?.id === script.id ? 'bg-green-500/10 text-green-500' : '',
+              macroStore.isRecording ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+              dragOverIndex === index ? 'border border-dashed border-primary bg-primary/5' : '',
+            ]"
             draggable="true"
             @dragstart="handleDragStart(index, $event)"
             @dragover.prevent="handleDragOver(index, $event)"
@@ -415,20 +433,24 @@ function saveScriptOrder(orderedScripts: any[]) {
               <input
                 ref="editInput"
                 v-model="editingScriptName"
-                class="edit-name-input"
+                class="w-full rounded-sm border border-primary bg-surface-elevated px-1.5 py-0.5 text-xs text-text outline-none"
                 @keydown.enter="saveScriptName(script.id)"
                 @blur="saveScriptName(script.id)"
                 @click.stop
               />
             </template>
             <template v-else>
-              <div class="script-name-row" draggable="false">
-                <span class="drag-handle" title="按住拖拽排序" draggable="false">☰</span>
-                <span class="script-name" @dblclick="!macroStore.isRecording && startRename(script)" draggable="false">{{ script.name }}</span>
-                <!-- 已绑定徽章 + 浮动 Tooltip -->
+              <div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden" draggable="false">
+                <span class="cursor-grab pr-1 text-[13px] text-muted-foreground/60 select-none active:cursor-grabbing" title="按住拖拽排序" draggable="false">☰</span>
+                <span
+                  class="min-w-0 flex-1 truncate text-xs text-muted-foreground"
+                  :class="store.currentScript?.id === script.id ? 'text-green-500' : ''"
+                  @dblclick="!macroStore.isRecording && startRename(script)"
+                  draggable="false"
+                >{{ script.name }}</span>
                 <span
                   v-if="scriptProfileMap[script.id]"
-                  class="bound-badge"
+                  class="inline-flex h-3.5 w-3.5 shrink-0 cursor-default items-center justify-center rounded-full bg-indigo-500/20 text-primary"
                   @mouseenter="showTooltip($event, '绑定于: ' + scriptProfileMap[script.id].join(', '))"
                   @mousemove="moveTooltip"
                   @mouseleave="hideTooltip"
@@ -437,132 +459,140 @@ function saveScriptOrder(orderedScripts: any[]) {
                   <Link :size="9" />
                 </span>
               </div>
-              <div class="script-item-actions">
-                <button class="icon-btn" @click.stop="!macroStore.isRecording && startRename(script)" :disabled="macroStore.isRecording" title="重命名">
+              <div class="hidden items-center gap-0.5 shrink-0 group-hover/script-item:flex">
+                <Button variant="ghost" size="icon-xs" :disabled="macroStore.isRecording" title="重命名" @click.stop="!macroStore.isRecording && startRename(script)">
                   <Edit2 :size="12" />
-                </button>
-                <button class="icon-btn danger" @click.stop="!macroStore.isRecording && deleteScript(script.id)" :disabled="macroStore.isRecording" title="删除">
+                </Button>
+                <Button variant="ghost" size="icon-xs" class="hover:text-destructive hover:bg-destructive/15" :disabled="macroStore.isRecording" title="删除" @click.stop="!macroStore.isRecording && deleteScript(script.id)">
                   <Trash2 :size="12" />
-                </button>
+                </Button>
               </div>
             </template>
           </div>
         </div>
       </div>
 
-      <div class="editor-panel">
+      <div class="min-w-0 flex-1">
         <CodeEditor v-model="editorCode" :activeLine="store.activeLine" @save="saveScript" />
       </div>
 
-      <div class="api-panel" :class="{ 'collapsed': apiPanelCollapsed }">
-        <div class="api-header" @click="handleApiPanelClick">
-          <div class="api-title-container">
+      <div
+        :class="[
+          'relative flex flex-col overflow-y-auto rounded-lg border border-border bg-surface p-4 transition-all duration-300',
+          apiPanelCollapsed ? 'w-12 min-w-12 cursor-pointer overflow-hidden px-1 hover:border-primary hover:bg-surface-elevated' : 'w-[260px] min-w-[260px]'
+        ]"
+        @click="handleApiPanelClick"
+      >
+        <div :class="['flex shrink-0 select-none items-center justify-between', apiPanelCollapsed ? 'mb-0 h-full flex-col gap-4 justify-start' : 'mb-4']">
+          <div :class="['flex items-center gap-1 text-text', apiPanelCollapsed ? 'mt-1 flex-col' : '']">
             <BookOpen :size="14" />
-            <h4 v-if="!apiPanelCollapsed" class="api-title">API参考</h4>
-            <span v-else class="api-title-vertical">API参考</span>
+            <h4 v-if="!apiPanelCollapsed" class="m-0 text-xs font-semibold text-text">API参考</h4>
+            <span v-else class="mt-2 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[4px] text-muted-foreground/60" style="writing-mode: vertical-lr">API参考</span>
           </div>
-          <button class="collapse-icon-btn" @click.stop="toggleApiPanel" :title="apiPanelCollapsed ? '展开API参考' : '折叠API参考'">
+          <button
+            class="flex h-5 w-5 items-center justify-center rounded-sm text-muted-foreground/70 opacity-70 transition-all hover:opacity-100 hover:bg-white/8 hover:text-text"
+            @click.stop="toggleApiPanel"
+            :title="apiPanelCollapsed ? '展开API参考' : '折叠API参考'"
+          >
             <ChevronRight :size="14" v-if="!apiPanelCollapsed" />
             <ChevronLeft :size="14" v-else />
           </button>
         </div>
-        <div class="api-content" v-show="!apiPanelCollapsed">
-          <div class="api-section">
-            <h5>指定默认手柄 (首选)</h5>
-            <code>set_default_device(0);</code>
-            <code>// 在脚本最上方指定默认手柄后</code>
-            <code>// 下面所有函数均可省略手柄编号！</code>
+        <div v-show="!apiPanelCollapsed" class="flex flex-1 flex-col overflow-y-auto">
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">指定默认手柄 (首选)</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">set_default_device(0);</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">// 在脚本最上方指定默认手柄后</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">// 下面所有函数均可省略手柄编号！</code>
           </div>
-          <div class="api-section">
-            <h5>按键操作</h5>
-            <code>press("A"); // 默认手柄</code>
-            <code>press(0, "A"); // 指定手柄</code>
-            <code>release("A");</code>
-            <code>按键: A B X Y LB RB LT RT</code>
-            <code>BACK START GUIDE LS RS</code>
-            <code>UP DOWN LEFT RIGHT</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">按键操作</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">press("A"); // 默认手柄</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">press(0, "A"); // 指定手柄</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">release("A");</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">按键: A B X Y LB RB LT RT</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">BACK START GUIDE LS RS</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">UP DOWN LEFT RIGHT</code>
           </div>
-          <div class="api-section">
-            <h5>摇杆 (-1.0 ~ 1.0)</h5>
-            <code>set_thumb(axis, val);</code>
-            <code>set_thumb(0, axis, val);</code>
-            <code>set_thumb("LeftX", 1.0);</code>
-            <code>axis: LeftX LeftY RightX RightY</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">摇杆 (-1.0 ~ 1.0)</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">set_thumb(axis, val);</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">set_thumb(0, axis, val);</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">set_thumb("LeftX", 1.0);</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">axis: LeftX LeftY RightX RightY</code>
           </div>
-          <div class="api-section">
-            <h5>扳机 (0.0 ~ 1.0)</h5>
-            <code>set_trigger(side, val);</code>
-            <code>set_trigger(0, side, val);</code>
-            <code>set_trigger("Left", 0.5);</code>
-            <code>side: Left Right</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">扳机 (0.0 ~ 1.0)</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">set_trigger(side, val);</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">set_trigger(0, side, val);</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">set_trigger("Left", 0.5);</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">side: Left Right</code>
           </div>
-          <div class="api-section">
-            <h5>OCR 屏幕文本识别</h5>
-            <code>ocr() // 默认标定区 #1 识别</code>
-            <code>ocr(index) // 读取标定区序号并识别</code>
-            <code>ocr(x, y, w, h) // 指定屏幕区域识别</code>
-            <code>// 亚像素 ClearType 级别高清对齐</code>
-            <code>// 深色模式智能自适应反色</code>
-            <code>// 自动过滤空格/换行，方便字符判定</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">OCR 屏幕文本识别</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">ocr() // 默认标定区 #1 识别</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">ocr(index) // 读取标定区序号并识别</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">ocr(x, y, w, h) // 指定屏幕区域识别</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">// 亚像素 ClearType 级别高清对齐</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">// 深色模式智能自适应反色</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">// 自动过滤空格/换行，方便字符判定</code>
           </div>
-          <div class="api-section">
-            <h5>字符串模糊判断与匹配</h5>
-            <code>let text = ocr(1);</code>
-            <code>text.contains("确定") // 模糊匹配</code>
-            <code>text.is_empty() // 是否为空字串</code>
-            <code>text == "开始游戏" // 精确相等比较</code>
-            <code>text.len // 获取识别字数 (属性)</code>
-            <code>text.to_int() // 字符串转为整数</code>
-            <code>log("结果: " + text); // 拼接输出</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">字符串模糊判断与匹配</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">let text = ocr(1);</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">text.contains("确定") // 模糊匹配</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">text.is_empty() // 是否为空字串</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">text == "开始游戏" // 精确相等比较</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">text.len // 获取识别字数 (属性)</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">text.to_int() // 字符串转为整数</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">log("结果: " + text); // 拼接输出</code>
           </div>
-          <div class="api-section">
-            <h5>延时与日志</h5>
-            <code>sleep(ms);</code>
-            <code>log("message");</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">延时与日志</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">sleep(ms);</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">log("message");</code>
           </div>
-          <div class="api-section">
-            <h5>变量与运算</h5>
-            <code>let x = 10;</code>
-            <code>let name = "hello";</code>
-            <code>let flag = true;</code>
-            <code>+ - * / % 比较运算</code>
-            <code>== != &lt; &gt; &lt;= &gt;=</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">变量与运算</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">let x = 10;</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">let name = "hello";</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">let flag = true;</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">+ - * / % 比较运算</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">== != &lt; &gt; &lt;= &gt;=</code>
           </div>
-          <div class="api-section">
-            <h5>条件判断</h5>
-            <code>if x &gt; 5 { ... }</code>
-            <code>if x &gt; 5 { ... }</code>
-            <code>else { ... }</code>
-            <code>if x == 1 { ... }</code>
-            <code>else if x == 2 { ... }</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">条件判断</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">if x &gt; 5 { ... }</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">else { ... }</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">if x == 1 { ... }</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">else if x == 2 { ... }</code>
           </div>
-          <div class="api-section">
-            <h5>循环</h5>
-            <code>while flag { ... }</code>
-            <code>loop { ... break; }</code>
-            <code>for i in 0..10 { ... }</code>
-            <code>break / continue</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">循环</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">while flag { ... }</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">loop { ... break; }</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">for i in 0..10 { ... }</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">break / continue</code>
           </div>
-          <div class="api-section">
-            <h5>函数</h5>
-            <code>fn add(a, b) {</code>
-            <code>  return a + b;</code>
-            <code>}</code>
-            <code>add(1, 2)</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">函数</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">fn add(a, b) {</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">  return a + b;</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">}</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">add(1, 2)</code>
           </div>
-          <div class="api-section">
-            <h5>数组与对象</h5>
-            <code>let arr = [1, 2, 3];</code>
-            <code>arr[0] // 访问</code>
-            <code>arr.push(4);</code>
-            <code>let obj = #{a: 1};</code>
-            <code>obj.a // 访问</code>
+          <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">数组与对象</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">let arr = [1, 2, 3];</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">arr[0] // 访问</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">arr.push(4);</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">let obj = #{a: 1};</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">obj.a // 访问</code>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 浮动 Tooltip 层，挂在根元素内，不受 overflow:hidden 影响 -->
     <teleport to="body">
       <div
         v-if="tooltipVisible"
@@ -574,198 +604,16 @@ function saveScriptOrder(orderedScripts: any[]) {
 </template>
 
 <style scoped>
-.script-editor-page {
-  padding: var(--space-lg);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-md);
-}
-
-.page-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.btn-primary,
-.btn-secondary,
-.btn-run {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-primary {
-  background: var(--color-cta);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: var(--color-cta-hover);
-}
-
-.btn-secondary {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.btn-secondary:hover {
-  border-color: var(--color-cta);
-}
-
-.btn-run {
-  background: var(--color-info);
-  color: white;
-}
-
-.btn-run:hover {
-  opacity: 0.9;
-}
-
-.btn-run.btn-stop {
-  background: var(--color-error);
-}
-
-.execution-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 500;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.execution-status.running {
-  background: rgba(59, 130, 246, 0.12);
-  color: #60a5fa;
-}
-
-.execution-status.success {
-  background: rgba(34, 197, 94, 0.12);
-  color: #4ade80;
-}
-
-.execution-status.error {
-  background: rgba(239, 68, 68, 0.12);
-  color: #f87171;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.execution-status.running .status-dot {
-  background: #60a5fa;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.execution-status.success .status-dot {
-  background: #4ade80;
-}
-
-.execution-status.error .status-dot {
-  background: #f87171;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-.status-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 240px;
-}
-
-.btn-primary:disabled,
-.btn-secondary:disabled,
-.btn-run:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.editor-layout {
-  flex: 1;
-  display: flex;
-  gap: var(--space-md);
-  min-height: 0;
-}
-
-.script-list-panel {
-  width: 260px;
-  min-width: 260px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-sm);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  overflow: hidden;
-}
-
-.input {
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text);
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-.input:focus {
-  border-color: var(--color-cta);
-}
-
-/* Profile 分类过滤 */
-.profile-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
 .filter-pill {
   font-size: 10px;
   font-weight: 500;
   padding: 2px 7px;
   border-radius: 10px;
   cursor: pointer;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-elevated);
-  color: var(--color-text-dim);
-  transition: all var(--transition-fast);
+  border: 1px solid oklch(var(--border));
+  background: oklch(var(--surface-elevated));
+  color: oklch(var(--muted-foreground) / 0.6);
+  transition: all 0.15s ease;
   white-space: nowrap;
   max-width: 80px;
   overflow: hidden;
@@ -773,14 +621,14 @@ function saveScriptOrder(orderedScripts: any[]) {
 }
 
 .filter-pill:hover {
-  color: var(--color-text);
-  border-color: var(--color-text-dim);
+  color: oklch(var(--foreground));
+  border-color: oklch(var(--muted-foreground));
 }
 
 .filter-pill.active {
   background: rgba(99, 102, 241, 0.15);
-  border-color: var(--color-cta);
-  color: var(--color-cta);
+  border-color: oklch(var(--primary));
+  color: oklch(var(--primary));
 }
 
 .filter-pill.unbound.active {
@@ -789,362 +637,30 @@ function saveScriptOrder(orderedScripts: any[]) {
   color: #f59e0b;
 }
 
-.list-empty {
-  font-size: 11px;
-  color: var(--color-text-dim);
-  text-align: center;
-  padding: var(--space-md);
+.is-recording .min-w-0.flex-1:first-of-type,
+.is-recording [class*="w-\\[260px\\]"]:last-of-type {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
-.script-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.script-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--transition-fast);
-  position: relative;
-  user-select: none; /* 防止文本选择干扰拖拽 */
-}
-
-.script-item-actions {
-  display: none; /* 默认隐藏，让脚本名称铺满整行 */
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.script-item:hover .script-item-actions {
-  display: flex; /* 悬浮时显示操作按钮 */
-}
-
-.edit-name-input {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-cta);
-  color: var(--color-text);
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  width: 100%;
-  outline: none;
-  font-family: inherit;
-}
-
-.script-item:hover {
-  background: var(--color-surface-elevated);
-}
-
-.script-item.active {
-  background: rgba(34, 197, 94, 0.1);
-  color: var(--color-cta);
-}
-
-.script-name-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.script-name {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
-
-.script-item.active .script-name {
-  color: var(--color-cta);
-}
-
-/* 已绑定徽章 + Tooltip */
-.bound-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: rgba(99, 102, 241, 0.2);
-  color: var(--color-cta);
-  flex-shrink: 0;
-  position: relative;
-  cursor: default;
-}
-
-.icon-btn {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-dim);
-  cursor: pointer;
-  opacity: 0.7; /* 默认轻微半透明 */
-  transition: all var(--transition-fast);
-}
-
-.icon-btn:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.icon-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--color-error);
-}
-
-.editor-panel {
-  flex: 1;
-  min-width: 0;
-}
-
-.code-editor {
-  width: 100%;
-  height: 100%;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-  color: var(--color-text);
-  font-family: var(--font-heading);
-  font-size: 13px;
-  line-height: 1.6;
-  resize: none;
-  tab-size: 2;
-}
-
-.code-editor:focus {
-  border-color: var(--color-cta);
-}
-
-.api-panel {
-  width: 260px;
-  min-width: 260px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-  overflow-y: auto;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
-.api-panel.collapsed {
-  width: 48px;
-  min-width: 48px;
-  padding: var(--space-md) var(--space-xs);
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.api-panel.collapsed:hover {
-  background: var(--color-surface-elevated);
-  border-color: var(--color-cta);
-}
-
-.api-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-md);
-  user-select: none;
-  flex-shrink: 0;
-}
-
-.api-panel.collapsed .api-header {
-  flex-direction: column;
-  gap: var(--space-md);
-  margin-bottom: 0;
-  height: 100%;
-  justify-content: flex-start;
-}
-
-.api-title-container {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  color: var(--color-text);
-}
-
-.api-panel.collapsed .api-title-container {
-  flex-direction: column;
-  margin-top: var(--space-xs);
-}
-
-.api-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.api-title-vertical {
-  writing-mode: vertical-lr;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-dim);
-  letter-spacing: 4px;
-  margin-top: var(--space-sm);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.collapse-icon-btn {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-dim);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  opacity: 0.7;
-}
-
-.collapse-icon-btn:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text);
-}
-
-.api-content {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.api-section {
-  margin-bottom: var(--space-md);
-}
-
-.api-section h5 {
-  font-size: 11px;
-  color: var(--color-cta);
-  margin-bottom: var(--space-xs);
-}
-
-.api-section code {
-  display: block;
-  font-size: 11px;
-  color: var(--color-text-muted);
-  font-family: var(--font-heading);
-  padding: 2px 0;
-}
-
-.btn-record {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  background: var(--color-error);
-  color: white;
-}
-
-.btn-record:hover {
-  opacity: 0.9;
-  transform: translateY(-0.5px);
-}
-
-.btn-stop-record {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  background: var(--color-warning);
-  color: var(--color-primary);
-  animation: pulse-recording 1.5s infinite;
-}
-
-.btn-stop-record:hover {
-  opacity: 0.9;
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease;
 }
 
 @keyframes pulse-recording {
-  0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-  }
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
-.script-item.disabled {
-  opacity: 0.5;
-  cursor: not-allowed !important;
+.animate-pulse-recording {
+  animation: pulse-recording 1.5s infinite;
 }
-
-.script-editor-page.is-recording .editor-panel {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.script-editor-page.is-recording .api-panel {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.script-item {
-  cursor: pointer;
-}
-
-.script-item.active {
-  cursor: pointer;
-}
-
-.script-item.drag-over {
-  border: 1px dashed var(--color-cta) !important;
-  background: rgba(34, 197, 94, 0.05) !important;
-}
-
-.drag-handle {
-  color: var(--color-text-dim);
-  cursor: grab;
-  font-size: 13px;
-  user-select: none;
-  padding-right: 4px;
-}
-
-.drag-handle:active {
-  cursor: grabbing;
-}
-
-
 </style>
 
 <!-- 全局样式：teleport 层不受 scoped 应用，必须单独一个非 scoped 块 -->

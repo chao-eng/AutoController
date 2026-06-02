@@ -385,39 +385,18 @@ watch(
 </script>
 
 <template>
-  <div class="monaco-wrapper">
-    <div ref="containerRef" class="monaco-container"></div>
+  <div class="relative h-full w-full overflow-hidden rounded-lg border border-border bg-surface">
+    <div ref="containerRef" class="absolute inset-0 h-full w-full"></div>
   </div>
 </template>
 
-<style scoped>
-.monaco-wrapper {
-  width: 100%;
-  height: 100%;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--color-surface);
-  position: relative;
-}
-
-.monaco-container {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-
-:deep(.active-execution-line) {
+<style>
+.active-execution-line {
   background: rgba(34, 197, 94, 0.12) !important;
-  border-left: 3px solid var(--color-cta) !important;
+  border-left: 3px solid oklch(var(--primary)) !important;
 }
 
-:deep(.active-execution-line-margin) {
+.active-execution-line-margin {
   background: rgba(34, 197, 94, 0.2) !important;
   font-weight: bold;
 }

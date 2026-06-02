@@ -9,6 +9,15 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { onUnmounted } from 'vue'
 import type { Script } from '../types/script'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 
 const store = useConfigStore()
 const scriptStore = useScriptStore()
@@ -410,272 +419,230 @@ function importBackup(event: Event) {
 </script>
 
 <template>
-  <div class="config-panel">
-    <div class="page-header">
-      <h2>参数配置</h2>
+  <div class="h-full overflow-y-auto p-6">
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold">参数配置</h2>
     </div>
 
-    <div class="config-sections">
+    <div class="flex flex-col gap-6 max-w-2xl">
       <!-- 通用设置 -->
-      <section class="config-section">
-        <h3>通用设置</h3>
-        <div class="config-item">
-          <label>开机自启动</label>
-          <input type="checkbox" v-model="store.config.auto_start" />
-        </div>
-        <div class="config-item">
-          <label>最小化到托盘</label>
-          <input type="checkbox" v-model="store.config.minimize_to_tray" />
-        </div>
-        <div class="config-item">
-          <label>日志级别</label>
-          <select v-model="store.config.log_level" class="input">
-            <option value="trace">Trace</option>
-            <option value="debug">Debug</option>
-            <option value="info">Info</option>
-            <option value="warn">Warn</option>
-            <option value="error">Error</option>
-          </select>
-        </div>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm border-l-[3px] border-primary pl-2">通用设置</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-3">
+          <div class="flex items-center justify-between py-2 border-b border-border/30">
+            <Label class="text-xs text-muted-foreground">开机自启动</Label>
+            <Checkbox v-model:checked="store.config.auto_start" />
+          </div>
+          <div class="flex items-center justify-between py-2 border-b border-border/30">
+            <Label class="text-xs text-muted-foreground">最小化到托盘</Label>
+            <Checkbox v-model:checked="store.config.minimize_to_tray" />
+          </div>
+          <div class="flex items-center justify-between py-2">
+            <Label class="text-xs text-muted-foreground">日志级别</Label>
+            <Select v-model="store.config.log_level">
+              <SelectTrigger class="w-[130px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="trace">Trace</SelectItem>
+                <SelectItem value="debug">Debug</SelectItem>
+                <SelectItem value="info">Info</SelectItem>
+                <SelectItem value="warn">Warn</SelectItem>
+                <SelectItem value="error">Error</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       <!-- 数据备份与恢复 -->
-      <section class="config-section">
-        <h3>数据备份与恢复</h3>
-        <div class="backup-info">
-          <p class="backup-desc">一键将程序的所有配置（含识别引擎）、宏录制数据、自定义脚本及定时任务打包备份为单 JSON 文件，或从备份文件还原全部数据资产。</p>
-        </div>
-        <div class="backup-actions">
-          <button class="action-btn primary-btn backup-btn" @click="exportBackup" title="导出打包备份数据">
-            💾 备份全部数据
-          </button>
-          <button class="action-btn text-btn restore-btn" @click="triggerImportBackup" title="导入备份并恢复数据">
-            📂 导入恢复数据
-          </button>
-          <input type="file" ref="backupFileInput" @change="importBackup" accept=".json" class="hidden-input" />
-        </div>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm border-l-[3px] border-primary pl-2">数据备份与恢复</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-3">
+          <CardDescription class="text-xs leading-relaxed">
+            一键将程序的所有配置（含识别引擎）、宏录制数据、自定义脚本及定时任务打包备份为单 JSON 文件，或从备份文件还原全部数据资产。
+          </CardDescription>
+          <div class="flex items-center gap-2">
+            <Button variant="default" size="sm" @click="exportBackup" title="导出打包备份数据">
+              💾 备份全部数据
+            </Button>
+            <Button variant="outline" size="sm" @click="triggerImportBackup" title="导入备份并恢复数据">
+              📂 导入恢复数据
+            </Button>
+            <input type="file" ref="backupFileInput" @change="importBackup" accept=".json" class="hidden-input" />
+          </div>
+        </CardContent>
+      </Card>
 
       <!-- OCR 区域标定 -->
-      <section class="config-section">
-        <h3>OCR 自动化配置</h3>
-        
-        <div class="ocr-engine-selector">
-          <div class="config-item">
-            <label>OCR 识别引擎</label>
-            <select v-model="store.config.ocr_engine" class="input">
-              <option value="winocr">Windows 原生 (WinRT OCR)</option>
-              <option value="paddleocr">内置 PaddleOCR (极速本地引擎)</option>
-            </select>
+      <Card>
+        <CardHeader>
+          <CardTitle class="text-sm border-l-[3px] border-primary pl-2">OCR 自动化配置</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-4">
+          <div class="flex items-center justify-between py-2 border-b border-border/30">
+            <Label class="text-xs text-muted-foreground">OCR 识别引擎</Label>
+            <Select v-model="store.config.ocr_engine">
+              <SelectTrigger class="w-[230px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="winocr">Windows 原生 (WinRT OCR)</SelectItem>
+                <SelectItem value="paddleocr">内置 PaddleOCR (极速本地引擎)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div v-if="store.config.ocr_engine === 'paddleocr'" class="ocr-native-badge">
-            <span class="badge-icon">⚡</span>
-            <span class="badge-text">已启用内置 PaddleOCR V4 本地推理引擎（免配置，零延迟，100% 离线）</span>
+          <div v-if="store.config.ocr_engine === 'paddleocr'" class="flex items-center gap-1.5 text-xs text-muted-foreground bg-primary/5 rounded-md px-3 py-2">
+            <span>⚡</span>
+            <span>已启用内置 PaddleOCR V4 本地推理引擎（免配置，零延迟，100% 离线）</span>
           </div>
-        </div>
 
-        <div class="ocr-container-group">
-          <!-- 区域列表 -->
-          <div class="ocr-regions-list">
-            <div 
-              v-for="(region, idx) in (store.config.ocr_regions || [])" 
-              :key="idx" 
-              class="ocr-config-card"
-            >
-              <div class="ocr-status-group">
-                <div class="ocr-label-group">
-                  <span class="ocr-title">OCR 识别区 #{{ idx + 1 }}</span>
-                  <span class="ocr-status-badge active">🎯 已标定</span>
+          <div class="space-y-3">
+            <div v-for="(region, idx) in (store.config.ocr_regions || [])" :key="idx" class="flex items-center justify-between bg-muted/30 border border-border rounded-lg p-3">
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold">OCR 识别区 #{{ idx + 1 }}</span>
+                  <Badge variant="secondary" class="text-[10px] h-5">🎯 已标定</Badge>
                 </div>
-                <div class="ocr-coords">
-                  <span class="coord-tag">X: {{ region.x }}</span>
-                  <span class="coord-tag">Y: {{ region.y }}</span>
-                  <span class="coord-tag">W: {{ region.w }}</span>
-                  <span class="coord-tag">H: {{ region.h }}</span>
+                <div class="flex gap-1.5">
+                  <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">X: {{ region.x }}</span>
+                  <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">Y: {{ region.y }}</span>
+                  <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">W: {{ region.w }}</span>
+                  <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">H: {{ region.h }}</span>
                 </div>
-                <div class="ocr-hint-code">
-                  脚本调用: <code>ocr({{ idx + 1 }})</code>
+                <div class="text-[11px] text-muted-foreground">
+                  脚本调用: <code class="bg-muted/50 text-primary px-1 rounded font-mono text-[11px]">ocr({{ idx + 1 }})</code>
                 </div>
               </div>
-              
-              <div class="ocr-actions">
-                <button 
-                  class="action-btn text-btn delete-btn-simple" 
-                  @click="clearOcrRegion(idx + 1)" 
-                  title="清除此标定区域"
-                >
-                  删除
-                </button>
-                <button 
-                  class="action-btn primary-btn ocr-btn-recal" 
-                  @click="startOcrCalibration(idx + 1)" 
-                  title="重新框选此标定区"
-                >
-                  重新标定
-                </button>
+              <div class="flex gap-2">
+                <Button variant="outline" size="sm" class="h-7 text-xs" @click="clearOcrRegion(idx + 1)" title="清除此标定区域">删除</Button>
+                <Button variant="default" size="sm" class="h-7 text-xs" @click="startOcrCalibration(idx + 1)" title="重新框选此标定区">重新标定</Button>
               </div>
             </div>
-          </div>
 
-          <!-- 无配置占位图 -->
-          <div v-if="!(store.config.ocr_regions && store.config.ocr_regions.length > 0)" class="ocr-empty-placeholder">
-            <span class="ocr-empty-text">⚠️ 尚未标定任何 OCR 识别区</span>
-            <span class="ocr-empty-desc">配置后即可在 Rhai 脚本中通过 <code>ocr()</code> 或 <code>ocr(序号)</code> 高效读取屏幕文字。</span>
-          </div>
+            <div v-if="!(store.config.ocr_regions && store.config.ocr_regions.length > 0)" class="flex flex-col items-center gap-1 py-6 border border-dashed border-border rounded-lg text-center">
+              <span class="text-sm font-semibold text-muted-foreground">⚠️ 尚未标定任何 OCR 识别区</span>
+              <span class="text-[11px] text-muted-foreground/70">配置后即可在 Rhai 脚本中通过 <code class="bg-muted/50 text-primary px-1 rounded font-mono">ocr()</code> 或 <code class="bg-muted/50 text-primary px-1 rounded font-mono">ocr(序号)</code> 高效读取屏幕文字。</span>
+            </div>
 
-          <!-- 添加新区域按钮 -->
-          <div class="ocr-add-container">
-            <button 
-              class="action-btn primary-btn ocr-btn" 
-              @click="startOcrCalibration()" 
-              title="添加一个新的屏幕框选识别区"
-            >
-              ➕ 添加标定区 (#{{ (store.config.ocr_regions || []).length + 1 }})
-            </button>
+            <div class="flex justify-end">
+              <Button variant="default" size="sm" @click="startOcrCalibration()" title="添加一个新的屏幕框选识别区">
+                ➕ 添加标定区 (#{{ (store.config.ocr_regions || []).length + 1 }})
+              </Button>
+            </div>
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <!-- Profile管理 -->
-      <section class="config-section">
-        <div class="section-header">
-          <h3>Profile管理</h3>
-          <div class="header-actions">
-            <button class="action-btn text-btn" @click="triggerImport" title="导入Profile配置文件">
+      <Card>
+        <CardHeader class="flex flex-row items-center justify-between">
+          <CardTitle class="text-sm border-l-[3px] border-primary pl-2">Profile管理</CardTitle>
+          <div class="flex items-center gap-2">
+            <Button variant="outline" size="sm" @click="triggerImport" title="导入Profile配置文件">
               <Upload :size="13" /> 导入
-            </button>
-            <button class="action-btn primary-btn" @click="openCreateModal" title="新建游戏手柄Profile配置">
+            </Button>
+            <Button variant="default" size="sm" @click="openCreateModal" title="新建游戏手柄Profile配置">
               <Plus :size="13" /> 创建 Profile
-            </button>
+            </Button>
             <input type="file" ref="fileInput" @change="handleImport" accept=".json" class="hidden-input" />
           </div>
-        </div>
+        </CardHeader>
+        <CardContent>
+          <div v-if="store.config.profiles.length === 0" class="text-center text-xs text-muted-foreground py-8 border border-dashed border-border rounded-md">
+            暂无 Profile，点击上方按钮创建
+          </div>
 
-        <div v-if="store.config.profiles.length === 0" class="empty-state">
-          暂无 Profile，点击上方按钮创建
-        </div>
-
-        <div v-else class="profile-list">
-          <div 
-            v-for="profile in store.config.profiles" 
-            :key="profile.id" 
-            class="profile-card" 
-          >
-            <div class="profile-icon">
-              <Gamepad :size="18" />
-            </div>
-            
-            <div class="profile-main">
-              <div class="profile-title">
-                <h4>{{ profile.name }}</h4>
-                <span class="controller-badge xbox360">Xbox 360</span>
+          <div v-else class="space-y-1.5">
+            <div v-for="profile in store.config.profiles" :key="profile.id" class="flex items-center gap-3 p-3 bg-muted/30 border border-border rounded-lg hover:-translate-y-0.5 hover:border-muted-foreground/50 hover:shadow-md transition-all">
+              <div class="flex items-center justify-center size-9 bg-muted/30 rounded text-muted-foreground shrink-0">
+                <Gamepad :size="18" />
               </div>
-              <div class="profile-meta">
-                <p class="profile-process">{{ profile.game_process }}</p>
-                <span v-if="profile.scripts.length > 0" class="script-badge">
-                  <FileCode2 :size="10" /> 脚本 ×{{ profile.scripts.length }}
-                </span>
-              </div>
-            </div>
 
-            <div class="profile-actions">
-              <button 
-                class="icon-btn script-btn" 
-                title="管理绑定脚本" 
-                @click="openScriptModal(profile)"
-              >
-                <FileCode2 :size="14" />
-              </button>
-              <button 
-                class="icon-btn" 
-                title="导出配置文件 (JSON)" 
-                @click="handleExportProfile(profile)"
-              >
-                <Download :size="14" />
-              </button>
-              <button 
-                class="icon-btn delete-btn" 
-                title="删除此 Profile" 
-                @click="handleDeleteProfile(profile.id)"
-              >
-                <Trash2 :size="14" />
-              </button>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <h4 class="text-sm font-semibold m-0">{{ profile.name }}</h4>
+                  <Badge variant="secondary" class="text-[10px] h-5 text-green-600 bg-green-500/15">Xbox 360</Badge>
+                </div>
+                <div class="flex items-center gap-2">
+                  <p class="text-[11px] text-muted-foreground/60 font-mono m-0">{{ profile.game_process }}</p>
+                  <span v-if="profile.scripts.length > 0" class="inline-flex items-center gap-1 text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-full font-medium">
+                    <FileCode2 :size="10" /> 脚本 ×{{ profile.scripts.length }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-0.5 shrink-0">
+                <Button variant="ghost" size="icon" class="size-7" title="管理绑定脚本" @click="openScriptModal(profile)">
+                  <FileCode2 :size="14" />
+                </Button>
+                <Button variant="ghost" size="icon" class="size-7" title="导出配置文件 (JSON)" @click="handleExportProfile(profile)">
+                  <Download :size="14" />
+                </Button>
+                <Button variant="ghost" size="icon" class="size-7 text-destructive hover:text-destructive hover:bg-destructive/10" title="删除此 Profile" @click="handleDeleteProfile(profile.id)">
+                  <Trash2 :size="14" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     </div>
 
     <!-- 创建 Profile 弹窗 -->
-    <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>创建新 Profile</h3>
-          <button class="close-btn" @click="showCreateModal = false">
-            <X :size="16" />
-          </button>
-        </div>
-        
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Profile 名称</label>
-            <input 
-              type="text" 
-              v-model="profileForm.name" 
-              placeholder="例如: 地平线5刷图配置" 
-              class="form-input" 
-              required 
-            />
+    <Dialog :open="showCreateModal" @update:open="showCreateModal = $event">
+      <DialogContent class="sm:max-w-[440px]">
+        <DialogHeader>
+          <DialogTitle>创建新 Profile</DialogTitle>
+        </DialogHeader>
+        <div class="space-y-4">
+          <div class="space-y-2">
+            <Label class="text-xs font-medium text-muted-foreground">Profile 名称</Label>
+            <Input v-model="profileForm.name" placeholder="例如: 地平线5刷图配置" required />
           </div>
-          
-          <div class="form-group">
-            <label>游戏进程名称 (Game Process) <span class="label-optional">可选</span></label>
-            <input 
-              type="text" 
-              v-model="profileForm.game_process" 
-              placeholder="例如: ForzaHorizon5.exe (可空留)" 
-              class="form-input" 
-            />
+          <div class="space-y-2">
+            <Label class="text-xs font-medium text-muted-foreground">
+              游戏进程名称 (Game Process) <span class="text-muted-foreground/50">可选</span>
+            </Label>
+            <Input v-model="profileForm.game_process" placeholder="例如: ForzaHorizon5.exe (可空留)" />
           </div>
         </div>
-        
-        <div class="modal-footer">
-          <button class="btn-cancel" @click="showCreateModal = false">取消</button>
-          <button class="btn-submit" @click="handleCreateProfile">创建</button>
-        </div>
-      </div>
-    </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" @click="showCreateModal = false">取消</Button>
+          <Button variant="default" size="sm" @click="handleCreateProfile">创建</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- 脚本绑定 Modal -->
-    <div v-if="showScriptModal && editingProfile" class="modal-overlay" @click.self="closeScriptModal">
-      <div class="modal-card modal-wide">
-        <div class="modal-header">
-          <div class="modal-title-group">
-            <h3>管理脚本绑定</h3>
-            <span class="modal-subtitle">{{ editingProfile.name }}</span>
-          </div>
-          <button class="close-btn" @click="closeScriptModal">
-            <X :size="16" />
-          </button>
-        </div>
-
-        <div class="modal-body script-modal-body">
+    <Dialog :open="showScriptModal && !!editingProfile" @update:open="(v) => { if (!v) closeScriptModal() }">
+      <DialogContent class="sm:max-w-[520px] max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>管理脚本绑定</DialogTitle>
+          <template #description>
+            <span class="text-[11px] text-muted-foreground">{{ editingProfile?.name }}</span>
+          </template>
+        </DialogHeader>
+        
+        <div class="flex-1 overflow-y-auto -mx-6 px-6">
           <!-- 已绑定脚本 -->
-          <div class="script-section">
-            <div class="script-section-label">
+          <div class="py-3">
+            <div class="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               <FileCode2 :size="13" />
               已绑定脚本
-              <span class="count-badge">{{ boundScripts.length }}</span>
+              <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-primary text-white text-[10px] font-bold rounded-full">{{ boundScripts.length }}</span>
             </div>
-            <div v-if="boundScripts.length === 0" class="script-empty">
+            <div v-if="boundScripts.length === 0" class="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded">
               暂未绑定任何脚本
             </div>
-            <div v-else class="script-list" @dragover.prevent>
-              <div 
-                v-for="(script, index) in boundScripts" 
-                :key="script.id" 
-                class="script-row bound"
-                :class="{ 'drag-over': dragOverIndex === index }"
+            <div v-else class="space-y-1" @dragover.prevent>
+              <div v-for="(script, index) in boundScripts" :key="script.id"
+                class="flex items-center justify-between px-2.5 py-2 rounded border bg-primary/5 border-primary/20"
+                :class="{ 'ring-2 ring-primary': dragOverIndex === index }"
                 draggable="true"
                 @dragstart="handleDragStart(index, $event)"
                 @dragover.prevent
@@ -683,994 +650,47 @@ function importBackup(event: Event) {
                 @dragleave="handleDragLeave"
                 @drop.prevent="handleDrop(index)"
               >
-                <div class="script-row-left">
-                  <span class="drag-handle" title="按住拖拽排序">☰</span>
-                  <span class="script-row-name">{{ script.name }}</span>
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <span class="cursor-grab text-muted-foreground/50 text-sm" title="按住拖拽排序">☰</span>
+                  <span class="text-xs font-medium truncate">{{ script.name }}</span>
                 </div>
-                
-                <div class="script-row-right">
-                  <div class="seq-sort-buttons">
-                    <button 
-                      class="seq-sort-btn" 
-                      :disabled="index === 0" 
-                      @click.stop="moveScript(index, -1)"
-                      title="上移"
-                    >
-                      ▲
-                    </button>
-                    <button 
-                      class="seq-sort-btn" 
-                      :disabled="index === boundScripts.length - 1" 
-                      @click.stop="moveScript(index, 1)"
-                      title="下移"
-                    >
-                      ▼
-                    </button>
-                  </div>
-                  <button class="script-row-btn remove-btn" @click="removeScriptFromProfile(script.id)" title="移除绑定">
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <Button variant="ghost" size="icon" class="size-6 text-[10px]" :disabled="index === 0" @click.stop="moveScript(index, -1)" title="上移">▲</Button>
+                  <Button variant="ghost" size="icon" class="size-6 text-[10px]" :disabled="index === boundScripts.length - 1" @click.stop="moveScript(index, 1)" title="下移">▼</Button>
+                  <Button variant="outline" size="sm" class="h-7 text-[11px] text-destructive border-destructive/30 bg-destructive/5 hover:bg-destructive/15" @click="removeScriptFromProfile(script.id)" title="移除绑定">
                     <Minus :size="12" /> 移除
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="script-divider"></div>
+          <Separator />
 
           <!-- 可添加脚本 -->
-          <div class="script-section">
-            <div class="script-section-label">
-              从脚本库添加
-            </div>
-            <div v-if="scriptStore.scripts.length === 0" class="script-empty">
+          <div class="py-3">
+            <div class="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">从脚本库添加</div>
+            <div v-if="scriptStore.scripts.length === 0" class="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded">
               脚本库为空，请先在脚本编辑器中创建脚本
             </div>
-            <div v-else-if="unboundScripts.length === 0" class="script-empty">
+            <div v-else-if="unboundScripts.length === 0" class="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded">
               所有脚本已全部绑定
             </div>
-            <div v-else class="script-list">
-              <div v-for="script in unboundScripts" :key="script.id" class="script-row unbound">
-                <span class="script-row-name">{{ script.name }}</span>
-                <button class="script-row-btn add-btn" @click="addScriptToProfile(script.id)" title="添加绑定">
+            <div v-else class="space-y-1">
+              <div v-for="script in unboundScripts" :key="script.id" class="flex items-center justify-between px-2.5 py-2 rounded border border-border bg-muted/30 hover:border-muted-foreground/50 transition-colors">
+                <span class="text-xs font-medium truncate">{{ script.name }}</span>
+                <Button variant="outline" size="sm" class="h-7 text-[11px] text-primary border-primary/30 bg-primary/5 hover:bg-primary/15" @click="addScriptToProfile(script.id)" title="添加绑定">
                   <Plus :size="12" /> 添加
-                </button>
+                </Button>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button class="btn-submit" @click="closeScriptModal">完成</button>
-        </div>
-      </div>
-    </div>
+        <DialogFooter class="border-t border-border pt-4 -mx-6 px-6">
+          <Button variant="default" size="sm" @click="closeScriptModal">完成</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>
-
-<style scoped>
-.config-panel {
-  padding: var(--space-lg);
-  height: 100%;
-  overflow-y: auto;
-  background: var(--color-background);
-}
-
-.page-header {
-  margin-bottom: var(--space-lg);
-}
-
-.page-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.config-sections {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-  max-width: 800px;
-}
-
-.config-section {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-.config-section h3 {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: var(--space-md);
-  color: var(--color-text);
-  border-left: 3px solid var(--color-cta);
-  padding-left: var(--space-xs);
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-md);
-}
-
-.section-header h3 {
-  margin-bottom: 0;
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--space-sm);
-  align-items: center;
-}
-
-.hidden-input {
-  display: none;
-}
-
-.config-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-sm) 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.config-item:last-child {
-  border-bottom: none;
-}
-
-.config-item label {
-  font-size: 13px;
-  color: var(--color-text-muted);
-}
-
-.input {
-  padding: var(--space-xs) var(--space-sm);
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-text);
-  font-size: 12px;
-  outline: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.input:focus {
-  border-color: var(--color-cta);
-}
-
-.empty-state {
-  text-align: center;
-  color: var(--color-text-dim);
-  padding: var(--space-xl) var(--space-lg);
-  font-size: 13px;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  margin-top: var(--space-md);
-}
-
-/* Profile List & Cards */
-.profile-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  margin-top: var(--space-md);
-}
-
-.profile-card {
-  display: flex;
-  align-items: center;
-  padding: var(--space-md);
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-normal);
-}
-
-.profile-card:hover {
-  transform: translateY(-1px);
-  border-color: var(--color-text-dim);
-  box-shadow: var(--shadow-md);
-}
-
-.profile-card.active {
-  border-color: rgba(34, 197, 94, 0.4);
-  background: rgba(34, 197, 94, 0.03);
-}
-
-.profile-icon {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
-  margin-right: var(--space-md);
-  flex-shrink: 0;
-}
-
-.profile-card.active .profile-icon {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.1);
-}
-
-.profile-main {
-  flex-grow: 1;
-  min-width: 0;
-}
-
-.profile-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-bottom: 4px;
-}
-
-.profile-title h4 {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.controller-badge {
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-weight: 500;
-}
-
-.controller-badge.xbox360 {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-}
-
-.active-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 10px;
-  background: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-}
-
-.profile-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.profile-process {
-  font-size: 11px;
-  color: var(--color-text-dim);
-  font-family: var(--font-heading);
-  margin: 0;
-}
-
-.script-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 10px;
-  color: var(--color-cta);
-  background: rgba(99, 102, 241, 0.1);
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-weight: 500;
-}
-
-.profile-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-}
-
-/* Action Buttons */
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.primary-btn {
-  background: var(--color-cta);
-  color: white;
-  border: none;
-}
-
-.primary-btn:hover {
-  opacity: 0.9;
-  transform: translateY(-0.5px);
-}
-
-.text-btn {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-}
-
-.text-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--color-text);
-}
-
-.btn-activate {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-activate:hover {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border-color: var(--color-text-dim);
-}
-
-.btn-deactivate {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 4px 10px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-deactivate:hover {
-  background: rgba(239, 68, 68, 0.2);
-}
-
-.icon-btn {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-dim);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.icon-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color-text);
-}
-
-.script-btn:hover {
-  color: var(--color-cta) !important;
-  background: rgba(99, 102, 241, 0.08) !important;
-}
-
-.delete-btn:hover {
-  color: #ef4444 !important;
-  background: rgba(239, 68, 68, 0.1) !important;
-}
-
-/* Modals */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(2, 6, 23, 0.7);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease-out;
-}
-
-.modal-card {
-  width: 100%;
-  max-width: 440px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
-  overflow: hidden;
-  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.modal-wide {
-  max-width: 520px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-md) var(--space-lg);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.modal-title-group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.modal-header h3 {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0;
-}
-
-.modal-subtitle {
-  font-size: 11px;
-  color: var(--color-text-dim);
-}
-
-.close-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-text-dim);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  transition: all var(--transition-fast);
-}
-
-.close-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color-text);
-}
-
-.modal-body {
-  padding: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-/* Script Modal */
-.script-modal-body {
-  gap: 0;
-  padding: 0;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.script-section {
-  padding: var(--space-md) var(--space-lg);
-}
-
-.script-section-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: var(--space-sm);
-}
-
-.count-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  background: var(--color-cta);
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 9px;
-}
-
-.script-divider {
-  height: 1px;
-  background: var(--color-border);
-  margin: 0 var(--space-lg);
-}
-
-.script-empty {
-  font-size: 12px;
-  color: var(--color-text-dim);
-  text-align: center;
-  padding: var(--space-md);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-sm);
-}
-
-.script-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.script-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  transition: all var(--transition-fast);
-}
-
-.script-row.bound {
-  background: rgba(99, 102, 241, 0.05);
-  border-color: rgba(99, 102, 241, 0.15);
-}
-
-.script-row.unbound {
-  background: var(--color-surface-elevated);
-}
-
-.script-row.unbound:hover {
-  border-color: var(--color-text-dim);
-}
-
-.script-row-name {
-  font-size: 12px;
-  color: var(--color-text);
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
-
-.script-row-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-  margin-left: var(--space-sm);
-}
-
-.remove-btn {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-}
-
-.remove-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-}
-
-.add-btn {
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  color: var(--color-cta);
-}
-
-.add-btn:hover {
-  background: rgba(99, 102, 241, 0.15);
-}
-
-/* Form */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-group label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-muted);
-}
-
-.form-input, .form-select {
-  padding: 8px 12px;
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-text);
-  font-size: 13px;
-  outline: none;
-  transition: all var(--transition-fast);
-}
-
-.form-input:focus, .form-select:focus {
-  border-color: var(--color-cta);
-}
-
-.form-input::placeholder {
-  color: var(--color-text-dim);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-sm);
-  padding: var(--space-md) var(--space-lg);
-  background: rgba(0, 0, 0, 0.15);
-  border-top: 1px solid var(--color-border);
-}
-
-.btn-cancel {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--color-text);
-}
-
-.btn-submit {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 8px 16px;
-  background: var(--color-cta);
-  border: none;
-  color: white;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-submit:hover {
-  opacity: 0.9;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(12px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-/* OCR Config styling */
-.ocr-container-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.ocr-regions-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.ocr-config-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-}
-
-.ocr-status-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.ocr-label-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.ocr-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.ocr-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-weight: 600;
-}
-
-.ocr-status-badge.active {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-}
-
-.ocr-status-badge.inactive {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-}
-
-.ocr-coords {
-  display: flex;
-  gap: var(--space-xs);
-  margin-top: 2px;
-}
-
-.coord-tag {
-  font-size: 11px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-heading);
-}
-
-.ocr-hint-code {
-  font-size: 11px;
-  color: var(--color-text-dim);
-  margin-top: 2px;
-}
-
-.ocr-hint-code code {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color-cta);
-  padding: 1px 4px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-heading);
-}
-
-.ocr-empty-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-lg);
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  text-align: center;
-  gap: var(--space-xs);
-}
-
-.ocr-empty-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.ocr-empty-desc {
-  font-size: 11px;
-  color: var(--color-text-dim);
-}
-
-.ocr-empty-desc code {
-  color: var(--color-cta);
-}
-
-.ocr-add-container {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.ocr-actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.delete-btn-simple {
-  font-size: 11px;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.delete-btn-simple:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444 !important;
-  border-color: rgba(239, 68, 68, 0.2) !important;
-}
-
-.ocr-btn {
-  background: var(--color-cta);
-  border: none;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 6px 14px;
-  border-radius: var(--radius-sm);
-}
-
-.ocr-btn:hover {
-  background: #1ca84f;
-}
-
-.ocr-btn-recal {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.ocr-btn-recal:hover {
-  background: #22c55e;
-  color: white;
-}
-
-.ocr-engine-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: var(--space-md);
-  border-bottom: 1px dashed var(--color-border);
-  padding-bottom: var(--space-md);
-}
-
-.ocr-native-badge {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: rgba(34, 197, 94, 0.05);
-  border: 1px solid rgba(34, 197, 94, 0.15);
-  border-radius: var(--radius-md);
-  margin-top: var(--space-sm);
-  animation: pulse-glow 3s infinite alternate;
-}
-
-.badge-icon {
-  font-size: 14px;
-}
-
-.badge-text {
-  font-size: 12px;
-  color: #22c55e;
-  font-weight: 500;
-}
-
-@keyframes pulse-glow {
-  0% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.05); }
-  100% { box-shadow: 0 0 15px rgba(34, 197, 94, 0.15); }
-}
-
-.url-input {
-  width: 280px;
-  cursor: text;
-}
-
-.script-row.bound {
-  cursor: grab;
-  user-select: none;
-  transition: background-color var(--transition-fast);
-}
-
-.script-row.bound:active {
-  cursor: grabbing;
-}
-
-.script-row.bound.drag-over {
-  border: 1px dashed var(--color-cta);
-  background: rgba(34, 197, 94, 0.05) !important;
-}
-
-.script-row-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-  pointer-events: none; /* 让点击穿透子节点以激活父级原生拖拽 */
-}
-
-.drag-handle {
-  color: var(--color-text-dim);
-  cursor: grab;
-  font-size: 13px;
-  user-select: none;
-  padding-right: 4px;
-}
-
-.script-row-right {
-  display: flex;
-  align-items: center;
-}
-
-.seq-sort-buttons {
-  display: flex;
-  gap: 2px;
-  margin-right: 4px;
-}
-
-.seq-sort-btn {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-dim);
-  border-radius: var(--radius-sm);
-  padding: 1px 6px;
-  font-size: 9px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.seq-sort-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text);
-  border-color: var(--color-text-dim);
-}
-
-.seq-sort-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.backup-info {
-  margin-bottom: var(--space-md);
-}
-
-.backup-desc {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.backup-actions {
-  display: flex;
-  gap: var(--space-sm);
-  margin-top: var(--space-md);
-}
-
-.backup-btn {
-  background: var(--color-cta) !important;
-}
-
-.backup-btn:hover {
-  background: var(--color-cta-hover) !important;
-}
-</style>
