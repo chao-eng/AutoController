@@ -184,8 +184,8 @@
           })),
         ],
         axes: [
-          { stroke: '#6b7280', grid: { stroke: '#1f2937' } },
-          { stroke: '#6b7280', grid: { stroke: '#1f2937' } },
+          { stroke: 'var(--tx-dim)', grid: { stroke: 'var(--bd-subtle)' } },
+          { stroke: 'var(--tx-dim)', grid: { stroke: 'var(--bd-subtle)' } },
         ],
       };
 

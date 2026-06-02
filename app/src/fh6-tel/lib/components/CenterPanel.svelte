@@ -330,7 +330,7 @@
   }
   .bst-led.bst-on { background: #a855f7; box-shadow: 0 0 7px #a855f7aa; border-color: #7e22ce; }
   .bst-val { color: var(--tx-ghost); transition: color 0.15s; }
-  .bst-val.bst-active { color: #d8b4fe; }
+  .bst-val.bst-active { color: #a855f7; }
   .bst-unit {
     font-size: clamp(0.36rem, 0.72vw, 0.46rem);
     font-weight: 700;

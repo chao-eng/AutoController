@@ -10,57 +10,23 @@ defineProps<{
 </script>
 
 <template>
-  <footer class="status-bar">
-    <div class="status-left">
-      <span class="status-item">
+  <footer class="flex h-6 flex-shrink-0 items-center justify-between border-t border-border bg-background px-3 text-[11px] text-muted-foreground">
+    <div class="flex items-center gap-3">
+      <span class="flex items-center gap-1">
         <Wifi :size="12" />
         <span>{{ deviceCount }} 设备运行中</span>
       </span>
     </div>
-    <div class="status-right">
-      <span class="status-item">
+    <div class="flex items-center gap-3">
+      <span class="flex items-center gap-1">
         <Cpu :size="12" />
         <span>CPU: {{ cpuUsage }}</span>
       </span>
-      <span class="status-item">
+      <span class="flex items-center gap-1">
         <MemoryStick :size="12" />
         <span>MEM: {{ memUsage }}</span>
       </span>
-      <span class="status-version">v{{ version }}</span>
+      <span class="text-[10px] text-muted-foreground/60">v{{ version }}</span>
     </div>
   </footer>
 </template>
-
-<style scoped>
-.status-bar {
-  height: var(--statusbar-height);
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-md);
-  font-size: 11px;
-  color: var(--color-text-dim);
-  flex-shrink: 0;
-}
-
-.status-left,
-.status-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.status-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.status-version {
-  color: var(--color-text-dim);
-  font-family: var(--font-heading);
-  font-size: 10px;
-}
-</style>

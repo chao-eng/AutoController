@@ -115,7 +115,7 @@
     padding: 0.5rem 1rem;
     background: var(--bg-panel);
     border-top: 1px solid var(--ac);
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 -4px 20px rgba(31,35,41,0.08);
   }
   .left {
     display: flex;

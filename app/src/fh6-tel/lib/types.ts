@@ -85,7 +85,6 @@ export interface AppSettings {
   tireTempOptimal: number;
   tireTempHot: number;
   autoRecord: boolean;
-  theme: 'dark' | 'cobalt2' | 'purple';
   tiresVisible: boolean;
 }
 

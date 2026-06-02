@@ -140,7 +140,7 @@
     background: var(--bg-panel);
     border: 1px solid var(--bd-subtle);
     border-radius: 6px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 20px rgba(31,35,41,0.08);
     display: flex;
     flex-direction: column;
     isolation: isolate;

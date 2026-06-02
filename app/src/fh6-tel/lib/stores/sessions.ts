@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
-import { ipc } from '$lib/ipc';
-import type { SessionRow, TelemetryPacket, AppSettings, SessionLap } from '$lib/types';
+import { ipc } from '../ipc';
+import type { SessionRow, TelemetryPacket, AppSettings, SessionLap } from '../types';
 
 export const sessions = writable<SessionRow[]>([]);
 export const settings = writable<AppSettings | null>(null);

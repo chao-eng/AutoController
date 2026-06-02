@@ -1,4 +1,4 @@
-import type { SessionRow, TelemetryPacket, AppSettings, SessionLap } from '$lib/types';
+import type { SessionRow, TelemetryPacket, AppSettings, SessionLap } from './types';
 
 const isTauri =
   typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;

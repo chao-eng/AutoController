@@ -95,7 +95,7 @@
     position: fixed; right: 0; top: 0; bottom: 0; width: 420px;
     background: var(--bg-panel); border-left: 1px solid var(--bd-dim);
     display: flex; flex-direction: column; z-index: 50;
-    box-shadow: -4px 0 24px rgba(0,0,0,0.5);
+    box-shadow: -4px 0 24px rgba(31,35,41,0.08);
   }
   .drawer-header {
     display: flex; justify-content: space-between; align-items: center;

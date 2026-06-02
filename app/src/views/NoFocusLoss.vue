@@ -1,4 +1,3 @@
-<!-- app/src/views/NoFocusLoss.vue -->
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
@@ -16,6 +15,7 @@ import {
   CheckCircle,
   XCircle
 } from '@lucide/vue'
+import { Button } from '@/components/ui/button'
 
 interface ProcessInfo {
   pid: number
@@ -24,7 +24,6 @@ interface ProcessInfo {
   is_64bit: boolean
 }
 
-// 进程数据状态
 const injectableProcesses = ref<ProcessInfo[]>([])
 const injectedProcesses = ref<ProcessInfo[]>([])
 const searchQuery = ref('')
@@ -33,20 +32,15 @@ const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const isAdmin = ref(false)
 
-// 显示 Defender 信任区引导指南
 const showGuide = ref(false)
-// 显示防止游戏失焦功能使用说明
 const showFeatureGuide = ref(false)
 
-// 推荐运行和警告条默认折叠状态
 const isAdminTipCollapsed = ref(true)
 const isWarningCollapsed = ref(true)
 
-// 过滤后的待注入进程列表
 const filteredProcesses = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   if (!query) return injectableProcesses.value
-
   return injectableProcesses.value.filter(
     (p) =>
       p.pid.toString().includes(query) ||
@@ -55,16 +49,12 @@ const filteredProcesses = computed(() => {
   )
 })
 
-// 获取可注入的窗口进程列表和已注入的进程列表
 async function fetchProcesses() {
   loading.value = true
   errorMessage.value = null
   try {
-    // 1. 获取已注入进程列表（从后端持久状态获取，防丢失）
     const injected = await invoke<ProcessInfo[]>('get_injected_processes')
     injectedProcesses.value = injected
-
-    // 2. 获取可注入进程列表
     const list = await invoke<ProcessInfo[]>('get_injectable_processes')
     injectableProcesses.value = list
   } catch (err: any) {
@@ -75,21 +65,14 @@ async function fetchProcesses() {
   }
 }
 
-// 执行注入 Hook
 async function injectHook(proc: ProcessInfo) {
   errorMessage.value = null
   successMessage.value = null
-  
   try {
     await invoke('inject_focus_hook', { pid: proc.pid, is64bit: proc.is_64bit })
-    
-    // 从待注入移动到已注入
     injectableProcesses.value = injectableProcesses.value.filter((p) => p.pid !== proc.pid)
     injectedProcesses.value.push(proc)
-    
     successMessage.value = `成功将防失去焦点 Hook 注入至进程「${proc.name}」(PID: ${proc.pid})！`
-    
-    // 自动清除成功提示
     setTimeout(() => {
       if (successMessage.value?.includes(proc.pid.toString())) {
         successMessage.value = null
@@ -98,31 +81,21 @@ async function injectHook(proc: ProcessInfo) {
   } catch (err: any) {
     console.error('注入 Hook 失败:', err)
     errorMessage.value = err.toString()
-    
-    // 如果提示核心组件丢失/拦截，则自动展开安全引导提示
     if (err.toString().includes('injector.exe') || err.toString().includes('拦截') || err.toString().includes('隔离')) {
       showGuide.value = true
     }
   }
 }
 
-// 执行安全卸载 Hook
 async function unloadHook(proc: ProcessInfo) {
   errorMessage.value = null
   successMessage.value = null
-  
   try {
     await invoke('unload_focus_hook', { pid: proc.pid, is64bit: proc.is_64bit })
-    
-    // 从已注入移动回待注入
     injectedProcesses.value = injectedProcesses.value.filter((p) => p.pid !== proc.pid)
     injectableProcesses.value.push(proc)
-    
-    // 重新排序待注入列表
     injectableProcesses.value.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
-    
     successMessage.value = `成功从进程「${proc.name}」(PID: ${proc.pid}) 中安全卸载 Hook！`
-    
     setTimeout(() => {
       successMessage.value = null
     }, 5000)
@@ -131,7 +104,6 @@ async function unloadHook(proc: ProcessInfo) {
     errorMessage.value = err.toString()
   }
 }
-
 
 const uiStore = useUIStore()
 
@@ -159,70 +131,67 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="nofocus-container">
-    <!-- 头部区域 -->
-    <div class="page-header">
-      <h2>防止游戏/窗口失去焦点 (No Focus Loss)</h2>
-      <div class="header-actions">
-        <button class="btn-secondary" @click="showFeatureGuide = !showFeatureGuide" :class="{ active: showFeatureGuide }">
-          <Info :size="14" />
+  <div class="flex h-full flex-col overflow-y-auto bg-background p-6">
+    <div class="mb-4 flex shrink-0 items-center justify-between">
+      <h2 class="text-lg font-semibold text-foreground">防止游戏/窗口失去焦点 (No Focus Loss)</h2>
+      <div class="flex items-center gap-2">
+        <Button variant="outline" size="sm" @click="showFeatureGuide = !showFeatureGuide">
+          <Info :size="14" class="mr-1" />
           <span>功能使用说明</span>
-        </button>
-        <button class="btn-secondary" @click="showGuide = !showGuide" :class="{ active: showGuide }">
-          <HelpCircle :size="14" />
+        </Button>
+        <Button variant="outline" size="sm" @click="showGuide = !showGuide">
+          <HelpCircle :size="14" class="mr-1" />
           <span>杀软信任指引</span>
-        </button>
-        <button class="btn-primary" @click="fetchProcesses" :disabled="loading">
-          <RefreshCw :size="14" :class="{ 'spinning': loading }" />
+        </Button>
+        <Button variant="default" size="sm" @click="fetchProcesses" :disabled="loading">
+          <RefreshCw :size="14" :class="{ 'animate-spin': loading }" class="mr-1" />
           <span>刷新进程</span>
-        </button>
+        </Button>
       </div>
     </div>
 
-    <!-- 管理员权限智能检测与推荐提示栏 -->
-    <div v-if="!isAdmin" class="admin-tip-banner warning-admin" :class="{ 'collapsed': isAdminTipCollapsed }">
-      <div class="admin-tip-title">
-        <ShieldAlert :size="16" />
-        <span class="title-text">推荐以管理员权限运行 (Administrator Privileges Recommended)</span>
-        <span v-if="isAdminTipCollapsed" class="collapsed-summary">：未以管理员权限启动，注入高权限游戏可能会失败。</span>
-        <button class="btn-text-toggle" @click="isAdminTipCollapsed = !isAdminTipCollapsed">
+    <div v-if="!isAdmin" class="mb-4 flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50/50 p-4 text-amber-700">
+      <div class="flex items-center gap-2">
+        <ShieldAlert :size="16" class="shrink-0" />
+        <span class="text-sm font-medium">推荐以管理员权限运行 (Administrator Privileges Recommended)</span>
+        <span v-if="isAdminTipCollapsed" class="text-xs text-amber-500">：未以管理员权限启动，注入高权限游戏可能会失败。</span>
+        <button class="ml-auto text-xs font-medium text-amber-600 hover:text-amber-800" @click="isAdminTipCollapsed = !isAdminTipCollapsed">
           {{ isAdminTipCollapsed ? '展开详情' : '收起' }}
         </button>
       </div>
       <Transition name="slide">
-        <div v-if="!isAdminTipCollapsed" class="admin-tip-content">
-          当前软件<strong>未以管理员身份运行</strong>。由于“防止窗口失焦”功能需要对目标游戏/程序进行跨进程注入，若目标游戏或软件是以管理员权限启动的（例如大部分大型3D游戏或Steam/Wegame平台下的游戏），普通权限的 AutoController 将会因系统权限不足（注入错误代码 102 或卸载错误代码 123）导致操作失败。<strong>强烈建议您右键本程序，选择「以管理员身份运行」重新启动。</strong>
+        <div v-if="!isAdminTipCollapsed" class="text-xs leading-relaxed text-amber-600">
+          当前软件<strong>未以管理员身份运行</strong>。由于"防止窗口失焦"功能需要对目标游戏/程序进行跨进程注入，若目标游戏或软件是以管理员权限启动的（例如大部分大型3D游戏或Steam/Wegame平台下的游戏），普通权限的 AutoController 将会因系统权限不足（注入错误代码 102 或卸载错误代码 123）导致操作失败。<strong>强烈建议您右键本程序，选择「以管理员身份运行」重新启动。</strong>
         </div>
       </Transition>
     </div>
-    <div v-else class="admin-tip-banner success-admin" :class="{ 'collapsed': isAdminTipCollapsed }">
-      <div class="admin-tip-title">
-        <ShieldCheck :size="16" />
-        <span class="title-text">已以管理员权限运行 (Running with Administrator Privileges)</span>
-        <span v-if="isAdminTipCollapsed" class="collapsed-summary">：已具备完整的系统高权限，可顺利附加注入。</span>
-        <button class="btn-text-toggle" @click="isAdminTipCollapsed = !isAdminTipCollapsed">
+    <div v-else class="mb-4 flex flex-col gap-2 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 text-emerald-700">
+      <div class="flex items-center gap-2">
+        <ShieldCheck :size="16" class="shrink-0" />
+        <span class="text-sm font-medium">已以管理员权限运行 (Running with Administrator Privileges)</span>
+        <span v-if="isAdminTipCollapsed" class="text-xs text-emerald-500">：已具备完整的系统高权限，可顺利附加注入。</span>
+        <button class="ml-auto text-xs font-medium text-emerald-600 hover:text-emerald-800" @click="isAdminTipCollapsed = !isAdminTipCollapsed">
           {{ isAdminTipCollapsed ? '展开详情' : '收起' }}
         </button>
       </div>
       <Transition name="slide">
-        <div v-if="!isAdminTipCollapsed" class="admin-tip-content">
+        <div v-if="!isAdminTipCollapsed" class="text-xs leading-relaxed text-emerald-600">
           当前软件<strong>已成功以管理员身份运行</strong>。程序已具备完整的系统权限，可以完美支持对高权限游戏及各类窗口程序附加防止失焦 Hook 拦截。
         </div>
       </Transition>
     </div>
 
-    <!-- 醒目防封警告卡片 (轻量 HSL 对齐 DeviceMonitor 风格) -->
-    <div class="warning-banner" :class="{ 'collapsed': isWarningCollapsed }">
-      <div class="warning-title">
-        <AlertTriangle :size="16" />
-        <span class="title-text">高危安全警告与免责声明 (Ban Risk Warning)</span>
-        <span v-if="isWarningCollapsed" class="collapsed-summary">：跨进程注入在多人网游中有封号风险，严禁在网游中使用！</span>
-        <button class="btn-text-toggle" @click="isWarningCollapsed = !isWarningCollapsed">
+    <div class="mb-4 flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50/50 p-4 text-red-700">
+      <div class="flex items-center gap-2">
+        <AlertTriangle :size="16" class="shrink-0" />
+        <span class="text-sm font-medium">高危安全警告与免责声明 (Ban Risk Warning)</span>
+        <span v-if="isWarningCollapsed" class="text-xs text-red-500">：跨进程注入在多人网游中有封号风险，严禁在网游中使用！</span>
+        <button class="ml-auto text-xs font-medium text-red-600 hover:text-red-800" @click="isWarningCollapsed = !isWarningCollapsed">
           {{ isWarningCollapsed ? '展开详情' : '收起' }}
         </button>
       </div>
       <Transition name="slide">
-        <div v-if="!isWarningCollapsed" class="warning-content">
+        <div v-if="!isWarningCollapsed" class="text-xs leading-relaxed text-red-600">
           <p>1. <strong>封号风险警告</strong>：本功能基于跨进程注入技术（DLL Injection）拦截窗口失活消息。这会被反作弊系统（如 EAC、BattlEye、Vanguard 等）视为外挂注入，<strong>在多人网络游戏或带有反作弊保护的游戏中开启此功能有极高封号风险！</strong></p>
           <p>2. <strong>网络游戏禁用</strong>：<strong>严禁在网络联机游戏中使用此功能</strong>。仅推荐在单机游戏（例如单机挂机、防止切屏暂停/静音、双显屏辅助等）中使用。</p>
           <p>3. <strong>免责说明</strong>：本工具为开源辅助软件，因违反规则或在网游中误用导致的任何损失（包括但不限于账号被封禁、处罚）均由使用者本人承担。</p>
@@ -230,35 +199,31 @@ onMounted(() => {
       </Transition>
     </div>
 
-    <!-- 消息提示栏 -->
-    <div v-if="errorMessage" class="message-banner error-banner">
-      <XCircle :size="14" />
-      <span class="message-text">{{ errorMessage }}</span>
-      <button class="close-msg" @click="errorMessage = null">×</button>
+    <div v-if="errorMessage" class="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+      <XCircle :size="14" class="shrink-0" />
+      <span class="flex-1">{{ errorMessage }}</span>
+      <button class="text-red-400 hover:text-red-600" @click="errorMessage = null">×</button>
     </div>
     
-    <div v-if="successMessage" class="message-banner success-banner">
-      <CheckCircle :size="14" />
-      <span class="message-text">{{ successMessage }}</span>
-      <button class="close-msg" @click="successMessage = null">×</button>
+    <div v-if="successMessage" class="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700">
+      <CheckCircle :size="14" class="shrink-0" />
+      <span class="flex-1">{{ successMessage }}</span>
+      <button class="text-emerald-400 hover:text-emerald-600" @click="successMessage = null">×</button>
     </div>
 
-    <!-- 防止游戏失焦功能使用说明 (平滑手风琴抽屉) -->
     <Transition name="slide">
-      <div v-if="showFeatureGuide" class="feature-guide-panel">
-        <div class="feature-guide-header">
-          <Info :size="16" />
-          <h4>防止游戏失焦功能使用指南 (No Focus Loss Feature Guide)</h4>
+      <div v-if="showFeatureGuide" class="mb-4 rounded-lg border border-border bg-card p-4">
+        <div class="mb-3 flex items-center gap-2">
+          <Info :size="16" class="text-primary" />
+          <h4 class="text-sm font-semibold text-foreground">防止游戏失焦功能使用指南 (No Focus Loss Feature Guide)</h4>
         </div>
-        <div class="feature-guide-steps">
-          <p style="margin-bottom: 8px;">
-            <strong>什么是防止游戏失焦？</strong><br />
+        <div class="space-y-2 text-xs leading-relaxed text-muted-foreground">
+          <p><strong class="text-foreground">什么是防止游戏失焦？</strong><br />
             当您切换到其他工作窗口或将游戏切换至后台时，许多游戏（尤其是使用 Unity、Unreal Engine 等引擎开发的游戏）会自动触发<strong>暂停、画面静止、声音变静音</strong>，或者大幅度降低后台渲染帧率（FPS）。<br />
-            本功能通过在底层将轻量级的拦截机制（<code>NoFocusLoss.dll</code>/<code>NoFocusLoss64.dll</code>）安全附加到游戏进程中，动态拦截窗口失活消息。<strong>即使您切屏、查看网页或多屏操作，游戏在后台也能保持与前台完全相同的满帧渲染、声音播放及挂机运行状态。</strong>
-          </p>
+            本功能通过在底层将轻量级的拦截机制（<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs">NoFocusLoss.dll</code>/<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs">NoFocusLoss64.dll</code>）安全附加到游戏进程中，动态拦截窗口失活消息。<strong>即使您切屏、查看网页或多屏操作，游戏在后台也能保持与前台完全相同的满帧渲染、声音播放及挂机运行状态。</strong></p>
           
-          <h5 style="margin: 12px 0 6px 0; font-size: 12px; font-weight: 700; color: var(--color-text);">使用步骤与指引：</h5>
-          <ol>
+          <h5 class="mt-3 text-xs font-bold text-foreground">使用步骤与指引：</h5>
+          <ol class="list-inside list-decimal space-y-1">
             <li><strong>管理员身份运行（强烈推荐）</strong>：由于高级别游戏具备高系统权限，请确保以<strong>管理员身份</strong>运行 AutoController，否则注入器会因权限不足而失败。</li>
             <li><strong>游戏必须窗口化</strong>：目标游戏需要在<strong>窗口化</strong>或<strong>无边框窗口化（Borderless）</strong>模式下运行，在独占全屏下无法发挥作用。<strong>（注意：部分游戏在修改为窗口化后，必须重启游戏才能使该渲染模式生效，建议配置后重启游戏再进行注入）</strong></li>
             <li><strong>一键注入挂机</strong>：在左侧进程列表搜索游戏并点击<strong>「注入 Hook」</strong>，即可激活后台挂机模式！</li>
@@ -268,35 +233,33 @@ onMounted(() => {
       </div>
     </Transition>
 
-    <!-- 杀软拦截排除配置引导 (平滑手风琴抽屉) -->
     <Transition name="slide">
-      <div v-if="showGuide" class="guide-panel">
-        <div class="guide-header">
-          <ShieldAlert :size="16" />
-          <h4>Windows Defender 杀软拦截修复指引</h4>
+      <div v-if="showGuide" class="mb-4 rounded-lg border border-border bg-card p-4">
+        <div class="mb-3 flex items-center gap-2">
+          <ShieldAlert :size="16" class="text-destructive" />
+          <h4 class="text-sm font-semibold text-foreground">Windows Defender 杀软拦截修复指引</h4>
         </div>
-        <div class="guide-steps">
-          <p>由于本功能采用<strong>“物理隔离”</strong>技术（由独立子进程 <code>injector.exe</code> 动态解密并执行注入，彻底避免主程序崩溃或被报毒），Windows Defender 或杀毒软件可能会对 <code>injector.exe</code> 进行警报或拦截。请按照以下步骤添加排除项：</p>
+        <div class="space-y-2 text-xs leading-relaxed text-muted-foreground">
+          <p>由于本功能采用<strong>"物理隔离"</strong>技术（由独立子进程 <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs">injector.exe</code> 动态解密并执行注入，彻底避免主程序崩溃或被报毒），Windows Defender 或杀毒软件可能会对 <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs">injector.exe</code> 进行警报或拦截。请按照以下步骤添加排除项：</p>
           
-          <!-- 管理员快捷自动白名单按钮 -->
-          <div v-if="isAdmin" class="auto-exclude-box" style="margin: 10px 0 16px 0; padding: 12px; background: rgba(51, 112, 255, 0.06); border-radius: var(--radius-md); border: 1px dashed rgba(51, 112, 255, 0.25); display: flex; align-items: center; justify-content: space-between; gap: var(--space-md);">
-            <div style="font-size: 12px; color: var(--color-text-muted); line-height: 1.5;">
-              <strong style="color: var(--color-text);">🛡️ 已检测到管理员权限：</strong><br />
+          <div v-if="isAdmin" class="my-2 flex items-center justify-between gap-4 rounded-lg border border-dashed border-primary/25 bg-primary/5 p-3">
+            <div class="text-xs leading-relaxed text-muted-foreground">
+              <strong class="text-foreground">🛡️ 已检测到管理员权限：</strong><br />
               支持一键调用 PowerShell 静默将本软件当前运行目录自动添加至 Defender 信任区。
             </div>
-            <button class="btn-primary" @click="handleAutoExclude" style="flex-shrink: 0; padding: 6px 12px; font-size: 11px; height: auto; border-radius: var(--radius-md); background: var(--color-cta); color: white; border: none; cursor: pointer; font-weight: 600;">
+            <Button size="sm" @click="handleAutoExclude">
               ⚡ 一键自动添加信任排除
-            </button>
+            </Button>
           </div>
 
-          <ol>
+          <ol class="list-inside list-decimal space-y-1">
             <li>打开 Windows 的 <strong>「安全中心」</strong> ➔ <strong>「病毒和威胁防护」</strong>。</li>
-            <li>点击 <strong>「“病毒和威胁防护”设置」</strong> 下方的 <strong>「管理设置」</strong>。</li>
+            <li>点击 <strong>「"病毒和威胁防护"设置」</strong> 下方的 <strong>「管理设置」</strong>。</li>
             <li>向下滑动到 <strong>「排除项」</strong>，点击 <strong>「添加或删除排除项」</strong>。</li>
             <li>点击 <strong>「添加排除项」</strong> ➔ 选择 <strong>「文件」</strong>。</li>
-            <li>定位到 AutoController 的安装目录（或开发环境的 target 目录），选中 <code>injector.exe</code> 并点击添加即可。</li>
+            <li>定位到 AutoController 的安装目录（或开发环境的 target 目录），选中 <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs">injector.exe</code> 并点击添加即可。</li>
           </ol>
-          <div class="guide-tip">
+          <div class="mt-2 flex items-center gap-1 text-muted-foreground">
             <Info :size="12" />
             <span>提示：我们的注入器代码完全开源，绝无后门及恶意行为，您可以放心添加信任运行。</span>
           </div>
@@ -304,103 +267,86 @@ onMounted(() => {
       </div>
     </Transition>
 
-    <!-- 双面板并排布局 -->
-    <div class="panels-grid">
-      <!-- 左侧待注入卡片 -->
-      <div class="panel-card">
-        <div class="panel-header">
-          <h3>
+    <div class="grid flex-1 grid-cols-2 gap-4 overflow-hidden">
+      <div class="flex flex-col overflow-hidden rounded-lg border border-border bg-card">
+        <div class="flex items-center justify-between border-b border-border px-4 py-3">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-foreground">
             <span>活动窗口进程 (可注入)</span>
-            <span class="badge count-badge">{{ filteredProcesses.length }}</span>
+            <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[11px] font-medium text-primary">{{ filteredProcesses.length }}</span>
           </h3>
-          <div class="panel-actions">
-            <!-- 搜索过滤 -->
-            <div class="search-box">
-              <Search :size="14" />
-              <input 
-                v-model="searchQuery" 
-                type="text" 
-                placeholder="搜索 PID、进程或窗口标题..." 
-              />
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1">
+              <Search :size="12" class="text-muted-foreground" />
+              <input v-model="searchQuery" type="text" placeholder="搜索 PID、进程或窗口标题..." class="w-36 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground" />
             </div>
-            <!-- 小刷新按钮 -->
-            <button class="btn-icon" @click="fetchProcesses" :disabled="loading" title="刷新列表">
-              <RefreshCw :size="14" :class="{ 'spinning': loading }" />
-            </button>
+            <Button variant="ghost" size="icon-sm" @click="fetchProcesses" :disabled="loading" title="刷新列表">
+              <RefreshCw :size="14" :class="{ 'animate-spin': loading }" />
+            </Button>
           </div>
         </div>
         
-        <div class="process-list-container">
-          <div v-if="filteredProcesses.length === 0" class="empty-state">
+        <div class="flex-1 overflow-y-auto">
+          <div v-if="filteredProcesses.length === 0" class="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
             <Info :size="24" />
-            <p>{{ searchQuery ? '未找到符合条件的活动窗口' : '暂无符合附加条件的活动窗口，请点击刷新' }}</p>
+            <p class="text-xs">{{ searchQuery ? '未找到符合条件的活动窗口' : '暂无符合附加条件的活动窗口，请点击刷新' }}</p>
           </div>
           
-          <div v-else class="process-list">
-            <div 
-              v-for="proc in filteredProcesses" 
-              :key="proc.pid" 
-              class="process-item"
-            >
-              <div class="proc-details">
-                <div class="proc-meta">
-                  <span class="proc-name">{{ proc.name }}</span>
-                  <span class="badge pid-badge">PID: {{ proc.pid }}</span>
-                  <span class="badge arch-badge" :class="{ 'x64': proc.is_64bit, 'x86': !proc.is_64bit }">
+          <div v-else class="divide-y divide-border">
+            <div v-for="proc in filteredProcesses" :key="proc.pid" class="flex items-center gap-3 px-4 py-3 hover:bg-accent/50">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-foreground">{{ proc.name }}</span>
+                  <span class="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">PID: {{ proc.pid }}</span>
+                  <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium" :class="proc.is_64bit ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'">
                     {{ proc.is_64bit ? '64-bit' : '32-bit' }}
                   </span>
                 </div>
-                <div class="proc-title" :title="proc.window_title">
+                <div class="mt-0.5 truncate text-xs text-muted-foreground" :title="proc.window_title">
                   窗口: {{ proc.window_title }}
                 </div>
               </div>
-              <button class="btn-inject" @click="injectHook(proc)">
+              <Button variant="default" size="sm" class="shrink-0 gap-1" @click="injectHook(proc)">
                 <Zap :size="12" />
                 <span>注入 Hook</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 右侧已注入卡片 -->
-      <div class="panel-card injected-card">
-        <div class="panel-header">
-          <h3>
+      <div class="flex flex-col overflow-hidden rounded-lg border border-border bg-card">
+        <div class="flex items-center justify-between border-b border-border px-4 py-3">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-foreground">
             <span>已附加 Hook 进程 (运行中)</span>
-            <span class="badge count-badge active-badge">{{ injectedProcesses.length }}</span>
+            <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-100 px-1.5 text-[11px] font-medium text-emerald-700">{{ injectedProcesses.length }}</span>
           </h3>
         </div>
 
-        <div class="process-list-container">
-          <div v-if="injectedProcesses.length === 0" class="empty-state">
+        <div class="flex-1 overflow-y-auto">
+          <div v-if="injectedProcesses.length === 0" class="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
             <ZapOff :size="24" />
-            <p>当前无附加 Hook 状态的进程</p>
-            <span class="empty-hint">在左侧列表中选择进程并点击“注入 Hook”</span>
+            <p class="text-xs">当前无附加 Hook 状态的进程</p>
+            <span class="text-[11px] text-muted-foreground/60">在左侧列表中选择进程并点击"注入 Hook"</span>
           </div>
 
-          <div v-else class="process-list">
-            <div 
-              v-for="proc in injectedProcesses" 
-              :key="proc.pid" 
-              class="process-item injected-item"
-            >
-              <div class="proc-details">
-                <div class="proc-meta">
-                  <span class="proc-name">{{ proc.name }}</span>
-                  <span class="badge pid-badge">PID: {{ proc.pid }}</span>
-                  <span class="badge arch-badge" :class="{ 'x64': proc.is_64bit, 'x86': !proc.is_64bit }">
+          <div v-else class="divide-y divide-border">
+            <div v-for="proc in injectedProcesses" :key="proc.pid" class="flex items-center gap-3 bg-emerald-50/30 px-4 py-3 hover:bg-emerald-50/50">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-foreground">{{ proc.name }}</span>
+                  <span class="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">PID: {{ proc.pid }}</span>
+                  <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium" :class="proc.is_64bit ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'">
                     {{ proc.is_64bit ? '64-bit' : '32-bit' }}
                   </span>
                 </div>
-                <div class="proc-title" :title="proc.window_title">
+                <div class="mt-0.5 truncate text-xs text-muted-foreground" :title="proc.window_title">
                   窗口: {{ proc.window_title }}
                 </div>
               </div>
-              <button class="btn-unload" @click="unloadHook(proc)">
+              <Button variant="outline" size="sm" class="shrink-0 gap-1 border-amber-200 text-amber-700 hover:bg-amber-50" @click="unloadHook(proc)">
                 <ZapOff :size="12" />
                 <span>安全卸载</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -408,639 +354,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.nofocus-container {
-  padding: var(--space-lg);
-  height: 100%;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--color-background);
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-md);
-  flex-shrink: 0;
-}
-
-.page-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.btn-primary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  background: var(--color-cta);
-  color: white;
-  padding: 6px 12px;
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--color-cta-hover);
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  padding: 6px 12px;
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-secondary:hover {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border-color: var(--color-text-dim);
-}
-
-.btn-secondary.active {
-  background: rgba(51, 112, 255, 0.08);
-  color: var(--color-cta);
-  border-color: var(--color-cta);
-}
-
-/* 红色醒目警示条 (完美的 Light-Mode 驱动对齐设计) */
-.warning-banner {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  padding: var(--space-md);
-  border-radius: var(--radius-lg);
-  margin-bottom: var(--space-md);
-  background: rgba(245, 74, 69, 0.06);
-  color: var(--color-error);
-  border: 1px solid rgba(245, 74, 69, 0.18);
-  flex-shrink: 0;
-}
-
-.warning-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.warning-content {
-  font-size: 12px;
-  line-height: 1.6;
-  color: #c93b37; /* 稍微偏暗红，确保可读性 */
-}
-
-.warning-content p {
-  margin-bottom: 4px;
-}
-.warning-content p:last-child {
-  margin-bottom: 0;
-}
-
-/* 提示通知消息条 */
-.message-banner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: 10px var(--space-md);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  margin-bottom: var(--space-md);
-  position: relative;
-  animation: fadeIn var(--transition-normal);
-  flex-shrink: 0;
-}
-
-.message-text {
-  flex: 1;
-  font-weight: 500;
-}
-
-.close-msg {
-  background: none;
-  border: none;
-  font-size: 16px;
-  font-weight: bold;
-  color: inherit;
-  cursor: pointer;
-  padding: 0 4px;
-}
-
-.error-banner {
-  background: rgba(245, 74, 69, 0.08);
-  color: var(--color-error);
-  border: 1px solid rgba(245, 74, 69, 0.15);
-}
-
-.success-banner {
-  background: rgba(0, 182, 91, 0.08);
-  color: var(--color-success);
-  border: 1px solid rgba(0, 182, 91, 0.15);
-}
-
-/* 信任区指引模块 */
-.guide-panel {
-  background: rgba(51, 112, 255, 0.04);
-  color: var(--color-text-muted);
-  border: 1px solid rgba(51, 112, 255, 0.15);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-  margin-bottom: var(--space-md);
-  flex-shrink: 0;
-}
-
-.guide-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  color: var(--color-cta);
-  margin-bottom: var(--space-sm);
-}
-
-.guide-header h4 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-cta);
-}
-
-.guide-steps {
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.guide-steps ol {
-  margin-left: 18px;
-  margin-top: 6px;
-  margin-bottom: 8px;
-}
-
-.guide-tip {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  margin-top: 8px;
-  color: var(--color-text-dim);
-  font-size: 11px;
-}
-
-/* 双面板卡片网格 */
-.panels-grid {
-  display: flex;
-  gap: var(--space-md);
-  flex: 1;
-  min-height: 0;
-}
-
-.panel-card {
-  flex: 1;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.panel-header {
-  padding: var(--space-md);
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-md);
-  flex-shrink: 0;
-}
-
-.panel-header h3 {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.panel-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.btn-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-icon:hover:not(:disabled) {
-  background: var(--color-surface-elevated);
-  color: var(--color-text);
-  border-color: var(--color-text-dim);
-}
-
-.btn-icon:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.search-box {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 4px var(--space-sm);
-  width: 200px;
-  transition: all var(--transition-fast);
-}
-
-.search-box:focus-within {
-  border-color: var(--color-cta);
-  background: var(--color-surface);
-}
-
-.search-box input {
-  border: none;
-  background: transparent;
-  font-size: 11px;
-  width: 100%;
-  color: var(--color-text);
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 600;
-  border-radius: var(--radius-sm);
-  padding: 2px 6px;
-}
-
-.count-badge {
-  background: var(--color-surface-elevated);
-  color: var(--color-text-muted);
-}
-
-.active-badge {
-  background: rgba(51, 112, 255, 0.1);
-  color: var(--color-cta);
-}
-
-/* 进程列表容器 */
-.process-list-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-sm);
-}
-
-.process-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.process-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px var(--space-md);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-}
-
-.process-item:hover {
-  background: var(--color-surface-elevated);
-  border-color: var(--color-text-dim);
-}
-
-.injected-item {
-  border-left: 3px solid var(--color-cta);
-}
-
-.proc-details {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-  margin-right: var(--space-md);
-}
-
-.proc-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex-wrap: wrap;
-}
-
-.proc-name {
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--color-text);
-}
-
-.pid-badge {
-  background: var(--color-surface-elevated);
-  color: var(--color-text-muted);
-  font-family: monospace;
-}
-
-.arch-badge {
-  font-size: 9px;
-  padding: 1px 4px;
-}
-
-.arch-badge.x64 {
-  background: rgba(51, 112, 255, 0.08);
-  color: var(--color-cta);
-}
-
-.arch-badge.x86 {
-  background: var(--color-surface-elevated);
-  color: var(--color-text-dim);
-}
-
-.proc-title {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 320px;
-}
-
-/* 操作按钮 */
-.btn-inject {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  background: rgba(51, 112, 255, 0.08);
-  color: var(--color-cta);
-  border: 1px solid rgba(51, 112, 255, 0.2);
-  padding: 5px 10px;
-  border-radius: var(--radius-md);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-inject:hover {
-  background: var(--color-cta);
-  color: white;
-  border-color: var(--color-cta);
-}
-
-.btn-unload {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  background: rgba(245, 74, 69, 0.08);
-  color: var(--color-error);
-  border: 1px solid rgba(245, 74, 69, 0.2);
-  padding: 5px 10px;
-  border-radius: var(--radius-md);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-unload:hover {
-  background: var(--color-error);
-  color: white;
-  border-color: var(--color-error);
-}
-
-/* 空状态 */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2xl) var(--space-md);
-  color: var(--color-text-dim);
-  text-align: center;
-}
-
-.empty-state p {
-  font-size: 12px;
-  font-weight: 500;
-  margin-top: var(--space-sm);
-  color: var(--color-text-muted);
-}
-
-.empty-hint {
-  font-size: 11px;
-  color: var(--color-text-dim);
-  margin-top: 4px;
-}
-
-/* 动效 */
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Slide 过渡动效 */
-.slide-enter-active,
-.slide-leave-active {
-  transition: all var(--transition-normal);
-}
-.slide-enter-from,
-.slide-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-/* 管理员权限提示栏 */
-.admin-tip-banner {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  padding: var(--space-md);
-  border-radius: var(--radius-lg);
-  margin-bottom: var(--space-md);
-  flex-shrink: 0;
-  transition: all var(--transition-normal);
-}
-
-.admin-tip-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.admin-tip-content {
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.warning-admin {
-  background: rgba(245, 154, 35, 0.06);
-  color: #d35400;
-  border: 1px solid rgba(245, 154, 35, 0.18);
-}
-
-.success-admin {
-  background: rgba(0, 182, 91, 0.06);
-  color: var(--color-success);
-  border: 1px solid rgba(0, 182, 91, 0.18);
-}
-
-.success-admin .admin-tip-content {
-  color: #008f47;
-}
-
-/* 版本号徽章 */
-.version-badge {
-  font-size: 10px;
-  background: var(--color-surface-elevated);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  margin-left: var(--space-sm);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  vertical-align: middle;
-  font-weight: 500;
-}
-
-/* 防止游戏失焦功能使用说明面板 */
-.feature-guide-panel {
-  background: rgba(124, 77, 255, 0.04);
-  color: var(--color-text-muted);
-  border: 1px solid rgba(124, 77, 255, 0.15);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-  margin-bottom: var(--space-md);
-  flex-shrink: 0;
-}
-
-.feature-guide-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  color: #7c4dff;
-  margin-bottom: var(--space-sm);
-}
-
-.feature-guide-header h4 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: #7c4dff;
-}
-
-.feature-guide-steps {
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.feature-guide-steps ol {
-  margin-left: 18px;
-  margin-top: 6px;
-  margin-bottom: 8px;
-}
-
-/* 折叠微调样式 */
-.btn-text-toggle {
-  background: none;
-  border: none;
-  color: inherit;
-  font-size: 11px;
-  font-weight: bold;
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0;
-  margin-left: auto;
-  opacity: 0.85;
-  transition: opacity var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.btn-text-toggle:hover {
-  opacity: 1;
-}
-
-.collapsed-summary {
-  font-size: 12px;
-  font-weight: normal;
-  opacity: 0.85;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 50%;
-  margin-left: var(--space-xs);
-}
-
-.admin-tip-banner.collapsed, .warning-banner.collapsed {
-  padding: 8px 12px;
-  gap: 0;
-  margin-bottom: var(--space-xs);
-}
-
-.title-text {
-  flex-shrink: 0;
-}
-
-.admin-tip-title, .warning-title {
-  width: 100%;
-}
-</style>

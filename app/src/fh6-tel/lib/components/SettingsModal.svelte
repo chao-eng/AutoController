@@ -38,15 +38,6 @@
         </select>
       </label>
 
-      <label>
-        主题界面
-        <select bind:value={draft.theme}>
-          <option value="dark">深色</option>
-          <option value="cobalt2">钴蓝2</option>
-          <option value="purple">紫色</option>
-        </select>
-      </label>
-
       <label class="checkbox-label">
         <input type="checkbox" bind:checked={draft.autoRecord} />
         自动记录游戏会话
@@ -69,7 +60,7 @@
 
 <style>
   .overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    position: fixed; inset: 0; background: rgba(31,35,41,0.45);
     display: flex; align-items: center; justify-content: center; z-index: 100;
   }
   .modal {

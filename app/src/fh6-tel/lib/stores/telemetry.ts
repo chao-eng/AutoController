@@ -1,6 +1,6 @@
 import { writable, derived } from 'svelte/store';
-import { ipc } from '$lib/ipc';
-import type { TelemetryPacket } from '$lib/types';
+import { ipc } from '../ipc';
+import type { TelemetryPacket } from '../types';
 
 export const packet = writable<TelemetryPacket | null>(null);
 export const isConnected = writable(false);

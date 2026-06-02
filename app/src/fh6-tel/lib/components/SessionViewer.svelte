@@ -165,7 +165,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(31,35,41,0.45);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -179,7 +179,7 @@
     border-radius: 10px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 12px 48px rgba(31,35,41,0.12);
   }
   header {
     display: flex;
@@ -339,7 +339,7 @@
   }
   .lap-row.best {
     border-color: #a855f7;
-    color: #d8b4fe;
+    color: #a855f7;
     font-weight: 700;
   }
   .lap-time {

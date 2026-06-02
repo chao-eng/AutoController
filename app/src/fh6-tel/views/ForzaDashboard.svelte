@@ -53,12 +53,6 @@
 
   let s = $derived($settings);
 
-  // Apply theme to <html> element whenever settings change
-  $effect(() => {
-    const theme = s?.theme ?? 'dark';
-    document.documentElement.setAttribute('data-theme', theme);
-  });
-
   // Replaying takes over the live dashboard — get the overlays out of the way.
   $effect(() => {
     if ($replay.active) {
@@ -145,108 +139,59 @@
 {/if}
 
 <style>
-  /* ── Theme: CSS custom properties ───────────────────────────────────────── */
+  /* ── Theme: CSS custom properties (AutoController project style) ────────── */
   :global(:root) {
-    /* Dark (default) */
-    --bg-body:    #030712;
-    --bg-panel:   #060c14;
-    --bg-card:    #080e18;
-    --bg-elevated:#0d1420;
-    --bg-track:   #151e2e;
-    --bd-dim:     #131d2e;
-    --bd-subtle:  #1e2a3a;
-    --bd-muted:   #252f42;
-    --bd-strong:  #2a3a50;
-    --tx-hi:      #f9fafb;
-    --tx-mid:     #e5e7eb;
-    --tx-lo:      #9ca3af;
-    --tx-dim:     #6b7280;
-    --tx-xdim:    #4b5563;
-    --tx-ghost:   #374151;
-    --ac:         #3b82f6;
-    --ac-dim:     #1e3a5f;
-    --adi-sky:    #0a1628;
-    --adi-ground: #1a1008;
-  }
-
-  :global([data-theme="cobalt2"]) {
-    --bg-body:    #122738;
-    --bg-panel:   #163448;
-    --bg-card:    #193549;
-    --bg-elevated:#1e4060;
-    --bg-track:   #1a3b58;
-    --bd-dim:     #1f4e6a;
-    --bd-subtle:  #235a7a;
-    --bd-muted:   #2a6d91;
-    --bd-strong:  #337ba0;
-    --tx-hi:      #ffffff;
-    --tx-mid:     #e1efff;
-    --tx-lo:      #9acfdf;
-    --tx-dim:     #7eb8d4;
-    --tx-xdim:    #5a96b8;
-    --tx-ghost:   #3d7a9c;
-    --ac:         #ffc600;
-    --ac-dim:     #7a5e00;
-    --adi-sky:    #0f2d47;
-    --adi-ground: #1a2808;
-  }
-
-  :global([data-theme="purple"]) {
-    --bg-body:    #0e0b1a;
-    --bg-panel:   #130e24;
-    --bg-card:    #18132e;
-    --bg-elevated:#1f1840;
-    --bg-track:   #1c1538;
-    --bd-dim:     #251c4a;
-    --bd-subtle:  #2d2260;
-    --bd-muted:   #3a2b78;
-    --bd-strong:  #4a3590;
-    --tx-hi:      #f5f0ff;
-    --tx-mid:     #ddd4ff;
-    --tx-lo:      #b8a8e8;
-    --tx-dim:     #8b6bb1;
-    --tx-xdim:    #6248a0;
-    --tx-ghost:   #4a3570;
-    --ac:         #c084fc;
-    --ac-dim:     #581c87;
-    --adi-sky:    #0e0b28;
-    --adi-ground: #1a0a2a;
+    --bg-body:    #F5F6F7;
+    --bg-panel:   #FFFFFF;
+    --bg-card:    #F2F3F5;
+    --bg-elevated:#FFFFFF;
+    --bg-track:   #DEE0E3;
+    --bd-dim:     #DEE0E3;
+    --bd-subtle:  #DEE0E3;
+    --bd-muted:   #8F959E;
+    --bd-strong:  #646A73;
+    --tx-hi:      #1F2329;
+    --tx-mid:     #1F2329;
+    --tx-lo:      #646A73;
+    --tx-dim:     #646A73;
+    --tx-xdim:    #8F959E;
+    --tx-ghost:   #B0B5BC;
+    --ac:         #3370FF;
+    --ac-dim:     #E8F0FE;
+    --adi-sky:    #DAE5F5;
+    --adi-ground: #E8E0D5;
   }
 
   :global(*, *::before, *::after) { box-sizing: border-box; margin: 0; padding: 0; }
   :global(body) {
     background: var(--bg-body);
     color: var(--tx-hi);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
     overflow: hidden;
     height: 100vh;
     width: 100vw;
   }
 
-  /* App-wide slim themed scrollbars (WebView2/Chromium + Firefox) */
+  /* App-wide slim themed scrollbars */
   :global(*) {
     scrollbar-width: thin;
-    scrollbar-color: var(--bd-strong) transparent;
+    scrollbar-color: #DEE0E3 transparent;
   }
-  :global(*::-webkit-scrollbar) { width: 9px; height: 9px; }
+  :global(*::-webkit-scrollbar) { width: 6px; height: 6px; }
   :global(*::-webkit-scrollbar-track) { background: transparent; }
   :global(*::-webkit-scrollbar-thumb) {
-    background: var(--bd-strong);
-    border-radius: 5px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
+    background: #DEE0E3;
+    border-radius: 3px;
   }
   :global(*::-webkit-scrollbar-thumb:hover) {
-    background: var(--tx-ghost);
-    background-clip: padding-box;
+    background: #8F959E;
   }
-  :global(*::-webkit-scrollbar-corner) { background: transparent; }
 
   .dashboard {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    width: 100vw;
+    height: 100%;
+    width: 100%;
   }
 
   .main {
@@ -262,20 +207,20 @@
     position: fixed; top: 0; left: 0; right: 0; z-index: 300;
     display: flex; align-items: center; gap: 0.75rem;
     padding: 0.35rem 1rem;
-    background: var(--ac-dim); border-bottom: 1px solid var(--ac);
-    font-size: 0.78rem; color: var(--tx-mid);
+    background: #3370FF; border-bottom: none;
+    font-size: 0.78rem; color: #fff;
   }
   .update-bar span { flex: 1; }
   .update-install {
-    background: var(--ac); color: #fff; border: none; border-radius: 4px;
+    background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px;
     padding: 0.2rem 0.65rem; font-size: 0.75rem; cursor: pointer;
   }
   .update-install:disabled { opacity: 0.6; cursor: default; }
   .update-dismiss {
-    background: none; border: none; color: var(--tx-dim);
+    background: none; border: none; color: rgba(255,255,255,0.7);
     font-size: 0.85rem; cursor: pointer; padding: 0 0.25rem;
   }
-  .update-dismiss:hover { color: var(--tx-hi); }
+  .update-dismiss:hover { color: #fff; }
 
   .toast-stack {
     position: fixed; bottom: 4rem; left: 50%; transform: translateX(-50%);
@@ -283,8 +228,9 @@
     pointer-events: none;
   }
   .toast {
-    background: var(--bg-elevated); border: 1px solid #ef4444; border-radius: 6px;
-    color: #fca5a5; font-size: 0.8rem; padding: 0.5rem 1rem;
+    background: #FFFFFF; border: 1px solid #F54A45; border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(31,35,41,0.1);
+    color: #F54A45; font-size: 0.8rem; padding: 0.5rem 1rem;
     max-width: 420px; text-align: center;
   }
 

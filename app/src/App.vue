@@ -15,6 +15,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
 const route = useRoute()
 const isMapWindow = computed(() => route.path === '/forza-map')
+const isForzaTelemetry = computed(() => route.path === '/forza-telemetry')
 
 const logStore = useLogStore()
 const controllerStore = useControllerStore()
@@ -104,12 +105,12 @@ onUnmounted(() => {
   <div class="app-layout">
     <AppSidebar v-if="!isMapWindow" />
     <div class="app-main">
-      <AppHeader v-if="!isMapWindow" />
+      <AppHeader v-if="!isMapWindow && !isForzaTelemetry" />
       <div class="app-content">
         <router-view />
       </div>
       <StatusBar
-        v-if="!isMapWindow"
+        v-if="!isMapWindow && !isForzaTelemetry"
         :deviceCount="deviceCount"
         :cpuUsage="cpuUsage"
         :memUsage="memUsage"
