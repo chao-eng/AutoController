@@ -7,7 +7,7 @@ import StickVisualizer from '../components/controller/StickVisualizer.vue'
 import TriggerBar from '../components/controller/TriggerBar.vue'
 import { Plus, AlertTriangle, CheckCircle, AlertCircle, Activity } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 const store = useControllerStore()

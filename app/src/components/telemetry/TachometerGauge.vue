@@ -10,8 +10,8 @@ const props = withDefaults(defineProps<{ useMph?: boolean }>(), { useMph: true }
 const telemetry = useTelemetryStore()
 const pkt = computed(() => telemetry.displayPacket)
 const speed = computed(() => props.useMph ? Math.round(telemetry.speedMph) : Math.round(telemetry.speedKph))
-const unit = computed(() => props.useMph ? 'MPH' : 'km/h')
-const rpm = computed(() => telemetry.rpmPercent)
+const unit = computed(() => props.useMph ? 'MPH' : 'Km/h')
+const rpm = computed(() => Math.min(Math.max(telemetry.rpmPercent, 0), 100))
 const isRedline = computed(() => rpm.value > 90)
 
 const gearLabel = computed(() => {
@@ -21,166 +21,558 @@ const gearLabel = computed(() => {
   return String(pkt.value.gear)
 })
 
-const CX = 160, CY = 148, R = 112
-const C = 2 * Math.PI * R
-const bgArc = (270 / 360) * C
-const ROT = 135
+const CX = 180
+const CY = 190
+const R = 134
+const START_ANGLE = 160
+const SWEEP_ANGLE = 220
+const CIRCLE_LENGTH = 2 * Math.PI * R
+const ARC_LENGTH = CIRCLE_LENGTH * (SWEEP_ANGLE / 360)
+const SPEED_LABEL_MIN = 20
+const SPEED_SCALE_MAX = 180
 
-const rpmArc = computed(() => (rpm.value / 100) * bgArc)
+function polarPoint(angleDeg: number, radius: number) {
+  const angle = angleDeg * Math.PI / 180
+  return {
+    x: CX + radius * Math.cos(angle),
+    y: CY + radius * Math.sin(angle),
+  }
+}
+
+const speedProgress = computed(() => {
+  if (speed.value <= 0) return 0
+  return Math.min(Math.max((speed.value - SPEED_LABEL_MIN) / (SPEED_SCALE_MAX - SPEED_LABEL_MIN), 0), 1)
+})
+const speedArc = computed(() => ARC_LENGTH * speedProgress.value)
+
+const tickMarks = Array.from({ length: 33 }, (_, i) => {
+  const value = SPEED_LABEL_MIN + i * 5
+  const pct = (value - SPEED_LABEL_MIN) / (SPEED_SCALE_MAX - SPEED_LABEL_MIN)
+  const angle = START_ANGLE + pct * SWEEP_ANGLE
+  const major = value % 20 === 0
+  const inner = polarPoint(angle, major ? 108 : 118)
+  const outer = polarPoint(angle, 132)
+  return {
+    value,
+    major,
+    x1: inner.x,
+    y1: inner.y,
+    x2: outer.x,
+    y2: outer.y,
+  }
+})
+
+const labelMarks = Array.from({ length: 9 }, (_, i) => {
+  const value = SPEED_LABEL_MIN + i * 20
+  const pct = (value - SPEED_LABEL_MIN) / (SPEED_SCALE_MAX - SPEED_LABEL_MIN)
+  const angle = START_ANGLE + pct * SWEEP_ANGLE
+  const point = polarPoint(angle, 86)
+  return { value, x: point.x, y: point.y }
+})
+
 const boost = computed(() => pkt.value?.boost ?? 0)
 const boostActive = computed(() => boost.value > 0.5)
 const throttleFrac = computed(() => (pkt.value?.throttle ?? 0) / 255)
 const brakeFrac = computed(() => (pkt.value?.brake ?? 0) / 255)
 const clutchFrac = computed(() => (pkt.value?.clutch ?? 0) / 255)
 const handbrakeOn = computed(() => (pkt.value?.handbrake ?? 0) > 127)
+const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngineRpm).toLocaleString() : '—')
 </script>
 
 <template>
-  <div class="flex flex-col h-full min-h-0 overflow-hidden">
-    <div class="flex-1 min-h-0 w-full h-full">
-      <svg viewBox="0 0 320 265" class="w-full h-full">
+  <div class="dash-cluster" :class="{ 'is-redline': isRedline }">
+    <div class="speed-stage">
+      <svg viewBox="0 0 360 260" class="speedometer" aria-label="Forza speedometer">
         <circle
-          :cx="CX" :cy="CY" :r="R"
-          fill="none" stroke="rgba(239,68,68,0.12)" stroke-width="20" stroke-linecap="round"
-          :stroke-dasharray="`${0.1 * bgArc} ${C - 0.1 * bgArc}`"
-          :transform="`rotate(${ROT + 0.9 * 270}, ${CX}, ${CY})`"
-        />
-        <circle
-          :cx="CX" :cy="CY" :r="R"
-          fill="none" stroke-width="20" stroke-linecap="round"
-          class="stroke-[var(--bg-track)]"
-          :stroke-dasharray="`${bgArc} ${C - bgArc}`"
-          :transform="`rotate(${ROT}, ${CX}, ${CY})`"
+          class="arc-base"
+          :cx="CX"
+          :cy="CY"
+          :r="R"
+          :stroke-dasharray="`${ARC_LENGTH} ${CIRCLE_LENGTH - ARC_LENGTH}`"
+          :transform="`rotate(${START_ANGLE}, ${CX}, ${CY})`"
         />
         <circle
-          :cx="CX" :cy="CY" :r="R"
-          fill="none" stroke-width="20" stroke-linecap="round"
-          :style="{
-            stroke: isRedline ? '#ef4444' : 'var(--ac)',
-            transition: 'stroke-dasharray 40ms linear, stroke 80ms ease',
-          }"
-          :stroke-dasharray="`${rpmArc} ${C - rpmArc}`"
-          :transform="`rotate(${ROT}, ${CX}, ${CY})`"
+          class="arc-progress"
+          :cx="CX"
+          :cy="CY"
+          :r="R"
+          :stroke-dasharray="`${speedArc} ${CIRCLE_LENGTH - speedArc}`"
+          :transform="`rotate(${START_ANGLE}, ${CX}, ${CY})`"
         />
-
-        <text
-          :x="CX" :y="CY - 14"
-          text-anchor="middle" font-size="66" font-weight="900"
-          class="fill-[var(--tx-hi)]"
-          font-family="'Segoe UI', system-ui, sans-serif"
-          style="font-variant-numeric: tabular-nums;"
-        >
-          {{ speed }}
-        </text>
-        <text
-          :x="CX" :y="CY + 10"
-          text-anchor="middle" font-size="14" font-weight="700"
-          class="fill-[var(--tx-xdim)]"
-          font-family="'Segoe UI', system-ui, sans-serif"
-          letter-spacing="4"
-        >
-          {{ unit }}
-        </text>
-
-        <rect :x="CX - 27" :y="CY + 22" width="54" height="46" rx="8"
-          class="fill-[var(--bg-elevated)]"
-          :style="{ stroke: isRedline ? '#ef4444' : 'var(--bd-muted)' }"
-          stroke-width="2"
-        />
-        <text
-          :x="CX" :y="CY + 58"
-          text-anchor="middle" font-size="32" font-weight="900"
-          :style="{ fill: isRedline ? '#ef4444' : 'var(--tx-mid)' }"
-          font-family="'Segoe UI', system-ui, sans-serif"
-        >
-          {{ gearLabel }}
-        </text>
-
-        <template v-for="i in 11" :key="i">
+        <template v-for="tick in tickMarks" :key="tick.value">
           <line
-            v-bind="(() => {
-              const idx = i - 1
-              const angle = (ROT + idx * 27) * Math.PI / 180
-              const inner = R - 14
-              const outer = R + 14
-              return {
-                x1: CX + inner * Math.cos(angle),
-                y1: CY + inner * Math.sin(angle),
-                x2: CX + outer * Math.cos(angle),
-                y2: CY + outer * Math.sin(angle),
-              }
-            })()"
-            :style="{ stroke: i - 1 >= 9 ? '#ef4444' : 'var(--bd-muted)' }"
-            :stroke-width="i % 5 === 0 ? 2.5 : 1.5"
-            stroke-linecap="round"
+            class="speed-tick"
+            :class="{ major: tick.major, lit: tick.value <= speed }"
+            :x1="tick.x1"
+            :y1="tick.y1"
+            :x2="tick.x2"
+            :y2="tick.y2"
           />
         </template>
+
+        <template v-for="label in labelMarks" :key="label.value">
+          <text class="speed-label" :x="label.x" :y="label.y" text-anchor="middle" dominant-baseline="middle">
+            {{ label.value }}
+          </text>
+        </template>
+
+        <g v-if="isRedline" class="overload-hud">
+          <circle class="overload-wave overload-wave-1" :cx="CX" :cy="CY" r="52" />
+          <circle class="overload-wave overload-wave-2" :cx="CX" :cy="CY" r="52" />
+        </g>
+        <circle class="center-ring" :cx="CX" :cy="CY" r="48" />
+        <text class="speed-value" :x="CX" :y="CY - 3" text-anchor="middle">
+          {{ speed }}
+        </text>
+        <text class="speed-unit" :x="CX" :y="CY + 29" text-anchor="middle">
+          {{ unit }}
+        </text>
+        <text v-if="isRedline" class="overload-label" :x="CX" :y="CY + 55" text-anchor="middle">
+          超载
+        </text>
       </svg>
     </div>
 
-    <div class="shrink-0 flex items-center gap-6 px-4 pb-3 min-h-0 w-full">
-      <div class="flex items-center gap-4 shrink-0">
+    <div class="control-deck">
+      <div class="support-gauges">
         <GForceMeter />
         <AttitudeIndicator />
         <SteeringWheel />
       </div>
 
-      <div class="flex-1 w-full flex flex-col gap-2">
-        <div class="flex items-center gap-3 w-full text-base sm:text-lg">
-          <span class="font-bold text-[var(--tx-dim)] shrink-0 min-w-[36px]">油门</span>
-          <div class="h-3 bg-[var(--bg-track)] rounded overflow-hidden flex-1">
-            <div class="h-full bg-green-500 rounded transition-[width] duration-[33ms]" :style="{ width: throttleFrac * 100 + '%' }" />
+      <div class="pedal-stack">
+        <div class="input-row">
+          <span class="input-label">油门</span>
+          <div class="input-track">
+            <div class="input-fill thr" :style="{ width: throttleFrac * 100 + '%' }" />
           </div>
-          <span class="font-bold text-[var(--tx-xdim)] tabular-nums w-10 text-right">{{ pkt ? Math.round(throttleFrac * 100) : '—' }}</span>
+          <span class="input-val">{{ pkt ? Math.round(throttleFrac * 100) : '—' }}</span>
         </div>
 
-        <div class="flex items-center gap-3 w-full text-base sm:text-lg">
-          <span class="font-bold text-[var(--tx-dim)] shrink-0 min-w-[36px]">刹车</span>
-          <div class="h-3 bg-[var(--bg-track)] rounded overflow-hidden flex-1">
-            <div class="h-full bg-red-500 rounded transition-[width] duration-[33ms]" :style="{ width: brakeFrac * 100 + '%' }" />
+        <div class="input-row">
+          <span class="input-label">刹车</span>
+          <div class="input-track">
+            <div class="input-fill brk" :style="{ width: brakeFrac * 100 + '%' }" />
           </div>
-          <span class="font-bold text-[var(--tx-xdim)] tabular-nums w-10 text-right">{{ pkt ? Math.round(brakeFrac * 100) : '—' }}</span>
+          <span class="input-val">{{ pkt ? Math.round(brakeFrac * 100) : '—' }}</span>
         </div>
 
-        <div class="flex items-center gap-3 w-full text-base sm:text-lg">
-          <span class="font-bold text-[var(--tx-dim)] shrink-0 min-w-[36px]">离合</span>
-          <div class="h-3 bg-[var(--bg-track)] rounded overflow-hidden flex-1">
-            <div class="h-full bg-slate-400 rounded transition-[width] duration-[33ms]" :style="{ width: clutchFrac * 100 + '%' }" />
+        <div class="input-row">
+          <span class="input-label">离合</span>
+          <div class="input-track">
+            <div class="input-fill clt" :style="{ width: clutchFrac * 100 + '%' }" />
           </div>
-          <span class="font-bold text-[var(--tx-xdim)] tabular-nums w-10 text-right">{{ pkt ? Math.round(clutchFrac * 100) : '—' }}</span>
+          <span class="input-val">{{ pkt ? Math.round(clutchFrac * 100) : '—' }}</span>
         </div>
 
-        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-0.5 text-base sm:text-lg">
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-[var(--tx-dim)] shrink-0">手刹</span>
-            <div
-              class="w-5 h-5 rounded-full border-2 transition-colors duration-100"
-              :class="handbrakeOn ? 'bg-orange-500 border-orange-500' : 'border-[var(--bd-muted)]'"
-            />
-            <span class="font-bold tabular-nums w-7 text-left" :class="handbrakeOn ? 'text-orange-500' : 'text-[var(--tx-xdim)]'">
+        <div class="status-row">
+          <div class="status-chip">
+            <span class="status-label">挡位</span>
+            <span class="gear-pill">{{ gearLabel }}</span>
+          </div>
+
+          <div class="status-chip">
+            <span class="status-label">手刹</span>
+            <span class="status-led" :class="{ 'hb-on': handbrakeOn }" />
+            <span class="status-value" :class="{ active: handbrakeOn }">
               {{ handbrakeOn ? '开' : '关' }}
             </span>
           </div>
 
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-[var(--tx-dim)] shrink-0">增压</span>
-            <div
-              class="w-5 h-5 rounded-full border-2 transition-colors duration-100"
-              :class="boostActive ? 'bg-yellow-500 border-yellow-500' : 'border-[var(--bd-muted)]'"
-            />
-            <span class="font-bold tabular-nums text-left" :class="boostActive ? 'text-yellow-500' : 'text-[var(--tx-xdim)]'">
+          <div class="status-chip">
+            <span class="status-label">增压</span>
+            <span class="status-led boost" :class="{ 'bst-on': boostActive }" />
+            <span class="status-value" :class="{ active: boostActive }">
               {{ pkt ? boost.toFixed(1) : '—' }}
             </span>
-            <span class="text-xs font-bold text-[var(--tx-xdim)] self-end mb-0.5">PSI</span>
+            <span class="status-unit">PSI</span>
           </div>
 
-          <div v-if="pkt" class="flex items-center gap-1.5 ml-auto">
-            <span class="text-lg font-bold text-[var(--tx-hi)] tabular-nums">{{ Math.round(pkt.currentEngineRpm).toLocaleString() }}</span>
-            <span class="text-xs font-bold text-[var(--tx-xdim)] self-end mb-0.5">RPM</span>
+          <div class="rpm-readout">
+            <span class="rpm-num">{{ rpmReadout }}</span>
+            <span class="rpm-unit">RPM</span>
           </div>
         </div>
-
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.dash-cluster {
+  --speed-accent: #c6f70c;
+  --speed-warning: #ef4444;
+  --speed-idle: #d8dce0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-body);
+}
+
+.dash-cluster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(239, 68, 68, 0.12), transparent 30%),
+    linear-gradient(90deg, rgba(239, 68, 68, 0.08), transparent 28%, transparent 72%, rgba(239, 68, 68, 0.08));
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+.dash-cluster.is-redline::after {
+  opacity: 1;
+  animation: overload-screen-flash 520ms steps(2, end) infinite;
+}
+
+.speed-stage {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  padding: clamp(0.4rem, 2vh, 1rem) 0.75rem 0;
+}
+
+.is-redline .speed-stage {
+  animation: overload-panel-jolt 360ms steps(2, end) infinite;
+}
+
+.speedometer {
+  display: block;
+  width: min(100%, 560px);
+  height: 100%;
+  overflow: visible;
+}
+
+.arc-base,
+.arc-progress {
+  fill: none;
+  stroke-linecap: butt;
+}
+
+.arc-base {
+  stroke: var(--speed-idle);
+  stroke-width: 2.4;
+}
+
+.arc-progress {
+  stroke: var(--speed-accent);
+  stroke-width: 4;
+  opacity: 1;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--speed-accent) 55%, transparent));
+  transition: stroke-dasharray 60ms linear;
+}
+
+.speed-tick {
+  stroke: var(--speed-idle);
+  stroke-width: 1.6;
+  stroke-linecap: square;
+  transition: stroke 60ms linear, filter 60ms linear;
+}
+
+.speed-tick.major {
+  stroke-width: 2.1;
+}
+
+.speed-tick.lit {
+  stroke: var(--speed-accent);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--speed-accent) 45%, transparent));
+}
+
+.speed-label {
+  fill: var(--tx-hi);
+  font-family: var(--font-heading), "DIN Condensed", "Arial Narrow", sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.center-ring {
+  fill: color-mix(in srgb, var(--bg-body) 84%, white);
+  stroke: color-mix(in srgb, var(--tx-hi) 12%, transparent);
+  stroke-width: 4;
+}
+
+.is-redline .center-ring {
+  stroke: var(--speed-warning);
+  stroke-width: 5;
+  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.38));
+  animation: overload-ring 520ms ease-in-out infinite;
+}
+
+.speed-value {
+  fill: var(--tx-hi);
+  font-family: var(--font-heading), "DIN Condensed", "Arial Narrow", sans-serif;
+  font-size: 37px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.is-redline .speed-value {
+  fill: var(--speed-warning);
+  animation: overload-text-flash 420ms steps(2, end) infinite;
+}
+
+.speed-unit {
+  fill: var(--tx-xdim);
+  font-family: var(--font-heading), "DIN Condensed", "Arial Narrow", sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.is-redline .speed-unit {
+  fill: #f87171;
+}
+
+.overload-wave {
+  fill: none;
+  stroke: var(--speed-warning);
+  stroke-width: 3;
+  transform-origin: 180px 190px;
+  opacity: 0;
+  filter: drop-shadow(0 0 9px rgba(239, 68, 68, 0.48));
+}
+
+.overload-wave-1 {
+  animation: overload-wave 820ms ease-out infinite;
+}
+
+.overload-wave-2 {
+  animation: overload-wave 820ms ease-out 240ms infinite;
+}
+
+.overload-label {
+  fill: var(--speed-warning);
+  font-family: var(--font-heading), "DIN Condensed", "Arial Narrow", sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 2px;
+  animation: overload-text-flash 420ms steps(2, end) infinite;
+}
+
+.control-deck {
+  display: grid;
+  grid-template-columns: auto minmax(15rem, 1fr);
+  gap: 1rem;
+  align-items: end;
+  flex-shrink: 0;
+  width: 100%;
+  padding: 0 1rem 0.85rem;
+}
+
+.support-gauges {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.pedal-stack {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--bd-dim);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  box-shadow: 0 4px 18px rgba(31, 35, 41, 0.06);
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: 2.3rem minmax(0, 1fr) 2.4rem;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.input-label,
+.input-val,
+.status-label,
+.status-value,
+.status-unit,
+.rpm-unit {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--tx-xdim);
+  font-variant-numeric: tabular-nums;
+}
+
+.input-track {
+  height: 0.68rem;
+  overflow: hidden;
+  border: 1px solid var(--bd-subtle);
+  border-radius: 999px;
+  background: var(--bg-track);
+}
+
+.input-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 40ms linear;
+}
+
+.input-fill.thr {
+  background: #22c55e;
+}
+
+.input-fill.brk {
+  background: #ef4444;
+}
+
+.input-fill.clt {
+  background: #64748b;
+}
+
+.input-val {
+  text-align: right;
+}
+
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem 1rem;
+  padding-top: 0.1rem;
+}
+
+.status-chip,
+.rpm-readout {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.gear-pill {
+  min-width: 2rem;
+  padding: 0.08rem 0.45rem;
+  border: 1px solid var(--bd-muted);
+  border-radius: 6px;
+  color: var(--tx-mid);
+  background: var(--bg-elevated);
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-led {
+  width: 0.68rem;
+  height: 0.68rem;
+  flex-shrink: 0;
+  border: 1px solid var(--bd-muted);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+}
+
+.status-led.hb-on {
+  border-color: #f97316;
+  background: #f97316;
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.45);
+}
+
+.status-led.bst-on {
+  border-color: #f59e0b;
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+}
+
+.status-value.active {
+  color: #f97316;
+}
+
+.rpm-readout {
+  margin-left: auto;
+}
+
+.rpm-num {
+  color: var(--tx-hi);
+  font-size: 1rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.is-redline .rpm-num,
+.is-redline .rpm-unit {
+  color: var(--speed-warning);
+  animation: overload-text-flash 420ms steps(2, end) infinite;
+}
+
+.is-redline .pedal-stack {
+  border-color: rgba(239, 68, 68, 0.32);
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.08),
+    0 8px 22px rgba(239, 68, 68, 0.12);
+}
+
+@keyframes overload-wave {
+  0% {
+    opacity: 0.58;
+    transform: scale(0.84);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.75);
+  }
+}
+
+@keyframes overload-ring {
+  0%, 100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.55));
+  }
+}
+
+@keyframes overload-text-flash {
+  0%, 100% {
+    opacity: 0.78;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes overload-panel-jolt {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(1px, -1px);
+  }
+}
+
+@keyframes overload-screen-flash {
+  0%, 100% {
+    opacity: 0.34;
+  }
+  50% {
+    opacity: 0.58;
+  }
+}
+
+@media (max-width: 760px) {
+  .control-deck {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  .support-gauges {
+    justify-content: space-between;
+  }
+}
+</style>

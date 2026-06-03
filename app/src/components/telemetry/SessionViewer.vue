@@ -88,7 +88,10 @@ function handleKeydown(e: KeyboardEvent) {
 
 <template>
   <Dialog :open="true" @update:open="(v) => { if (!v) emit('close') }">
-    <DialogContent class="max-w-[900px] w-[94vw] h-[92vh] max-h-[800px] p-0 flex flex-col gap-0 overflow-hidden rounded-xl">
+    <DialogContent
+      :show-close-button="false"
+      class="max-w-[1100px] w-[94vw] h-[92vh] max-h-[860px] p-0 flex flex-col gap-0 overflow-hidden rounded-xl"
+    >
       <DialogDescription class="sr-only">会话详情视图，包含统计分析和数据回放功能</DialogDescription>
       <header class="flex items-center justify-between gap-4 px-4 py-3 border-b border-border shrink-0">
         <div class="flex items-center gap-2 min-w-0 flex-1">
@@ -102,9 +105,9 @@ function handleKeydown(e: KeyboardEvent) {
             />
           </template>
           <template v-else>
-            <Button variant="ghost" class="text-sm font-semibold px-1.5 -ml-1.5 h-auto truncate max-w-full" @click="startEdit" title="点击重命名">
-              {{ displayName }}
-              <span class="text-muted-foreground text-xs ml-1.5">✎</span>
+            <Button variant="ghost" class="min-w-0 text-sm font-semibold px-1.5 -ml-1.5 h-auto max-w-full" @click="startEdit" title="点击重命名">
+              <span class="truncate">{{ displayName }}</span>
+              <span class="text-muted-foreground text-xs ml-1.5 shrink-0">✎</span>
             </Button>
           </template>
           <Button
