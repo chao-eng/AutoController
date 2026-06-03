@@ -1,12 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-
-export interface ToastMessage {
-  id: string
-  message: string
-  type: 'success' | 'error' | 'info' | 'warning'
-  duration: number
-}
+import { toast } from 'vue-sonner'
 
 export interface DialogOptions {
   title: string
@@ -19,20 +13,11 @@ export interface DialogOptions {
 }
 
 export const useUIStore = defineStore('ui', () => {
-  const toasts = ref<ToastMessage[]>([])
   const activeDialog = ref<DialogOptions | null>(null)
 
-  function showToast(message: string, type: ToastMessage['type'] = 'info', duration = 3000) {
-    const id = Math.random().toString(36).substring(2, 9)
-    const toast: ToastMessage = { id, message, type, duration }
-    toasts.value.push(toast)
-    setTimeout(() => {
-      removeToast(id)
-    }, duration)
-  }
-
-  function removeToast(id: string) {
-    toasts.value = toasts.value.filter(t => t.id !== id)
+  function showToast(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info', duration = 3000) {
+    const toastFn = type === 'success' ? toast.success : type === 'error' ? toast.error : type === 'warning' ? toast.warning : toast.info
+    toastFn(message, { duration })
   }
 
   function showAlert(title: string, message: string): Promise<void> {
@@ -84,10 +69,8 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   return {
-    toasts,
     activeDialog,
     showToast,
-    removeToast,
     showAlert,
     showConfirm,
     showPrompt,

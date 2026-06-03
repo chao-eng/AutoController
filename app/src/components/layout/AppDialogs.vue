@@ -2,8 +2,6 @@
 import { ref, watch, nextTick } from 'vue'
 import { useUIStore } from '../../stores/ui'
 import { AlertCircle, Info } from '@lucide/vue'
-import { toast } from 'vue-sonner'
-import Sonner from '@/components/ui/sonner/Sonner.vue'
 import {
   Dialog,
   DialogContent,
@@ -59,19 +57,10 @@ function renderDialogMessage(message: string): string {
   return safeText
 }
 
-uiStore.$subscribe((_mutation, state) => {
-  state.toasts.forEach(t => {
-    const toastFn = t.type === 'success' ? toast.success : t.type === 'error' ? toast.error : t.type === 'warning' ? toast.warning : toast.info
-    toastFn(t.message, { duration: t.duration, id: t.id })
-  })
-  if (state.toasts.length > 0) {
-    state.toasts = []
-  }
-})
+
 </script>
 
 <template>
-  <Sonner position="top-right" :close-button="true" :rich-colors="true" />
   <Dialog :open="!!uiStore.activeDialog" @update:open="(v) => { if (!v) handleCancel() }">
     <DialogContent class="sm:max-w-[420px]">
       <DialogHeader v-if="uiStore.activeDialog">

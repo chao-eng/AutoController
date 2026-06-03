@@ -9,7 +9,7 @@ import type { ScheduledTask } from '../types/scheduler'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -466,6 +466,7 @@ async function stopSequence(taskId: string) {
       <DialogContent class="sm:max-w-[580px] max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{{ editingTaskId ? '修改任务序列与调度' : '编排串联多脚本序列' }}</DialogTitle>
+          <DialogDescription class="sr-only">{{ editingTaskId ? '修改现有任务序列的名称、调度和执行步骤' : '创建新的任务序列，编排多个脚本的执行顺序与调度' }}</DialogDescription>
         </DialogHeader>
 
         <div class="flex-1 overflow-y-auto -mx-6 px-6 space-y-4">

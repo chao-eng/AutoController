@@ -2,6 +2,8 @@
 import AppSidebar from './components/layout/AppSidebar.vue'
 import StatusBar from './components/layout/StatusBar.vue'
 import AppDialogs from './components/layout/AppDialogs.vue'
+import { Toaster } from '@/components/ui/sonner'
+import 'vue-sonner/style.css'
 import { useLogStore } from './stores/log'
 import { useControllerStore } from './stores/controller'
 import { useScriptStore } from './stores/script'
@@ -101,6 +103,10 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- Toaster must be first: official shadcn-vue pattern -->
+  <div class="sonner-anchor">
+    <Toaster position="top-right" :close-button="true" :rich-colors="true" />
+  </div>
   <div class="app-layout">
     <AppSidebar v-if="!isMapWindow" />
     <div class="app-main">
@@ -138,5 +144,11 @@ onUnmounted(() => {
   flex: 1;
   overflow: hidden;
   background: radial-gradient(circle at 50% 25%, var(--background) 0%, var(--muted) 120%);
+}
+
+.sonner-anchor {
+  flex-shrink: 0;
+  height: 0;
+  overflow: visible;
 }
 </style>

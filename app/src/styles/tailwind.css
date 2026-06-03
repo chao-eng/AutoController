@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Orbitron:wght@600;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+ 
 
 @tailwind base;
 @tailwind components;
@@ -138,6 +140,9 @@
     --color-cta-hover: oklch(0.95 0 0);
     --font-body: var(--font-sans);
   }
+  .theme {
+    --font-heading: var(--font-sans);
+  }
 }
 
 *,
@@ -218,4 +223,15 @@ input[type="range"]::-webkit-slider-thumb:hover {
 input[type="range"]::-webkit-slider-thumb:active {
   transform: scale(1.4);
   background-color: oklch(0.6 0.2 264.376);
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

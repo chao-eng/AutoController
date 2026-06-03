@@ -29,12 +29,12 @@ const props = defineProps<ToasterProps>()
       '--gray5': 'var(--border)',
       '--gray12': 'var(--popover-foreground)',
     }"
-    v-bind="props"
     :toast-options="{
       classes: {
         toast: 'rounded-2xl',
       },
     }"
+    v-bind="props"
   >
     <template #success-icon>
       <CircleCheckIcon class="size-4" />

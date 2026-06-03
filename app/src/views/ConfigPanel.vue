@@ -598,6 +598,7 @@ function importBackup(event: Event) {
       <DialogContent class="sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle>创建新 Profile</DialogTitle>
+          <DialogDescription class="sr-only">填写 Profile 名称和游戏进程信息</DialogDescription>
         </DialogHeader>
         <div class="space-y-4">
           <div class="space-y-2">
@@ -623,6 +624,7 @@ function importBackup(event: Event) {
       <DialogContent class="sm:max-w-[520px] max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>管理脚本绑定</DialogTitle>
+          <DialogDescription class="sr-only">{{ editingProfile?.name || '脚本绑定管理' }}</DialogDescription>
           <template #description>
             <span class="text-[11px] text-muted-foreground">{{ editingProfile?.name }}</span>
           </template>
