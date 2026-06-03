@@ -50,7 +50,7 @@ async function handleClearAll() {
 
 <template>
   <Sheet :open="true" @update:open="(v) => { if (!v) emit('close') }">
-    <SheetContent side="right" class="w-[420px] sm:max-w-[420px] flex flex-col p-0">
+    <SheetContent side="right" class="w-[420px] sm:max-w-[420px] flex flex-col p-0" :show-close-button="false">
       <SheetHeader class="flex-row items-center justify-between px-4 py-3 border-b border-border">
         <SheetTitle class="text-base">历史会话</SheetTitle>
         <div class="flex items-center gap-1.5">
