@@ -90,7 +90,7 @@ function handleKeydown(e: KeyboardEvent) {
   <Dialog :open="true" @update:open="(v) => { if (!v) emit('close') }">
     <DialogContent
       :show-close-button="false"
-      class="max-w-[1100px] w-[94vw] h-[92vh] max-h-[860px] p-0 flex flex-col gap-0 overflow-hidden rounded-xl"
+      class="w-[92vw] max-w-[calc(100vw-1rem)] sm:max-w-[760px] lg:max-w-[900px] h-[92vh] max-h-[860px] p-0 flex flex-col gap-0 overflow-hidden rounded-xl"
     >
       <DialogDescription class="sr-only">会话详情视图，包含统计分析和数据回放功能</DialogDescription>
       <header class="flex items-center justify-between gap-4 px-4 py-3 border-b border-border shrink-0">
