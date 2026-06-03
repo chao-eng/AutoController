@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useTelemetryStore } from '@/stores/telemetry'
+import GForceMeter from './GForceMeter.vue'
+import AttitudeIndicator from './AttitudeIndicator.vue'
+import SteeringWheel from './SteeringWheel.vue'
 
 const props = withDefaults(defineProps<{ useMph?: boolean }>(), { useMph: true })
 
@@ -115,22 +118,11 @@ const handbrakeOn = computed(() => (pkt.value?.handbrake ?? 0) > 127)
       </svg>
     </div>
 
-    <div class="shrink-0 flex items-center gap-4 px-4 pb-3 min-h-0 w-full">
-      <div class="flex items-center gap-1 shrink-0">
-        <div
-          class="relative overflow-hidden rounded-full shrink-0"
-          :style="{
-            width: 'clamp(56px, 8vw, 80px)',
-            height: 'clamp(56px, 8vw, 80px)',
-            border: '1px solid var(--bd-muted)',
-            background: 'radial-gradient(circle, var(--bg-elevated) 0%, var(--bg-panel) 100%)',
-          }"
-        >
-          <div class="absolute rounded-full border border-[var(--bd-subtle)] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1/2 h-1/2" />
-          <div class="absolute rounded-full border border-[var(--bd-subtle)] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[78%] h-[78%]" />
-          <div class="absolute top-1/2 left-[5%] w-[90%] h-px bg-[var(--bd-subtle)] -translate-y-1/2" />
-          <div class="absolute left-1/2 top-[5%] h-[90%] w-px bg-[var(--bd-subtle)] -translate-x-1/2" />
-        </div>
+    <div class="shrink-0 flex items-center gap-6 px-4 pb-3 min-h-0 w-full">
+      <div class="flex items-center gap-4 shrink-0">
+        <GForceMeter />
+        <AttitudeIndicator />
+        <SteeringWheel />
       </div>
 
       <div class="flex-1 w-full flex flex-col gap-2">

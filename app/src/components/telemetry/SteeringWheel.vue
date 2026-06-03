@@ -6,6 +6,13 @@ const telemetry = useTelemetryStore()
 const pkt = computed(() => telemetry.displayPacket)
 const steerNorm = computed(() => (pkt.value?.steer ?? 0) / 127)
 const steerDeg = computed(() => steerNorm.value * 120)
+
+const steerLabel = computed(() => {
+  const norm = steerNorm.value
+  const pct = Math.round(Math.abs(norm) * 100)
+  if (pct === 0) return '回正 0%'
+  return norm < 0 ? `向左 ${pct}%` : `向右 ${pct}%`
+})
 </script>
 
 <template>
@@ -23,15 +30,12 @@ const steerDeg = computed(() => steerNorm.value * 120)
         <line x1="27.7" y1="16" x2="0" y2="0" class="stroke-[var(--bd-strong)]" stroke-width="4" stroke-linecap="round" />
         <line x1="-27.7" y1="16" x2="0" y2="0" class="stroke-[var(--bd-strong)]" stroke-width="4" stroke-linecap="round" />
         <circle cx="0" cy="0" r="8" class="fill-[var(--bg-elevated)] stroke-[var(--bd-strong)]" stroke-width="1.5" />
-        <circle cx="0" cy="-38" r="4" class="fill-[var(--ac)]" />
+        <circle cx="0" cy="-38" r="4" fill="#eab308" />
       </g>
     </svg>
     <div class="flex gap-1 items-baseline">
-      <span class="text-[clamp(0.4rem,0.8vw,0.52rem)] font-bold text-[var(--ac)] tracking-wide min-w-[1.5rem] text-center">
-        {{ Math.abs(steerNorm) < 0.05 ? '中' : steerNorm < 0 ? '左' : '右' }}
-      </span>
-      <span class="text-[clamp(0.38rem,0.75vw,0.48rem)] font-bold text-[var(--tx-xdim)] tabular-nums">
-        {{ Math.round(Math.abs(steerNorm) * 100) }}%
+      <span class="text-[clamp(0.42rem,0.85vw,0.54rem)] font-bold text-[var(--tx-xdim)] tabular-nums tracking-wide">
+        {{ steerLabel }}
       </span>
     </div>
   </div>

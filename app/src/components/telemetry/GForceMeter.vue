@@ -11,7 +11,7 @@ const longG = computed(() => pkt.value ? -(pkt.value.accelZ / 9.81) : 0)
 const gDotX = computed(() => Math.min(Math.max(latG.value / G_MAX, -1), 1) * 50 + 50)
 const gDotY = computed(() => Math.min(Math.max(-longG.value / G_MAX, -1), 1) * 50 + 50)
 const gMag = computed(() => Math.hypot(latG.value, longG.value))
-const gDotColor = computed(() => gMag.value > 1.5 ? '#ef4444' : gMag.value > 0.8 ? '#f59e0b' : '#22c55e')
+const gDotColor = '#22c55e'
 </script>
 
 <template>

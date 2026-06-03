@@ -54,8 +54,8 @@ const ROLL_TICKS = [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60]
         <g
           :style="{ transform: `translateY(${pitchOffset}px)`, transition: 'transform 40ms linear' }"
         >
-          <rect x="-200" y="-200" width="400" height="200" style="fill: var(--adi-sky)" />
-          <rect x="-200" y="0" width="400" height="200" style="fill: var(--adi-ground)" />
+          <rect x="-200" y="-200" width="400" height="200" class="adi-sky" />
+          <rect x="-200" y="0" width="400" height="200" class="adi-ground" />
           <line x1="-200" y1="0" x2="200" y2="0" class="stroke-[var(--tx-dim)]" stroke-width="1.2" />
           <template v-for="deg in [-25, -20, -15, -10, -5, 5, 10, 15, 20, 25]" :key="deg">
             <line
@@ -82,11 +82,11 @@ const ROLL_TICKS = [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60]
         </g>
       </g>
 
-      <line x1="-38" y1="0" x2="-14" y2="0" class="stroke-[var(--tx-hi)]" stroke-width="2.5" stroke-linecap="round" />
-      <line x1="14" y1="0" x2="38" y2="0" class="stroke-[var(--tx-hi)]" stroke-width="2.5" stroke-linecap="round" />
-      <line x1="-14" y1="0" x2="-14" y2="5" class="stroke-[var(--tx-hi)]" stroke-width="2.5" stroke-linecap="round" />
-      <line x1="14" y1="0" x2="14" y2="5" class="stroke-[var(--tx-hi)]" stroke-width="2.5" stroke-linecap="round" />
-      <circle cx="0" cy="0" r="2.5" class="fill-[var(--tx-hi)]" />
+      <line x1="-38" y1="0" x2="-14" y2="0" stroke="#eab308" stroke-width="2.5" stroke-linecap="round" />
+      <line x1="14" y1="0" x2="38" y2="0" stroke="#eab308" stroke-width="2.5" stroke-linecap="round" />
+      <line x1="-14" y1="0" x2="-14" y2="5" stroke="#eab308" stroke-width="2.5" stroke-linecap="round" />
+      <line x1="14" y1="0" x2="14" y2="5" stroke="#eab308" stroke-width="2.5" stroke-linecap="round" />
+      <circle cx="0" cy="0" r="2.5" fill="#eab308" />
 
       <g :style="{ transform: `rotate(${rollDeg}deg)`, transition: 'transform 40ms linear' }">
         <polygon points="0,-43 -3,-37 3,-37" class="fill-[var(--tx-hi)]" />
@@ -96,7 +96,7 @@ const ROLL_TICKS = [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60]
     </svg>
     <div class="flex gap-2">
       <span class="text-[clamp(0.42rem,0.85vw,0.54rem)] font-bold text-[var(--tx-xdim)] tabular-nums tracking-wide">
-        横滚 {{ rollDeg.toFixed(1) }}°
+        侧倾 {{ rollDeg.toFixed(1) }}°
       </span>
       <span class="text-[clamp(0.42rem,0.85vw,0.54rem)] font-bold text-[var(--tx-xdim)] tabular-nums tracking-wide">
         俯仰 {{ pitchDeg.toFixed(1) }}°
@@ -104,3 +104,21 @@ const ROLL_TICKS = [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60]
     </div>
   </div>
 </template>
+
+<style scoped>
+.adi-sky {
+  fill: #e0f2fe; /* Light blue sky background */
+  transition: fill 0.3s ease;
+}
+.adi-ground {
+  fill: #f1f5f9; /* Light gray ground background */
+  transition: fill 0.3s ease;
+}
+
+:global(.dark) .adi-sky {
+  fill: #0c4a6e; /* Dark mode blue sky */
+}
+:global(.dark) .adi-ground {
+  fill: #1e293b; /* Dark mode gray ground */
+}
+</style>
