@@ -18,7 +18,7 @@
 
 **AutoController** 是一款专为 Windows 平台打造的高性能、专业级虚拟手柄挂机与自动化工具。它基于 **Tauri 2.0** 框架，结合 **Vue 3 (TypeScript)** 现代化前端与 **Rust** 异步后端，底层通过 **ViGEmBus** 内核驱动实现高精度、低延迟的硬件级 Xbox 360 手柄信号模拟。无论是长时间挂机的核心玩家，还是需要进行批量自动化测试的开发人员，AutoController 都能提供直观、强悍的解决方案。
 
-> ℹ️ **提示**：关于当前版本（v0.6.0）的详细功能更新，请查看 [最新更新日志](docs/update-log.md)。
+> ℹ️ **提示**：关于当前版本（v0.6.1）的详细功能更新，请查看 [最新更新日志](docs/update-log.md)。
 
 ---
 
@@ -130,7 +130,7 @@ AutoController/
 
 **AutoController** is a professional-grade, high-performance virtual gamepad simulation and automation utility designed specifically for Windows. Powered by the **Tauri 2.0** framework, featuring a modern **Vue 3 (TypeScript)** frontend paired with an asynchronous **Rust** backend, it leverages the kernel-level **ViGEmBus** driver to deliver hardware-level, high-precision, and low-latency Xbox 360 gamepad emulation. Whether you are a core gamer looking for long-term AFK gaming or a developer running batch automated testing, AutoController offers an intuitive, sleek, and robust solution.
 
-> ℹ️ **Note**: For detailed features and release details on the current version (v0.6.0), check the [Latest Update Log](docs/update-log.md).
+> ℹ️ **Note**: For detailed features and release details on the current version (v0.6.1), check the [Latest Update Log](docs/update-log.md).
 
 ---
 
