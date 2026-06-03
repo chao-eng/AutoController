@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "AutoController",
+        "title": "手柄自动化控制台",
         "width": 1280,
         "height": 800,
         "minWidth": 960,

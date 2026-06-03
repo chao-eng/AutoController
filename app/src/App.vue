@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AppSidebar from './components/layout/AppSidebar.vue'
-import AppHeader from './components/layout/AppHeader.vue'
 import StatusBar from './components/layout/StatusBar.vue'
 import AppDialogs from './components/layout/AppDialogs.vue'
 import { useLogStore } from './stores/log'
@@ -105,7 +104,6 @@ onUnmounted(() => {
   <div class="app-layout">
     <AppSidebar v-if="!isMapWindow" />
     <div class="app-main">
-      <AppHeader v-if="!isMapWindow && !isForzaTelemetry" />
       <div class="app-content">
         <router-view />
       </div>

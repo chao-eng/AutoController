@@ -16,9 +16,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { HelpCircle } from '@lucide/vue'
+import { ref } from 'vue'
+import HelpModal from '../HelpModal.vue'
+import { openUrl } from '@tauri-apps/plugin-opener'
 
 const router = useRouter()
 const route = useRoute()
+
+const showHelp = ref(false)
+
+async function openGithub() {
+  try {
+    await openUrl('https://github.com/chao-eng/AutoController')
+  } catch (err) {
+    console.error('无法在系统浏览器中打开网页:', err)
+  }
+}
 
 const navItems = [
   { icon: Monitor, label: '设备', path: '/devices', name: 'devices' },
@@ -103,5 +117,47 @@ function navigate(path: string) {
         </Tooltip>
       </TooltipProvider>
     </nav>
+
+    <!-- Bottom utilities -->
+    <div class="mt-auto flex flex-col gap-1.5 items-center">
+      <!-- GitHub Button -->
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button
+              class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground"
+              @click="openGithub"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+              </svg>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>GitHub 源码</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <!-- Help Button -->
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button
+              class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground"
+              @click="showHelp = true"
+            >
+              <HelpCircle :size="20" :stroke-width="1.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>使用说明</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+
+    <!-- Help Modal Overlay -->
+    <HelpModal v-if="showHelp" @close="showHelp = false" />
   </aside>
 </template>
