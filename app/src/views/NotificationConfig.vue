@@ -276,12 +276,12 @@ function getTypeName(type: string): string {
         :key="channel.id"
         class="transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/50"
       >
-        <CardHeader class="flex flex-row justify-between items-start p-4 pb-2">
-          <div class="flex flex-col gap-1">
+        <CardHeader class="flex flex-row justify-between items-start pt-1.5 px-4 pb-2">
+          <div class="flex flex-col gap-2">
+            <CardTitle class="text-sm font-semibold text-foreground">{{ channel.name }}</CardTitle>
             <Badge :class="channel.config.type === 'feishu' ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/10' : channel.config.type === 'serverchan' ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/10' : channel.config.type === 'serverchan3' ? 'bg-red-500/10 text-red-500 hover:bg-red-500/10' : 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/10'" class="self-start text-[10px] font-semibold px-2 py-0.5 uppercase">
               {{ getTypeName(channel.config.type) }}
             </Badge>
-            <CardTitle class="text-sm font-semibold text-foreground">{{ channel.name }}</CardTitle>
           </div>
           <div class="flex gap-0.5">
             <Button variant="ghost" size="icon" class="w-6 h-6" @click="openEditDialog(channel)" title="编辑">

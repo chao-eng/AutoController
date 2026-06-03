@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<{ useMph?: boolean }>(), { useMph: true }
 const telemetry = useTelemetryStore()
 const pkt = computed(() => telemetry.displayPacket)
 const speed = computed(() => props.useMph ? Math.round(telemetry.speedMph) : Math.round(telemetry.speedKph))
-const unit = computed(() => props.useMph ? 'MPH' : 'KPH')
+const unit = computed(() => props.useMph ? 'MPH' : 'km/h')
 const rpm = computed(() => telemetry.rpmPercent)
 const isRedline = computed(() => rpm.value > 90)
 
