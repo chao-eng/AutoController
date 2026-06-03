@@ -104,7 +104,7 @@ onUnmounted(() => {
   <div class="app-layout">
     <AppSidebar v-if="!isMapWindow" />
     <div class="app-main">
-      <div class="app-content">
+      <div class="app-content bg-grid">
         <router-view />
       </div>
       <StatusBar
@@ -137,6 +137,6 @@ onUnmounted(() => {
 .app-content {
   flex: 1;
   overflow: hidden;
-  background: var(--color-background);
+  background: radial-gradient(circle at 50% 25%, var(--background) 0%, var(--muted) 120%);
 }
 </style>

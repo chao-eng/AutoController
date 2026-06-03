@@ -375,11 +375,21 @@ watch(
               <Card class="flex min-h-[420px] flex-col items-center justify-between border border-border p-4 lg:p-6">
                 <div class="mx-auto w-full max-w-[440px]">
                   <svg viewBox="0 0 441 383" class="h-auto w-full drop-shadow-lg transition-transform duration-100">
+                    <defs>
+                      <linearGradient id="controller-body" x1="0" y1="0" x2="441" y2="0" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="var(--color-surface)" />
+                        <stop offset="100%" stop-color="var(--color-surface-elevated)" />
+                      </linearGradient>
+                      <filter id="active-glow" x="-30%" y="-30%" width="160%" height="160%">
+                        <feGaussianBlur stdDeviation="3.5" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                      </filter>
+                    </defs>
                     <g id="XboxController">
                       <!-- Left main shell -->
-                      <path d="M220.5 294.5C220.5 294.5 195 294.5 150 294.5C105 294.5 81.5 378.5 49.5 378.5C17.5 378.5 4 363.9 4 317.5C4 271.1 43.5 165.5 55 137.5C66.5 109.5 95.5 92.0001 128 92.0001C154 92.0001 200.5 92.0001 220.5 92.0001" class="fill-[var(--color-surface)] stroke-[var(--color-border)]" stroke-width="3" />
+                      <path d="M220.5 294.5C220.5 294.5 195 294.5 150 294.5C105 294.5 81.5 378.5 49.5 378.5C17.5 378.5 4 363.9 4 317.5C4 271.1 43.5 165.5 55 137.5C66.5 109.5 95.5 92.0001 128 92.0001C154 92.0001 200.5 92.0001 220.5 92.0001" fill="url(#controller-body)" class="stroke-[var(--color-border)]" stroke-width="3" />
                       <!-- Right main shell -->
-                      <path d="M220 294.5C220 294.5 245.5 294.5 290.5 294.5C335.5 294.5 359 378.5 391 378.5C423 378.5 436.5 363.9 436.5 317.5C436.5 271.1 397 165.5 385.5 137.5C374 109.5 345 92.0001 312.5 92.0001C286.5 92.0001 240 92.0001 220 92.0001" class="fill-[var(--color-surface)] stroke-[var(--color-border)]" stroke-width="3" />
+                      <path d="M220 294.5C220 294.5 245.5 294.5 290.5 294.5C335.5 294.5 359 378.5 391 378.5C423 378.5 436.5 363.9 436.5 317.5C436.5 271.1 397 165.5 385.5 137.5C374 109.5 345 92.0001 312.5 92.0001C286.5 92.0001 240 92.0001 220 92.0001" fill="url(#controller-body)" class="stroke-[var(--color-border)]" stroke-width="3" />
                       
                       <!-- Left Trigger (LT) - Interactive drag & depth fill -->
                       <path 
@@ -599,6 +609,7 @@ watch(
                             stroke: '#f59e0b', 
                             strokeWidth: '2px' 
                           }" 
+                          :filter="isBtnY ? 'url(#active-glow)' : ''"
                           class="transition-all duration-100" 
                         />
                         <text 
@@ -624,6 +635,7 @@ watch(
                             stroke: '#3b82f6', 
                             strokeWidth: '2px' 
                           }" 
+                          :filter="isBtnX ? 'url(#active-glow)' : ''"
                           class="transition-all duration-100" 
                         />
                         <text 
@@ -649,6 +661,7 @@ watch(
                             stroke: '#ef4444', 
                             strokeWidth: '2px' 
                           }" 
+                          :filter="isBtnB ? 'url(#active-glow)' : ''"
                           class="transition-all duration-100" 
                         />
                         <text 
@@ -674,6 +687,7 @@ watch(
                             stroke: '#10b981', 
                             strokeWidth: '2px' 
                           }" 
+                          :filter="isBtnA ? 'url(#active-glow)' : ''"
                           class="transition-all duration-100" 
                         />
                         <text 
@@ -692,7 +706,7 @@ watch(
                         @touchend.prevent="store.setButton(selectedDeviceId!, 'Back', false)"
                         class="cursor-pointer"
                       >
-                        <circle cx="188" cy="162" r="10" :style="{ fill: isBtnBack ? '#6366f1' : 'var(--color-surface-elevated)' }" class="transition-all duration-200" />
+                        <circle cx="188" cy="162" r="10" :style="{ fill: isBtnBack ? '#6366f1' : 'var(--color-surface-elevated)' }" :filter="isBtnBack ? 'url(#active-glow)' : ''" class="transition-all duration-200" />
                         <rect x="184" y="158" width="8" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" :style="{ stroke: isBtnBack ? '#ffffff' : 'var(--color-text-muted)' }" class="pointer-events-none transition-colors duration-200" />
                       </g>
 
@@ -705,7 +719,7 @@ watch(
                         @touchend.prevent="store.setButton(selectedDeviceId!, 'Start', false)"
                         class="cursor-pointer"
                       >
-                        <circle cx="253" cy="162" r="10" :style="{ fill: isBtnStart ? '#6366f1' : 'var(--color-surface-elevated)' }" class="transition-all duration-200" />
+                        <circle cx="253" cy="162" r="10" :style="{ fill: isBtnStart ? '#6366f1' : 'var(--color-surface-elevated)' }" :filter="isBtnStart ? 'url(#active-glow)' : ''" class="transition-all duration-200" />
                         <path d="M249 158 H257 M249 162 H257 M249 166 H257" stroke="currentColor" stroke-width="1.5" :style="{ stroke: isBtnStart ? '#ffffff' : 'var(--color-text-muted)' }" class="pointer-events-none transition-colors duration-200" />
                       </g>
 
@@ -724,7 +738,7 @@ watch(
                         @touchend.prevent="store.setButton(selectedDeviceId!, 'Guide', false)"
                         class="cursor-pointer"
                       >
-                        <circle cx="220.5" cy="125" r="16" :style="{ fill: isBtnGuide ? '#6366f1' : 'var(--color-surface-elevated)' }" class="transition-all duration-200" />
+                        <circle cx="220.5" cy="125" r="16" :style="{ fill: isBtnGuide ? '#6366f1' : 'var(--color-surface-elevated)' }" :filter="isBtnGuide ? 'url(#active-glow)' : ''" class="transition-all duration-200" />
                         <path d="M216 120 L225 130 M225 120 L216 130" stroke-width="3" stroke-linecap="round" :style="{ stroke: isBtnGuide ? '#ffffff' : 'var(--color-text-muted)' }" class="transition-colors duration-200" />
                       </g>
                     </g>

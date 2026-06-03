@@ -96,15 +96,15 @@ function navigate(path: string) {
         <circle cx="256" cy="196" r="7" fill="url(#side-electric)" />
       </svg>
     </div>
-    <nav class="flex flex-col gap-1">
+    <nav class="flex flex-col gap-1.5">
       <TooltipProvider v-for="item in navItems" :key="item.path">
         <Tooltip>
           <TooltipTrigger as-child>
             <div class="relative">
               <div v-if="isActive(item)" class="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
               <button
-                class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground"
-                :class="{ 'text-primary bg-primary/10': isActive(item) }"
+                class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all duration-300 hover:bg-accent hover:text-accent-foreground hover:scale-105 active:scale-95"
+                :class="{ 'text-primary bg-primary/10 shadow-sm border border-primary/20': isActive(item) }"
                 @click="navigate(item.path)"
               >
                 <component :is="item.icon" :size="20" :stroke-width="1.5" />
@@ -125,7 +125,7 @@ function navigate(path: string) {
         <Tooltip>
           <TooltipTrigger as-child>
             <button
-              class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground"
+              class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all duration-300 hover:bg-accent hover:text-accent-foreground hover:scale-105 active:scale-95"
               @click="openGithub"
             >
               <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -144,7 +144,7 @@ function navigate(path: string) {
         <Tooltip>
           <TooltipTrigger as-child>
             <button
-              class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-accent hover:text-accent-foreground"
+              class="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-all duration-300 hover:bg-accent hover:text-accent-foreground hover:scale-105 active:scale-95"
               @click="showHelp = true"
             >
               <HelpCircle :size="20" :stroke-width="1.5" />
