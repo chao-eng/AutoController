@@ -12,7 +12,13 @@ import {
 import { Toaster as Sonner } from 'vue-sonner'
 import { cn } from '@/lib/utils'
 
-const props = defineProps<ToasterProps>()
+const props = withDefaults(defineProps<ToasterProps>(), {
+  toastOptions: () => ({
+    classes: {
+      toast: 'rounded-2xl border border-normal-border bg-normal-bg text-normal-text',
+    },
+  }),
+})
 </script>
 
 <template>
@@ -28,11 +34,6 @@ const props = defineProps<ToasterProps>()
       '--gray4': 'var(--border)',
       '--gray5': 'var(--border)',
       '--gray12': 'var(--popover-foreground)',
-    }"
-    :toast-options="{
-      classes: {
-        toast: 'rounded-2xl',
-      },
     }"
     v-bind="props"
   >

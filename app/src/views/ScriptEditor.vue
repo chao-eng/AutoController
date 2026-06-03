@@ -7,7 +7,6 @@ import { useConfigStore } from '../stores/config'
 import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link, BookOpen, ChevronLeft, ChevronRight } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import CodeEditor from '../components/script/CodeEditor.vue'
 
 const store = useScriptStore()
@@ -459,7 +458,7 @@ function saveScriptOrder(orderedScripts: any[]) {
                   <Link :size="9" />
                 </span>
               </div>
-              <div class="hidden items-center gap-0.5 shrink-0 group-hover/script-item:flex">
+              <div class="flex items-center gap-0.5 shrink-0">
                 <Button variant="ghost" size="icon-xs" :disabled="macroStore.isRecording" title="重命名" @click.stop="!macroStore.isRecording && startRename(script)">
                   <Edit2 :size="12" />
                 </Button>
