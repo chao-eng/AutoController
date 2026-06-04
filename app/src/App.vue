@@ -105,7 +105,7 @@ onUnmounted(() => {
 <template>
   <!-- Toaster must be first: official shadcn-vue pattern -->
   <div class="sonner-anchor">
-    <Toaster position="top-right" :close-button="true" :rich-colors="true" />
+    <Toaster position="top-right" close-button-position="top-right" :expand="true" :gap="4" :close-button="true" />
   </div>
   <div class="app-layout">
     <AppSidebar v-if="!isMapWindow" />
