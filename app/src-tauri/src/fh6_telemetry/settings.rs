@@ -7,6 +7,8 @@ use thiserror::Error;
 pub struct Settings {
     pub port: u16,
     pub use_mph: bool,
+    #[serde(default = "Settings::default_dashboard_max_speed")]
+    pub dashboard_max_speed: u16,
     pub tire_temp_cold: f32,
     pub tire_temp_optimal: f32,
     pub tire_temp_hot: f32,
@@ -64,6 +66,9 @@ impl Settings {
     fn default_tires_visible() -> bool {
         true
     }
+    fn default_dashboard_max_speed() -> u16 {
+        180
+    }
 }
 
 impl Default for Settings {
@@ -71,6 +76,7 @@ impl Default for Settings {
         Self {
             port: 20440,
             use_mph: true,
+            dashboard_max_speed: Self::default_dashboard_max_speed(),
             tire_temp_cold: 60.0,
             tire_temp_optimal: 85.0,
             tire_temp_hot: 110.0,
@@ -145,6 +151,7 @@ mod tests {
         assert_eq!(s.map_max_zoom, 5);
         assert_eq!(s.map_tile_size, 256);
         assert_eq!(s.map_cal_a_world, [0.0, 0.0]);
+        assert_eq!(s.dashboard_max_speed, 180);
     }
 
     #[test]
@@ -153,6 +160,7 @@ mod tests {
             "tireTempOptimal":85.0,"tireTempHot":110.0,"autoRecord":true,"theme":"dark"}"#;
         let s: Settings = serde_json::from_str(legacy).unwrap();
         assert!(s.tires_visible);
+        assert_eq!(s.dashboard_max_speed, 180);
     }
 
     #[test]

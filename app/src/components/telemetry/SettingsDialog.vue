@@ -27,10 +27,23 @@ const emit = defineEmits<{ close: [] }>()
 const sessionsStore = useSessionsStore()
 
 const draft = ref<AppSettings | null>(null)
+const DASHBOARD_MAX_SPEED_MIN = 40
+const DASHBOARD_MAX_SPEED_MAX = 600
+const DASHBOARD_MAX_SPEED_DEFAULT = 180
+
+function normalizeDashboardMaxSpeed(value: unknown) {
+  const speed = typeof value === 'number' && Number.isFinite(value)
+    ? Math.round(value)
+    : DASHBOARD_MAX_SPEED_DEFAULT
+  return Math.min(Math.max(speed, DASHBOARD_MAX_SPEED_MIN), DASHBOARD_MAX_SPEED_MAX)
+}
 
 watch(() => sessionsStore.settings, (s) => {
   if (s && !draft.value) {
-    draft.value = { ...s }
+    draft.value = {
+      ...s,
+      dashboardMaxSpeed: normalizeDashboardMaxSpeed(s.dashboardMaxSpeed),
+    }
   }
 }, { immediate: true })
 
@@ -38,10 +51,16 @@ const useMphModel = computed({
   get: () => draft.value?.useMph ? 'true' : 'false',
   set: (v: string) => { if (draft.value) draft.value.useMph = v === 'true' },
 })
+const speedUnitLabel = computed(() => draft.value?.useMph ? 'mph' : 'km/h')
 
 async function save() {
   if (!draft.value) return
-  await sessionsStore.saveSettings(draft.value)
+  const next = {
+    ...draft.value,
+    dashboardMaxSpeed: normalizeDashboardMaxSpeed(draft.value.dashboardMaxSpeed),
+  }
+  draft.value = next
+  await sessionsStore.saveSettings(next)
   emit('close')
 }
 </script>
@@ -74,6 +93,21 @@ async function save() {
               <SelectItem value="false">km/h</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <Label class="text-muted-foreground">仪表盘最大速度</Label>
+          <div class="flex items-center gap-2">
+            <Input
+              v-model.number="draft.dashboardMaxSpeed"
+              type="number"
+              :min="DASHBOARD_MAX_SPEED_MIN"
+              :max="DASHBOARD_MAX_SPEED_MAX"
+              step="10"
+            />
+            <span class="min-w-[3rem] text-sm font-semibold text-muted-foreground">{{ speedUnitLabel }}</span>
+          </div>
+          <span class="text-xs text-muted-foreground/70">用于控制速度仪表盘的刻度上限。</span>
         </div>
 
         <div class="flex items-center gap-2">

@@ -81,6 +81,7 @@ export interface SessionLap {
 export interface AppSettings {
   port: number;
   useMph: boolean;
+  dashboardMaxSpeed: number;
   tireTempCold: number;
   tireTempOptimal: number;
   tireTempHot: number;

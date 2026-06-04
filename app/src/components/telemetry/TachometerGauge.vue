@@ -5,7 +5,10 @@ import GForceMeter from './GForceMeter.vue'
 import AttitudeIndicator from './AttitudeIndicator.vue'
 import SteeringWheel from './SteeringWheel.vue'
 
-const props = withDefaults(defineProps<{ useMph?: boolean }>(), { useMph: true })
+const props = withDefaults(defineProps<{ useMph?: boolean; maxSpeed?: number }>(), {
+  useMph: true,
+  maxSpeed: 180,
+})
 
 const telemetry = useTelemetryStore()
 const pkt = computed(() => telemetry.displayPacket)
@@ -29,7 +32,7 @@ const SWEEP_ANGLE = 220
 const CIRCLE_LENGTH = 2 * Math.PI * R
 const ARC_LENGTH = CIRCLE_LENGTH * (SWEEP_ANGLE / 360)
 const SPEED_LABEL_MIN = 20
-const SPEED_SCALE_MAX = 180
+const SPEED_SCALE_DEFAULT_MAX = 180
 
 function polarPoint(angleDeg: number, radius: number) {
   const angle = angleDeg * Math.PI / 180
@@ -39,35 +42,64 @@ function polarPoint(angleDeg: number, radius: number) {
   }
 }
 
+const speedScaleMax = computed(() => {
+  const max = props.maxSpeed
+  return Math.max(SPEED_LABEL_MIN + 20, Number.isFinite(max) ? Math.round(max) : SPEED_SCALE_DEFAULT_MAX)
+})
+
 const speedProgress = computed(() => {
   if (speed.value <= 0) return 0
-  return Math.min(Math.max((speed.value - SPEED_LABEL_MIN) / (SPEED_SCALE_MAX - SPEED_LABEL_MIN), 0), 1)
+  return Math.min(Math.max((speed.value - SPEED_LABEL_MIN) / (speedScaleMax.value - SPEED_LABEL_MIN), 0), 1)
 })
 const speedArc = computed(() => ARC_LENGTH * speedProgress.value)
 
-const tickMarks = Array.from({ length: 33 }, (_, i) => {
-  const value = SPEED_LABEL_MIN + i * 5
-  const pct = (value - SPEED_LABEL_MIN) / (SPEED_SCALE_MAX - SPEED_LABEL_MIN)
-  const angle = START_ANGLE + pct * SWEEP_ANGLE
-  const major = value % 20 === 0
-  const inner = polarPoint(angle, major ? 108 : 118)
-  const outer = polarPoint(angle, 132)
-  return {
-    value,
-    major,
-    x1: inner.x,
-    y1: inner.y,
-    x2: outer.x,
-    y2: outer.y,
-  }
+const speedLabelStep = computed(() => {
+  const range = speedScaleMax.value - SPEED_LABEL_MIN
+  if (range <= 180) return 20
+  if (range <= 360) return 40
+  if (range <= 540) return 60
+  return 100
 })
 
-const labelMarks = Array.from({ length: 9 }, (_, i) => {
-  const value = SPEED_LABEL_MIN + i * 20
-  const pct = (value - SPEED_LABEL_MIN) / (SPEED_SCALE_MAX - SPEED_LABEL_MIN)
-  const angle = START_ANGLE + pct * SWEEP_ANGLE
-  const point = polarPoint(angle, 86)
-  return { value, x: point.x, y: point.y }
+const tickMarks = computed(() => {
+  const step = speedLabelStep.value / 4
+  const marks = []
+  const max = speedScaleMax.value
+  for (let value = SPEED_LABEL_MIN, index = 0; value <= max; value += step, index += 1) {
+    const pct = (value - SPEED_LABEL_MIN) / (max - SPEED_LABEL_MIN)
+    const angle = START_ANGLE + pct * SWEEP_ANGLE
+    const major = index % 4 === 0 || value === max
+    const inner = polarPoint(angle, major ? 108 : 118)
+    const outer = polarPoint(angle, 132)
+    marks.push({
+      value,
+      major,
+      x1: inner.x,
+      y1: inner.y,
+      x2: outer.x,
+      y2: outer.y,
+    })
+  }
+  return marks
+})
+
+const labelMarks = computed(() => {
+  const values = []
+  const max = speedScaleMax.value
+  const step = speedLabelStep.value
+  for (let value = SPEED_LABEL_MIN; value <= max; value += step) {
+    values.push(value)
+  }
+  if (values[values.length - 1] !== max) {
+    if (max - values[values.length - 1] < step / 2) values[values.length - 1] = max
+    else values.push(max)
+  }
+  return values.map((value) => {
+    const pct = (value - SPEED_LABEL_MIN) / (max - SPEED_LABEL_MIN)
+    const angle = START_ANGLE + pct * SWEEP_ANGLE
+    const point = polarPoint(angle, 86)
+    return { value, x: point.x, y: point.y }
+  })
 })
 
 const boost = computed(() => pkt.value?.boost ?? 0)

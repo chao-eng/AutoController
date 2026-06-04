@@ -107,7 +107,10 @@ async function handleToggleTires() {
 
     <div class="min-h-0 flex-1 overflow-hidden">
       <div class="h-full w-full overflow-hidden" :style="{ background: 'var(--bg-body)' }">
-        <CenterPanel :use-mph="settings?.useMph ?? true" />
+        <CenterPanel
+          :use-mph="settings?.useMph ?? true"
+          :max-speed="settings?.dashboardMaxSpeed ?? 180"
+        />
       </div>
     </div>
 

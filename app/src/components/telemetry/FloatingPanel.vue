@@ -196,7 +196,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   isolation: isolate;
-  min-width: 120px;
 }
 .fp.dragging { opacity: 0.9; cursor: grabbing; user-select: none; }
 .fp-header {
