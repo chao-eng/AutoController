@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { nextTick, ref, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps<{
   id: string
@@ -19,23 +19,75 @@ const x = ref(0)
 const y = ref(0)
 const w = ref(200)
 const ready = ref(false)
+const panelEl = ref<HTMLElement | null>(null)
+
+const VIEWPORT_PADDING = 8
+const MIN_WIDTH = 120
+
+let panelResizeObserver: ResizeObserver | null = null
+
+function finiteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function minPanelWidth() {
+  return Math.min(MIN_WIDTH, Math.max(0, window.innerWidth - VIEWPORT_PADDING * 2))
+}
+
+function maxPanelWidth() {
+  return Math.max(minPanelWidth(), window.innerWidth - VIEWPORT_PADDING * 2)
+}
+
+function clampWidth(width: number, left = x.value) {
+  const availableFromLeft = Math.max(minPanelWidth(), window.innerWidth - left - VIEWPORT_PADDING)
+  return clamp(width, minPanelWidth(), Math.min(maxPanelWidth(), availableFromLeft))
+}
+
+function panelHeight() {
+  return panelEl.value?.getBoundingClientRect().height ?? 40
+}
+
+function maxX() {
+  return Math.max(VIEWPORT_PADDING, window.innerWidth - w.value - VIEWPORT_PADDING)
+}
+
+function maxY() {
+  return Math.max(VIEWPORT_PADDING, window.innerHeight - panelHeight() - VIEWPORT_PADDING)
+}
+
+function clampPosition() {
+  w.value = clampWidth(w.value)
+  x.value = clamp(x.value, VIEWPORT_PADDING, maxX())
+  y.value = clamp(y.value, VIEWPORT_PADDING, maxY())
+}
 
 onMounted(() => {
   const saved = localStorage.getItem(props.id)
   if (saved) {
     try {
       const s = JSON.parse(saved)
-      x.value = s.x
-      y.value = s.y
-      w.value = s.w
+      x.value = finiteNumber(s.x) ? s.x : 0
+      y.value = finiteNumber(s.y) ? s.y : 0
+      w.value = finiteNumber(s.w) ? s.w : (props.defaultWidth ?? 200)
     } catch { /* fall through */ }
   }
   if (!saved) {
     w.value = props.defaultWidth ?? 200
-    x.value = window.innerWidth - (props.defaultWidth ?? 200)
+    x.value = window.innerWidth - (props.defaultWidth ?? 200) - VIEWPORT_PADDING
     y.value = props.defaultTop ?? window.innerHeight - (props.defaultWidth ?? 200) - (props.defaultBottom ?? 0)
   }
+  w.value = clampWidth(w.value)
   ready.value = true
+  void nextTick(() => {
+    clampPosition()
+    panelResizeObserver = new ResizeObserver(clampPosition)
+    if (panelEl.value) panelResizeObserver.observe(panelEl.value)
+  })
+  window.addEventListener('resize', clampPosition)
 })
 
 function persist() {
@@ -57,8 +109,8 @@ function startDrag(e: PointerEvent) {
 }
 
 function onDragMove(e: PointerEvent) {
-  x.value = Math.max(0, Math.min(window.innerWidth - w.value, originX + e.clientX - dragStartX))
-  y.value = Math.max(0, Math.min(window.innerHeight - 40, originY + e.clientY - dragStartY))
+  x.value = clamp(originX + e.clientX - dragStartX, VIEWPORT_PADDING, maxX())
+  y.value = clamp(originY + e.clientY - dragStartY, VIEWPORT_PADDING, maxY())
 }
 
 function stopDrag() {
@@ -81,7 +133,8 @@ function startResize(e: PointerEvent) {
 }
 
 function onResizeMove(e: PointerEvent) {
-  w.value = Math.max(120, Math.min(window.innerWidth - x.value, originW + e.clientX - resizeStartX))
+  w.value = clampWidth(originW + e.clientX - resizeStartX)
+  clampPosition()
 }
 
 function stopResize() {
@@ -93,12 +146,17 @@ function stopResize() {
 onUnmounted(() => {
   window.removeEventListener('pointermove', onDragMove)
   window.removeEventListener('pointermove', onResizeMove)
+  window.removeEventListener('pointerup', stopDrag)
+  window.removeEventListener('pointerup', stopResize)
+  window.removeEventListener('resize', clampPosition)
+  panelResizeObserver?.disconnect()
 })
 </script>
 
 <template>
   <div v-if="ready">
     <div
+      ref="panelEl"
       class="fp"
       :class="{ dragging }"
       :style="{ left: x + 'px', top: y + 'px', width: w + 'px' }"
@@ -129,6 +187,8 @@ onUnmounted(() => {
 .fp {
   position: fixed;
   z-index: 50;
+  max-height: calc(100vh - 16px);
+  min-width: min(120px, calc(100vw - 16px));
   background: var(--bg-panel);
   border: 1px solid var(--bd-subtle);
   border-radius: 6px;
@@ -165,7 +225,7 @@ onUnmounted(() => {
   font-size: 0.8rem; cursor: pointer; padding: 0 0.1rem; line-height: 1;
 }
 .fp-close:hover { color: var(--tx-hi); }
-.fp-body { flex: 1; min-height: 0; overflow: hidden; }
+.fp-body { flex: 1; min-height: 0; overflow: auto; }
 .fp-resize {
   position: absolute; bottom: 3px; right: 4px;
   width: 12px; height: 12px; cursor: se-resize;
