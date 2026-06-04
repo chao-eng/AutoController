@@ -60,9 +60,9 @@ windows = { version = "0.58.0", features = [
     "Win32_System_Memory",
     "Win32_System_Diagnostics_Debug",
     "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_ProcessStatus",
     "Win32_Foundation",
     "Win32_System_LibraryLoader"
 ] }
 paddle-ocr-rs = "0.6.1"
 ort = { version = "=2.0.0-rc.10", default-features = false, features = ["load-dynamic"] }
-

@@ -1,16 +1,21 @@
 use chrono::{DateTime, Duration, NaiveTime, Utc};
 use cron::Schedule;
 use parking_lot::Mutex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use std::sync::Arc;
 use tauri::Manager;
+use tokio::sync::Semaphore;
+use tokio::time::MissedTickBehavior;
 
 use super::types::*;
 use crate::controller::ControllerManager;
 use crate::macro_engine::MacroPlayer;
 use crate::persistence::DataDir;
 use crate::script_engine::ScriptRuntime;
+
+const SCHEDULER_TICK_MS: u64 = 1000;
+const MAX_CONCURRENT_DISPATCHES: usize = 4;
 
 /// 核心辅助：计算下一次执行的时间
 pub fn calculate_next_run(
@@ -76,6 +81,12 @@ pub fn calculate_next_run(
         }
         ScheduleType::Manual => None,
     }
+}
+
+struct DueTask {
+    id: String,
+    action: TaskAction,
+    priority: u8,
 }
 
 pub struct TaskQueue {
@@ -186,13 +197,18 @@ impl TaskQueue {
     }
 }
 
-/// 后台智能任务调度引擎主循环线程
+/// 后台智能任务调度引擎主循环
 pub fn start_scheduler_loop(app_handle: tauri::AppHandle) {
-    std::thread::spawn(move || {
+    tauri::async_runtime::spawn(async move {
         tracing::info!("AutoController 后台定时任务调度引擎已启动");
+        let running_tasks = Arc::new(Mutex::new(HashSet::<String>::new()));
+        let dispatch_permits = Arc::new(Semaphore::new(MAX_CONCURRENT_DISPATCHES));
+        let mut interval =
+            tokio::time::interval(std::time::Duration::from_millis(SCHEDULER_TICK_MS));
+        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
         loop {
-            // 每秒心跳轮询一次，保证高精度与低功耗
-            std::thread::sleep(std::time::Duration::from_millis(1000));
+            interval.tick().await;
 
             let queue = match app_handle.try_state::<TaskQueue>() {
                 Some(q) => q,
@@ -200,110 +216,137 @@ pub fn start_scheduler_loop(app_handle: tauri::AppHandle) {
             };
 
             let now = Utc::now();
-            let mut tasks_to_run = Vec::new();
-
-            // 1. 扫描当前需要执行的任务列表
-            {
-                let tasks = queue.tasks.lock();
-                for task in tasks.values() {
-                    if task.enabled {
-                        if let Some(next) = task.next_run {
-                            if next <= now {
-                                tasks_to_run.push((
-                                    task.id.clone(),
-                                    task.action.clone(),
-                                    task.priority,
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
+            let tasks_to_run = collect_due_tasks(&queue, now, &running_tasks);
 
             if tasks_to_run.is_empty() {
                 continue;
             }
 
-            // 2. 依据任务优先级进行高优先级抢占排序（优先级高的先执行）
-            tasks_to_run.sort_by(|a, b| b.2.cmp(&a.2));
-
-            // 3. 多线程异步非阻塞分发执行任务，防止耗时操作拖慢主轮询心跳
-            for (task_id, action, _) in tasks_to_run {
-                tracing::info!(task_id = %task_id, "触发定时调度任务");
-
-                let handle_clone = app_handle.clone();
-                let tid = task_id.clone();
-
-                std::thread::spawn(move || {
-                    let result = match &action {
-                        TaskAction::PlayMacro {
-                            macro_id,
-                            speed,
-                            loop_count,
-                        } => {
-                            if let (Some(player), Some(recorder), Some(controller)) = (
-                                handle_clone.try_state::<MacroPlayer>(),
-                                handle_clone.try_state::<crate::macro_engine::MacroRecorder>(),
-                                handle_clone.try_state::<ControllerManager>(),
-                            ) {
-                                if let Some(mac) = recorder.get_macro(macro_id) {
-                                    player
-                                        .start_playback(
-                                            controller.inner().clone(),
-                                            mac,
-                                            *speed,
-                                            *loop_count,
-                                        )
-                                        .map(|_| ())
-                                } else {
-                                    Err("指定手柄宏已不存在".to_string())
-                                }
-                            } else {
-                                Err("手柄模拟基础设施未就绪".to_string())
-                            }
-                        }
-                        TaskAction::ExecuteScript { script_id } => {
-                            if let Some(runtime) = handle_clone.try_state::<ScriptRuntime>() {
-                                runtime.execute_script(script_id).map(|_| ())
-                            } else {
-                                Err("脚本自动化引擎未就绪".to_string())
-                            }
-                        }
-                        TaskAction::ExecuteSequence {
-                            steps,
-                            task_loop_count,
-                        } => {
-                            if let Some(runtime) = handle_clone.try_state::<ScriptRuntime>() {
-                                runtime.execute_sequence(&tid, steps.clone(), *task_loop_count)
-                            } else {
-                                Err("脚本引擎未就绪".to_string())
-                            }
-                        }
-                    };
-
-                    if let Err(e) = result {
-                        tracing::error!(task_id = %tid, error = %e, "定时调度任务执行失败");
-                    } else {
-                        tracing::info!(task_id = %tid, "定时调度任务执行成功");
-                    }
-                });
-
-                // 4. 更新调度任务状态并计算下一次运行时间
-                {
-                    let mut tasks = queue.tasks.lock();
-                    if let Some(task) = tasks.get_mut(&task_id) {
-                        task.last_run = Some(now);
-                        // Once 类型的单次定时任务，执行后自动下线
-                        if let ScheduleType::Once(_) = task.schedule {
-                            task.enabled = false;
-                            task.next_run = None;
-                        } else {
-                            task.next_run = calculate_next_run(&task.schedule, Some(now));
-                        }
-                    }
-                }
+            for task in tasks_to_run {
+                advance_task(&queue, &task.id, now);
                 queue.persist();
+                dispatch_task(
+                    app_handle.clone(),
+                    task,
+                    running_tasks.clone(),
+                    dispatch_permits.clone(),
+                );
             }
         }
     });
+}
+
+fn collect_due_tasks(
+    queue: &TaskQueue,
+    now: DateTime<Utc>,
+    running_tasks: &Arc<Mutex<HashSet<String>>>,
+) -> Vec<DueTask> {
+    let tasks = queue.tasks.lock();
+    let mut running = running_tasks.lock();
+    let mut due = Vec::new();
+
+    for task in tasks.values() {
+        let should_run = task.enabled && task.next_run.is_some_and(|next| next <= now);
+        if should_run && !running.contains(&task.id) {
+            running.insert(task.id.clone());
+            due.push(DueTask {
+                id: task.id.clone(),
+                action: task.action.clone(),
+                priority: task.priority,
+            });
+        }
+    }
+
+    due.sort_by(|a, b| b.priority.cmp(&a.priority));
+    due
+}
+
+fn advance_task(queue: &TaskQueue, task_id: &str, now: DateTime<Utc>) {
+    let mut tasks = queue.tasks.lock();
+    if let Some(task) = tasks.get_mut(task_id) {
+        task.last_run = Some(now);
+        if let ScheduleType::Once(_) = task.schedule {
+            task.enabled = false;
+            task.next_run = None;
+        } else {
+            task.next_run = calculate_next_run(&task.schedule, Some(now));
+        }
+    }
+}
+
+fn dispatch_task(
+    app_handle: tauri::AppHandle,
+    task: DueTask,
+    running_tasks: Arc<Mutex<HashSet<String>>>,
+    dispatch_permits: Arc<Semaphore>,
+) {
+    tauri::async_runtime::spawn(async move {
+        let task_id = task.id.clone();
+        let permit = match dispatch_permits.acquire_owned().await {
+            Ok(permit) => permit,
+            Err(e) => {
+                running_tasks.lock().remove(&task_id);
+                tracing::error!(task_id = %task_id, error = %e, "调度并发控制器已关闭");
+                return;
+            }
+        };
+
+        tracing::info!(task_id = %task_id, "触发定时调度任务");
+        let result = execute_task_action(app_handle, &task_id, &task.action);
+        drop(permit);
+
+        running_tasks.lock().remove(&task_id);
+        if let Err(e) = result {
+            tracing::error!(task_id = %task_id, error = %e, "定时调度任务执行失败");
+        } else {
+            tracing::info!(task_id = %task_id, "定时调度任务执行成功");
+        }
+    });
+}
+
+fn execute_task_action(
+    app_handle: tauri::AppHandle,
+    task_id: &str,
+    action: &TaskAction,
+) -> Result<(), String> {
+    match action {
+        TaskAction::PlayMacro {
+            macro_id,
+            speed,
+            loop_count,
+        } => {
+            if let (Some(player), Some(recorder), Some(controller)) = (
+                app_handle.try_state::<MacroPlayer>(),
+                app_handle.try_state::<crate::macro_engine::MacroRecorder>(),
+                app_handle.try_state::<ControllerManager>(),
+            ) {
+                if let Some(mac) = recorder.get_macro(macro_id) {
+                    player
+                        .start_playback(controller.inner().clone(), mac, *speed, *loop_count)
+                        .map(|_| ())
+                } else {
+                    Err("指定手柄宏已不存在".to_string())
+                }
+            } else {
+                Err("手柄模拟基础设施未就绪".to_string())
+            }
+        }
+        TaskAction::ExecuteScript { script_id } => {
+            if let Some(runtime) = app_handle.try_state::<ScriptRuntime>() {
+                runtime.execute_script(script_id).map(|_| ())
+            } else {
+                Err("脚本自动化引擎未就绪".to_string())
+            }
+        }
+        TaskAction::ExecuteSequence {
+            steps,
+            task_loop_count,
+        } => {
+            if let Some(runtime) = app_handle.try_state::<ScriptRuntime>() {
+                runtime.execute_sequence(task_id, steps.clone(), *task_loop_count)
+            } else {
+                Err("脚本引擎未就绪".to_string())
+            }
+        }
+    }
 }
