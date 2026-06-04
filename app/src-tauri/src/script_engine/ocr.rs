@@ -515,15 +515,21 @@ mod win_impl {
                     long,
                     black,
                 ),
-                6 => fill_warmup_rect(img, x + stroke, y + long * 2 + stroke * 2, long, stroke, black),
+                6 => fill_warmup_rect(
+                    img,
+                    x + stroke,
+                    y + long * 2 + stroke * 2,
+                    long,
+                    stroke,
+                    black,
+                ),
                 _ => {}
             }
         }
     }
 
     fn make_paddleocr_warmup_image() -> image::RgbImage {
-        let mut img =
-            image::RgbImage::from_pixel(280, 96, image::Rgb([255, 255, 255]));
+        let mut img = image::RgbImage::from_pixel(280, 96, image::Rgb([255, 255, 255]));
         let scale = 6;
         let digit_w = scale * 6;
         let gap = scale;
