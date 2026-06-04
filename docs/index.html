@@ -1784,6 +1784,671 @@
       word-break: break-all;
     }
 
+    /* Forza telemetry dashboard */
+    .telemetry-page-container {
+      padding: 0;
+      overflow: hidden;
+      background: #F8FAFC;
+    }
+
+    .telemetry-dashboard {
+      --tel-panel: #FFFFFF;
+      --tel-body: #F8FAFC;
+      --tel-elevated: #F1F5F9;
+      --tel-track: #E2E8F0;
+      --tel-border: #DCE3EA;
+      --tel-border-soft: rgba(15, 23, 42, 0.08);
+      --tel-text: #172033;
+      --tel-muted: #64748B;
+      --tel-dim: #94A3B8;
+      --tel-accent: #008F5F;
+      --tel-glow: rgba(0, 143, 95, 0.28);
+      --tel-danger: #EF4444;
+      --tel-warning: #F59E0B;
+      height: 100%;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      color: var(--tel-text);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(248, 250, 252, 0.96)),
+        radial-gradient(rgba(15, 23, 42, 0.035) 1px, transparent 1px);
+      background-size: auto, 20px 20px;
+    }
+
+    .telemetry-topbar {
+      height: 48px;
+      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) auto minmax(160px, 1fr);
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: var(--tel-panel);
+      border-bottom: 1px solid var(--tel-border);
+    }
+
+    .telemetry-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      color: var(--tel-muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .telemetry-live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22C55E;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.62);
+      animation: telemetry-pulse 1.5s ease-in-out infinite;
+    }
+
+    .telemetry-car-strip {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      overflow: hidden;
+    }
+
+    .telemetry-car-name {
+      max-width: min(30vw, 280px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--tel-text);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .telemetry-badge {
+      display: inline-flex;
+      align-items: center;
+      height: 20px;
+      padding: 0 7px;
+      border: 1px solid var(--tel-border);
+      border-radius: 6px;
+      color: var(--tel-muted);
+      background: var(--tel-panel);
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .telemetry-badge.class-s1 {
+      color: #CA8A04;
+      border-color: rgba(202, 138, 4, 0.36);
+      background: rgba(234, 179, 8, 0.08);
+    }
+
+    .telemetry-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .telemetry-action {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--tel-border);
+      border-radius: 6px;
+      background: var(--tel-panel);
+      color: var(--tel-dim);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .telemetry-action.is-active {
+      border-color: var(--tel-accent);
+      color: var(--tel-accent);
+      background: rgba(0, 143, 95, 0.08);
+    }
+
+    .telemetry-compass {
+      position: relative;
+      height: 30px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: var(--tel-panel);
+      border-bottom: 1px solid var(--tel-border);
+    }
+
+    .telemetry-compass svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .telemetry-compass-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      pointer-events: none;
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--tel-text);
+    }
+
+    .telemetry-compass-center span:last-child {
+      color: var(--tel-accent);
+      font-size: 11px;
+    }
+
+    .telemetry-main {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 222px;
+      gap: 16px;
+      padding: 16px 16px 8px;
+      overflow: hidden;
+    }
+
+    .telemetry-cluster {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .telemetry-speed-stage {
+      position: relative;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--tel-border-soft);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.52);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+      overflow: hidden;
+    }
+
+    .telemetry-speed-stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 56%, rgba(0, 143, 95, 0.11), transparent 38%),
+        linear-gradient(90deg, rgba(239, 68, 68, 0.05), transparent 25%, transparent 75%, rgba(239, 68, 68, 0.05));
+    }
+
+    .telemetry-speed-svg {
+      position: relative;
+      z-index: 1;
+      width: min(100%, 620px);
+      height: min(100%, 430px);
+      overflow: visible;
+    }
+
+    .telemetry-arc-base,
+    .telemetry-arc-progress {
+      fill: none;
+      stroke-linecap: butt;
+    }
+
+    .telemetry-arc-base {
+      stroke: #D8DCE0;
+      stroke-width: 3;
+    }
+
+    .telemetry-arc-progress {
+      stroke: var(--tel-accent);
+      stroke-width: 7;
+      filter: drop-shadow(0 0 6px var(--tel-glow));
+      transition: stroke-dasharray 180ms linear;
+    }
+
+    .telemetry-speed-tick {
+      stroke: #CBD5E1;
+      stroke-width: 2;
+      stroke-linecap: square;
+    }
+
+    .telemetry-speed-tick.is-lit {
+      stroke: var(--tel-accent);
+      filter: drop-shadow(0 0 3px var(--tel-glow));
+    }
+
+    .telemetry-speed-label {
+      fill: var(--tel-text);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .telemetry-center-ring {
+      fill: color-mix(in srgb, var(--tel-body) 86%, white);
+      stroke: rgba(15, 23, 42, 0.12);
+      stroke-width: 5;
+    }
+
+    .telemetry-speed-value {
+      fill: var(--tel-text);
+      font-size: 46px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .telemetry-speed-unit {
+      fill: var(--tel-dim);
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .telemetry-gear {
+      fill: var(--tel-accent);
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .telemetry-needle {
+      stroke: var(--tel-warning);
+      stroke-width: 4;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.42));
+      transition: transform 180ms linear;
+      transform-origin: 180px 190px;
+    }
+
+    .telemetry-control-deck {
+      display: grid;
+      grid-template-columns: auto minmax(260px, 1fr);
+      align-items: end;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .telemetry-support-gauges {
+      display: flex;
+      align-items: end;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .telemetry-mini-gauge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--tel-dim);
+      font-size: 10px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .telemetry-g-circle {
+      position: relative;
+      width: 76px;
+      height: 76px;
+      border: 1px solid var(--tel-border);
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(0, 143, 95, 0.14) 0 2px, transparent 3px),
+        radial-gradient(circle, var(--tel-elevated), var(--tel-panel));
+      box-shadow: inset 0 0 18px rgba(0, 143, 95, 0.08);
+    }
+
+    .telemetry-g-circle::before,
+    .telemetry-g-circle::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: inherit;
+      border: 1px dashed var(--tel-border);
+    }
+
+    .telemetry-g-circle::after {
+      inset: 23px;
+    }
+
+    .telemetry-g-cross-h,
+    .telemetry-g-cross-v {
+      position: absolute;
+      background: var(--tel-border);
+    }
+
+    .telemetry-g-cross-h {
+      left: 8px;
+      right: 8px;
+      top: 50%;
+      height: 1px;
+    }
+
+    .telemetry-g-cross-v {
+      top: 8px;
+      bottom: 8px;
+      left: 50%;
+      width: 1px;
+    }
+
+    .telemetry-g-dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      left: var(--gx);
+      top: var(--gy);
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      background: #30F27A;
+      box-shadow: 0 0 9px rgba(48, 242, 122, 0.72);
+      transition: left 180ms linear, top 180ms linear;
+    }
+
+    .telemetry-attitude {
+      width: 92px;
+      height: 92px;
+      border: 1px solid var(--tel-border);
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--tel-panel);
+    }
+
+    .telemetry-wheel {
+      width: 72px;
+      height: 72px;
+      transition: transform 180ms linear;
+    }
+
+    .telemetry-pedal-stack {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 12px;
+      border: 1px solid var(--tel-border);
+      border-radius: 10px;
+      background: var(--tel-panel);
+      box-shadow: 0 4px 18px rgba(31, 35, 41, 0.06);
+    }
+
+    .telemetry-input-row {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) 34px;
+      align-items: center;
+      gap: 8px;
+      color: var(--tel-dim);
+      font-size: 11px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .telemetry-input-track {
+      height: 11px;
+      overflow: hidden;
+      border: 1px solid var(--tel-border-soft);
+      border-radius: 999px;
+      background: var(--tel-track);
+    }
+
+    .telemetry-input-fill {
+      height: 100%;
+      border-radius: inherit;
+      transition: width 180ms linear;
+    }
+
+    .telemetry-input-fill.throttle {
+      background: #22C55E;
+    }
+
+    .telemetry-input-fill.brake {
+      background: #EF4444;
+    }
+
+    .telemetry-input-fill.clutch {
+      background: #64748B;
+    }
+
+    .telemetry-status-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px 14px;
+      padding-top: 2px;
+      color: var(--tel-dim);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .telemetry-status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .telemetry-gear-pill {
+      min-width: 32px;
+      padding: 2px 8px;
+      border: 1px solid var(--tel-border);
+      border-radius: 6px;
+      color: var(--tel-text);
+      background: var(--tel-elevated);
+      text-align: center;
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+    .telemetry-led {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--tel-elevated);
+      border: 1px solid var(--tel-border);
+    }
+
+    .telemetry-led.is-on {
+      background: var(--tel-warning);
+      border-color: var(--tel-warning);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+    }
+
+    .telemetry-rpm {
+      margin-left: auto;
+      color: var(--tel-text);
+      font-size: 14px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .telemetry-side {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .telemetry-floating-panel,
+    .telemetry-session-panel {
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--tel-border);
+      border-radius: 12px;
+      background: var(--tel-panel);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+    }
+
+    .telemetry-panel-head {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      border-bottom: 1px solid var(--tel-border);
+      color: var(--tel-muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .telemetry-tire-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 6px;
+      padding: 8px;
+      height: 190px;
+    }
+
+    .telemetry-tire {
+      position: relative;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 8px;
+      border: 1px solid color-mix(in srgb, var(--tire-color) 28%, var(--tel-elevated));
+      border-radius: 9px;
+      background:
+        radial-gradient(ellipse at 28% 22%, color-mix(in srgb, var(--tire-color) 10%, transparent), transparent 62%),
+        rgba(248, 250, 252, 0.7);
+      overflow: hidden;
+    }
+
+    .telemetry-tire-label {
+      color: var(--tel-dim);
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .telemetry-tire-temp {
+      color: var(--tire-color);
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .telemetry-tire-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--tel-muted);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .telemetry-slip {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--slip-color);
+      box-shadow: 0 0 6px color-mix(in srgb, var(--slip-color) 55%, transparent);
+    }
+
+    .telemetry-session-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px;
+    }
+
+    .telemetry-session-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px;
+      border: 1px solid var(--tel-border-soft);
+      border-radius: 8px;
+      background: rgba(248, 250, 252, 0.72);
+    }
+
+    .telemetry-session-title {
+      color: var(--tel-text);
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .telemetry-session-meta {
+      color: var(--tel-dim);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .telemetry-lapbar {
+      height: clamp(44px, 6vh, 64px);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 0 16px;
+      background: var(--tel-panel);
+      border-top: 1px solid var(--tel-border);
+    }
+
+    .telemetry-lap-item {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 clamp(10px, 2.2vw, 22px);
+      border-right: 1px solid var(--tel-border-soft);
+    }
+
+    .telemetry-lap-item:last-child {
+      border-right: 0;
+    }
+
+    .telemetry-lap-label {
+      color: var(--tel-dim);
+      font-size: 10px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .telemetry-lap-value {
+      color: var(--tel-text);
+      font-size: clamp(12px, 1.4vw, 16px);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .telemetry-lap-value.accent {
+      color: var(--tel-accent);
+    }
+
+    @keyframes telemetry-pulse {
+      0%, 100% {
+        transform: scale(0.9);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.25);
+        opacity: 0.55;
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .telemetry-main {
+        grid-template-columns: 1fr;
+      }
+
+      .telemetry-side {
+        display: none;
+      }
+    }
+
     /* Screen Calibration Bounding Box overlay (Huashu-Design highlight) */
     .calibration-overlay {
       position: absolute;
@@ -2467,6 +3132,13 @@
           <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
         </svg>
       ),
+      Gauge: ({ size = 18, ...props }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="m12 14 4-4" />
+          <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+          <path d="M5 19h14" />
+        </svg>
+      ),
       Gamepad: ({ size = 14, ...props }) => (
         <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
           <line x1="6" x2="10" y1="12" y2="12" />
@@ -2563,6 +3235,7 @@
 
     function App() {
       const [currentTab, setCurrentTab] = useState('devices');
+      const [telemetryTick, setTelemetryTick] = useState(0);
       const [devices, setDevices] = useState([
         { id: '0', name: 'Xbox 360', connected: true, lx: 0, ly: 0, rx: 0, ry: 0, lt: 0, rt: 0, buttons: 0 }
       ]);
@@ -2935,6 +3608,13 @@ fn main() {
       ]);
       const [logFilter, setLogFilter] = useState('all');
 
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setTelemetryTick(t => t + 1);
+        }, 900);
+        return () => clearInterval(interval);
+      }, []);
+
       // Helper to append log entries
       const appendLog = (level, module, msg) => {
         const timeStr = new Date().toTimeString().split(' ')[0];
@@ -3304,6 +3984,64 @@ fn main() {
         return l.level.toLowerCase() === logFilter.toLowerCase();
       });
 
+      const telemetrySpeedMax = 180;
+      const telemetrySpeed = Math.round(126 + Math.sin(telemetryTick / 2.4) * 18);
+      const telemetrySpeedProgress = Math.min(Math.max(telemetrySpeed / telemetrySpeedMax, 0), 1);
+      const telemetryArcLength = 461;
+      const telemetrySpeedArc = telemetryArcLength * telemetrySpeedProgress;
+      const telemetryNeedleDeg = -110 + telemetrySpeedProgress * 220;
+      const telemetryRpmPct = Math.round(72 + Math.sin(telemetryTick / 1.7) * 18);
+      const telemetryRpmReadout = Math.round(6400 + Math.sin(telemetryTick / 1.6) * 900).toLocaleString();
+      const telemetryThrottle = Math.round(78 + Math.sin(telemetryTick / 2.2) * 12);
+      const telemetryBrake = Math.max(0, Math.round(7 + Math.sin(telemetryTick / 3.4) * 7));
+      const telemetryClutch = Math.max(0, Math.round(4 + Math.cos(telemetryTick / 2.8) * 4));
+      const telemetryHeading = (74 + telemetryTick * 3) % 360;
+      const telemetryHeadingText = Math.round(telemetryHeading).toString().padStart(3, '0');
+      const telemetryGx = 50 + Math.sin(telemetryTick / 1.9) * 22;
+      const telemetryGy = 50 - Math.cos(telemetryTick / 2.6) * 17;
+      const telemetrySteerDeg = Math.sin(telemetryTick / 2.1) * 52;
+      const telemetryPitch = 9 + Math.sin(telemetryTick / 3) * 6;
+      const telemetryRoll = Math.sin(telemetryTick / 2.4) * 18;
+
+      const telemetryPolar = (angleDeg, radius, cx = 180, cy = 190) => {
+        const angle = angleDeg * Math.PI / 180;
+        return {
+          x: cx + radius * Math.cos(angle),
+          y: cy + radius * Math.sin(angle),
+        };
+      };
+
+      const telemetrySpeedTicks = Array.from({ length: 17 }, (_, i) => {
+        const value = 20 + i * 10;
+        const pct = (value - 20) / 160;
+        const angle = 160 + pct * 220;
+        const major = i % 4 === 0;
+        const inner = telemetryPolar(angle, major ? 108 : 118);
+        const outer = telemetryPolar(angle, 132);
+        const label = major ? telemetryPolar(angle, 86) : null;
+        return { value, major, x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y, label };
+      });
+
+      const telemetryCompassTicks = Array.from({ length: 15 }, (_, i) => {
+        const diff = -105 + i * 15;
+        const deg = Math.round((telemetryHeading + diff + 360) % 360);
+        const cardinal = deg % 45 < 8 || deg % 45 > 37;
+        return { x: 400 + diff * 3, deg, cardinal };
+      });
+
+      const telemetryTires = [
+        { label: '前左', temp: 88 + Math.sin(telemetryTick / 2) * 4, slip: 0.04, wear: 96, color: '#22C55E' },
+        { label: '前右', temp: 91 + Math.cos(telemetryTick / 2.4) * 4, slip: 0.07, wear: 94, color: '#22C55E' },
+        { label: '后左', temp: 103 + Math.sin(telemetryTick / 2.8) * 5, slip: 0.11, wear: 89, color: '#F59E0B' },
+        { label: '后右', temp: 106 + Math.cos(telemetryTick / 2.6) * 5, slip: 0.14, wear: 88, color: '#F59E0B' },
+      ];
+
+      const telemetrySessions = [
+        { title: 'Sierra Nueva 冲刺赛', meta: '7 圈 · 最快 1:42.318' },
+        { title: '高速环道调校验证', meta: '12.4 km · 峰值 1.4G' },
+        { title: '蓝图挂机稳定性测试', meta: '32 分钟 · 0 次丢包' },
+      ];
+
       return (
         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
           <div className="app-layout">
@@ -3332,6 +4070,9 @@ fn main() {
                 </button>
                 <button className={`sidebar-item ${currentTab === 'nofocus' ? 'active' : ''}`} onClick={() => setCurrentTab('nofocus')} title="防止游戏/窗口失去焦点">
                   <Icons.EyeOff size={18} />
+                </button>
+                <button className={`sidebar-item ${currentTab === 'telemetry' ? 'active' : ''}`} onClick={() => setCurrentTab('telemetry')} title="Forza 遥测">
+                  <Icons.Gauge size={18} />
                 </button>
                 <button className={`sidebar-item ${currentTab === 'logs' ? 'active' : ''}`} onClick={() => setCurrentTab('logs')} title="日志查看">
                   <Icons.ScrollText size={18} />
@@ -3389,7 +4130,7 @@ fn main() {
               )}
 
               {/* View Panel Content */}
-              <div className="page-container">
+              <div className={`page-container ${currentTab === 'telemetry' ? 'telemetry-page-container' : ''}`}>
 
                 {/* TAB 1: DEVICES VIEW */}
                 {currentTab === 'devices' && (
@@ -4582,7 +5323,280 @@ fn main() {
                   </div>
                 )}
 
-                {/* TAB 6: LOGS VIEW */}
+                {/* TAB 7: FORZA TELEMETRY VIEW */}
+                {currentTab === 'telemetry' && (
+                  <div className="telemetry-dashboard">
+                    <header className="telemetry-topbar">
+                      <div className="telemetry-live">
+                        <span className="telemetry-live-dot"></span>
+                        <span>实时遥测</span>
+                      </div>
+
+                      <div className="telemetry-car-strip">
+                        <span className="telemetry-car-name">2024 Lamborghini Revuelto</span>
+                        <span className="telemetry-badge class-s1">S1</span>
+                        <span className="telemetry-badge">900</span>
+                        <span className="telemetry-badge">AWD</span>
+                      </div>
+
+                      <div className="telemetry-actions">
+                        <button className="telemetry-action is-active" title="隐藏轮胎数据">胎</button>
+                        <button className="telemetry-action" title="历史会话">
+                          <Icons.ScrollText size={14} />
+                        </button>
+                        <button className="telemetry-action" title="设置">
+                          <Icons.Settings size={14} />
+                        </button>
+                        <span className="telemetry-badge">v0.7.0</span>
+                      </div>
+                    </header>
+
+                    <div className="telemetry-compass">
+                      <svg viewBox="0 0 800 30" preserveAspectRatio="xMidYMid meet">
+                        {telemetryCompassTicks.map(tick => (
+                          <g key={tick.deg + '-' + tick.x}>
+                            <line
+                              x1={tick.x}
+                              y1="0"
+                              x2={tick.x}
+                              y2={tick.cardinal ? 12 : 7}
+                              stroke={tick.cardinal ? 'var(--tel-accent)' : 'var(--tel-border)'}
+                              strokeWidth={tick.cardinal ? 1.5 : 1}
+                              strokeLinecap="round"
+                            />
+                            <text
+                              x={tick.x}
+                              y="23"
+                              textAnchor="middle"
+                              fontSize={tick.cardinal ? 10 : 7}
+                              fontWeight={tick.cardinal ? 900 : 700}
+                              fill={tick.cardinal ? 'var(--tel-text)' : 'var(--tel-dim)'}
+                            >
+                              {tick.cardinal ? tick.deg : ''}
+                            </text>
+                          </g>
+                        ))}
+                        <polygon points="400,17 395,26 405,26" fill="var(--tel-text)" opacity="0.85" />
+                      </svg>
+                      <div className="telemetry-compass-center">
+                        <span>{telemetryHeadingText}°</span>
+                        <span>东北</span>
+                      </div>
+                    </div>
+
+                    <main className="telemetry-main">
+                      <section className="telemetry-cluster">
+                        <div className="telemetry-speed-stage">
+                          <svg viewBox="0 0 360 300" className="telemetry-speed-svg" aria-label="Forza telemetry speedometer">
+                            <circle
+                              className="telemetry-arc-base"
+                              cx="180"
+                              cy="190"
+                              r="120"
+                              strokeDasharray={`${telemetryArcLength} ${755 - telemetryArcLength}`}
+                              transform="rotate(160 180 190)"
+                            />
+                            <circle
+                              className="telemetry-arc-progress"
+                              cx="180"
+                              cy="190"
+                              r="120"
+                              strokeDasharray={`${telemetrySpeedArc} ${755 - telemetrySpeedArc}`}
+                              transform="rotate(160 180 190)"
+                            />
+
+                            {telemetrySpeedTicks.map(tick => (
+                              <g key={tick.value}>
+                                <line
+                                  className={`telemetry-speed-tick ${tick.value <= telemetrySpeed ? 'is-lit' : ''}`}
+                                  x1={tick.x1}
+                                  y1={tick.y1}
+                                  x2={tick.x2}
+                                  y2={tick.y2}
+                                  strokeWidth={tick.major ? 2.6 : 1.7}
+                                />
+                                {tick.label && (
+                                  <text
+                                    className="telemetry-speed-label"
+                                    x={tick.label.x}
+                                    y={tick.label.y}
+                                    textAnchor="middle"
+                                    dominantBaseline="middle"
+                                  >
+                                    {tick.value}
+                                  </text>
+                                )}
+                              </g>
+                            ))}
+
+                            <line
+                              className="telemetry-needle"
+                              x1="180"
+                              y1="190"
+                              x2="180"
+                              y2="86"
+                              style={{ transform: `rotate(${telemetryNeedleDeg}deg)` }}
+                            />
+                            <circle className="telemetry-center-ring" cx="180" cy="190" r="55" />
+                            <text className="telemetry-speed-value" x="180" y="184" textAnchor="middle">{telemetrySpeed}</text>
+                            <text className="telemetry-speed-unit" x="180" y="216" textAnchor="middle">MPH</text>
+                            <text className="telemetry-gear" x="180" y="252" textAnchor="middle">4</text>
+                          </svg>
+                        </div>
+
+                        <div className="telemetry-control-deck">
+                          <div className="telemetry-support-gauges">
+                            <div className="telemetry-mini-gauge">
+                              <div className="telemetry-g-circle">
+                                <div className="telemetry-g-cross-h"></div>
+                                <div className="telemetry-g-cross-v"></div>
+                                <div
+                                  className="telemetry-g-dot"
+                                  style={{ '--gx': `${telemetryGx}%`, '--gy': `${telemetryGy}%` }}
+                                ></div>
+                              </div>
+                              <span>横向 0.8G · 纵向 0.4G</span>
+                            </div>
+
+                            <div className="telemetry-mini-gauge">
+                              <svg viewBox="-50 -50 100 100" className="telemetry-attitude">
+                                <defs>
+                                  <clipPath id="telemetry-adi-clip">
+                                    <circle cx="0" cy="0" r="46" />
+                                  </clipPath>
+                                </defs>
+                                <circle cx="0" cy="0" r="48" fill="var(--tel-panel)" stroke="var(--tel-border)" strokeWidth="1.5" />
+                                <g clipPath="url(#telemetry-adi-clip)" style={{ transform: `rotate(${-telemetryRoll}deg)` }}>
+                                  <g style={{ transform: `translateY(${telemetryPitch}px)` }}>
+                                    <rect x="-200" y="-200" width="400" height="200" fill="#E0F2FE" />
+                                    <rect x="-200" y="0" width="400" height="200" fill="#F1F5F9" />
+                                    <line x1="-200" y1="0" x2="200" y2="0" stroke="var(--tel-muted)" strokeWidth="1.2" />
+                                    {[-20, -10, 10, 20].map(deg => (
+                                      <line key={deg} x1="-14" x2="14" y1={-deg * 1.6} y2={-deg * 1.6} stroke="var(--tel-border)" strokeWidth="1" />
+                                    ))}
+                                  </g>
+                                </g>
+                                <line x1="-38" y1="0" x2="-14" y2="0" stroke="#EAB308" strokeWidth="2.5" strokeLinecap="round" />
+                                <line x1="14" y1="0" x2="38" y2="0" stroke="#EAB308" strokeWidth="2.5" strokeLinecap="round" />
+                                <circle cx="0" cy="0" r="2.5" fill="#EAB308" />
+                                <g style={{ transform: `rotate(${telemetryRoll}deg)` }}>
+                                  <polygon points="0,-43 -3,-37 3,-37" fill="var(--tel-text)" />
+                                </g>
+                              </svg>
+                              <span>侧倾 {telemetryRoll.toFixed(1)}° · 俯仰 {telemetryPitch.toFixed(1)}°</span>
+                            </div>
+
+                            <div className="telemetry-mini-gauge">
+                              <svg viewBox="-50 -50 100 100" className="telemetry-wheel" style={{ transform: `rotate(${telemetrySteerDeg}deg)` }}>
+                                <circle cx="0" cy="0" r="39" fill="none" stroke="var(--tel-muted)" strokeWidth="8" />
+                                <line x1="0" y1="-32" x2="0" y2="0" stroke="var(--tel-muted)" strokeWidth="4" strokeLinecap="round" />
+                                <line x1="27.7" y1="16" x2="0" y2="0" stroke="var(--tel-muted)" strokeWidth="4" strokeLinecap="round" />
+                                <line x1="-27.7" y1="16" x2="0" y2="0" stroke="var(--tel-muted)" strokeWidth="4" strokeLinecap="round" />
+                                <circle cx="0" cy="0" r="8" fill="var(--tel-elevated)" stroke="var(--tel-muted)" strokeWidth="1.5" />
+                                <circle cx="0" cy="-38" r="4" fill="#EAB308" />
+                              </svg>
+                              <span>{telemetrySteerDeg < 0 ? '向左' : '向右'} {Math.round(Math.abs(telemetrySteerDeg) / 120 * 100)}%</span>
+                            </div>
+                          </div>
+
+                          <div className="telemetry-pedal-stack">
+                            {[
+                              ['油门', telemetryThrottle, 'throttle'],
+                              ['刹车', telemetryBrake, 'brake'],
+                              ['离合', telemetryClutch, 'clutch'],
+                            ].map(([label, value, tone]) => (
+                              <div key={label} className="telemetry-input-row">
+                                <span>{label}</span>
+                                <div className="telemetry-input-track">
+                                  <div className={`telemetry-input-fill ${tone}`} style={{ width: `${value}%` }}></div>
+                                </div>
+                                <span>{value}</span>
+                              </div>
+                            ))}
+
+                            <div className="telemetry-status-row">
+                              <span className="telemetry-status-chip">
+                                <span>挡位</span>
+                                <span className="telemetry-gear-pill">4</span>
+                              </span>
+                              <span className="telemetry-status-chip">
+                                <span>手刹</span>
+                                <span className="telemetry-led"></span>
+                                <span>关</span>
+                              </span>
+                              <span className="telemetry-status-chip">
+                                <span>增压</span>
+                                <span className="telemetry-led is-on"></span>
+                                <span>8.6 PSI</span>
+                              </span>
+                              <span className="telemetry-rpm">{telemetryRpmReadout} RPM · {telemetryRpmPct}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <aside className="telemetry-side">
+                        <div className="telemetry-floating-panel">
+                          <div className="telemetry-panel-head">
+                            <span>轮胎数据</span>
+                            <span>°C / 磨损</span>
+                          </div>
+                          <div className="telemetry-tire-grid">
+                            {telemetryTires.map(tire => (
+                              <div
+                                key={tire.label}
+                                className="telemetry-tire"
+                                style={{
+                                  '--tire-color': tire.color,
+                                  '--slip-color': tire.slip > 0.1 ? '#F59E0B' : '#22C55E',
+                                }}
+                              >
+                                <span className="telemetry-tire-label">{tire.label}</span>
+                                <span className="telemetry-tire-temp">{Math.round(tire.temp)}°</span>
+                                <div className="telemetry-tire-foot">
+                                  <span>{tire.wear}%</span>
+                                  <span className="telemetry-slip"></span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="telemetry-session-panel">
+                          <div className="telemetry-panel-head">
+                            <span>历史会话</span>
+                            <span>3</span>
+                          </div>
+                          <div className="telemetry-session-list">
+                            {telemetrySessions.map(session => (
+                              <div key={session.title} className="telemetry-session-item">
+                                <span className="telemetry-session-title">{session.title}</span>
+                                <span className="telemetry-session-meta">{session.meta}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </aside>
+                    </main>
+
+                    <footer className="telemetry-lapbar">
+                      {[
+                        ['圈数', '3'],
+                        ['当前圈', '1:42.318'],
+                        ['上一圈', '1:43.904'],
+                        ['最快圈', '1:41.772'],
+                        ['本次会话', '12:36.481'],
+                      ].map(([label, value], index) => (
+                        <div key={label} className="telemetry-lap-item">
+                          <span className="telemetry-lap-label">{label}</span>
+                          <span className={`telemetry-lap-value ${index === 1 ? 'accent' : ''}`}>{value}</span>
+                        </div>
+                      ))}
+                    </footer>
+                  </div>
+                )}
+
+                {/* TAB 8: LOGS VIEW */}
                 {currentTab === 'logs' && (
                   <div className="log-viewer-layout">
                     <div className="page-header">
@@ -4634,6 +5648,7 @@ fn main() {
               </div>
 
               {/* Bottom footer statusbar */}
+              {currentTab !== 'telemetry' && (
               <footer className="status-bar">
                 <div className="status-items">
                   <div className="status-item">
@@ -4655,6 +5670,7 @@ fn main() {
                   </div>
                 </div>
               </footer>
+              )}
             </div>
           </div>
 
