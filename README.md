@@ -1,24 +1,16 @@
 # 🎮 AutoController
 
 <p align="center">
-  <strong>基于 Tauri 2.0 + Vue 3 + ViGEmBus 的专业级游戏手柄模拟与自动化挂机工具</strong><br/>
-  <em>Professional-Grade Gamepad Simulation & Automation Tool Powered by Tauri 2.0 + Vue 3 + ViGEmBus</em>
-</p>
-
-<p align="center">
-  <a href="#-简体中文">🇨🇳 简体中文</a> | <a href="#-english">🇬🇧 English</a>
+  <strong>基于 Tauri 2.0 + Vue 3 + ViGEmBus 的专业级游戏手柄模拟与自动化挂机工具</strong>
 </p>
 
 ---
-
-<details open>
-<summary><b>🇨🇳 简体中文 (点击可折叠/展开)</b></summary>
 
 ## 📝 项目概述
 
 **AutoController** 是一款专为 Windows 平台打造的高性能、专业级虚拟手柄挂机与自动化工具。它基于 **Tauri 2.0** 框架，结合 **Vue 3 (TypeScript)** 现代化前端与 **Rust** 异步后端，底层通过 **ViGEmBus** 内核驱动实现高精度、低延迟的硬件级 Xbox 360 手柄信号模拟。无论是长时间挂机的核心玩家，还是需要进行批量自动化测试的开发人员，AutoController 都能提供直观、强悍的解决方案。
 
-> ℹ️ **提示**：关于当前版本（v0.6.1）的详细功能更新，请查看 [最新更新日志](docs/update-log.md)。
+> ℹ️ **提示**：关于当前版本（v0.7.0）的详细功能更新，请查看 [最新更新日志](docs/update-log.md)。
 
 ---
 
@@ -29,6 +21,12 @@
     * **超低延迟**（<5ms）和**高精度**（100Hz+）输入模拟，保障极速响应。
     * 最多支持 **8 个虚拟手柄** 独立并发运行，并支持运行时热插拔管理。
     * 直观的可视化仪表盘，提供摇杆拖拽互动可视化及扳机键动态进度条。
+* **🧩 全局新版 UI 骨架（v0.7.0 新增）**
+    * 新增统一页面骨架、标题区、状态提示与空状态组件，让设备监控、宏控制、脚本编辑器、任务调度、配置、通知、防失焦和日志查看等页面保持一致的交互结构。
+    * 补齐信息、成功、警告、危险等语义化状态样式，并统一按钮图标、工具栏、折叠侧栏与提示反馈的视觉节奏。
+* **🏎️ Forza 实时遥测分析（v0.7.0 新增）**
+    * 新增 Forza 遥测独立页面，支持接收游戏 Data Out UDP 数据并展示实时速度、转速、挡位、圈速、姿态、G 值、输入与轮胎状态。
+    * 支持自动记录历史会话、圈速统计、数据回放、收藏/重命名/删除会话，以及速度、转速和驾驶输入曲线分析。
 * **⏱️ 高精度宏录制与回放**
     * 一键捕获所有手柄动作事件，记录毫秒级时间戳。
     * 回放支持 **50% ~ 200% 的速度缩放** 调节，满足各种特定节奏需求。
@@ -75,6 +73,7 @@
 | **样式/组件** | Vanilla CSS + Lucide Icons | 自定义精美工业风 (Vibrant & Block-based) 主题，配合 Lucide 图标 |
 | **脚本运行时**| QuickJS (Rust 绑定) | 轻量沙箱环境，执行用户编写的手柄自动化脚本 |
 | **OCR 引擎** | PaddleOCR (Rust 原生绑定) | 主程序内置的离线高性能文本识别引擎，免外部部署 |
+| **遥测模块** | Forza Data Out + UDP + SQLite | 接收、展示、记录并回放 Forza 遥测数据 |
 | **内核模拟** | ViGEmBus Driver (1.17+) | 核心虚拟手柄硬件级信号生成驱动 |
 
 ---
@@ -93,11 +92,12 @@ AutoController/
 │   │       ├── controller/        # 手柄模拟与 ViGEmBus 通信
 │   │       ├── macro_engine/      # 宏录制与回放引擎
 │   │       ├── script_engine/     # QuickJS 引擎与 API 绑定
+│   │       ├── fh6_telemetry/     # Forza 遥测接收、解析与历史会话存储
 │   │       ├── scheduler/         # 任务调度与 Cron 解析
 │   │       └── system/            # 托盘与进程监控集成
 │   └── src/                       # Vue 3 前端 (TypeScript)
 │       ├── views/                 # 页面视图 (设备监控、编辑器、调度器等)
-│       ├── components/            # 通用及模块专用组件 (摇杆/扳机可视化)
+│       ├── components/            # 通用及模块专用组件 (摇杆/扳机/遥测可视化)
 │       └── stores/                # Pinia 状态管理仓库
 ├── design-system/                 # 系统 UI 视觉规范设计文档
 ├── docs/                          # 设计及任务计划文档
@@ -115,140 +115,4 @@ AutoController/
 ### 2. 运行与配置
 - **普通模式**：双击启动桌面的 **AutoController** 即可开始使用设备模拟、录制宏、编写 QuickJS 脚本以及调用全内置的离线 OCR 功能。
 - **管理员模式 (推荐 🛡️)**：如果您挂机的游戏具有高权限或需要使用 **防止窗口失去焦点 (No Focus Loss)** 注入技术，请在桌面上右键选择 **“以管理员身份运行”** 启动本程序。
-
----
-
-
-</details>
-
----
-
-<details>
-<summary><b>🇬🇧 English (Click to expand/collapse)</b></summary>
-
-## 📝 Project Overview
-
-**AutoController** is a professional-grade, high-performance virtual gamepad simulation and automation utility designed specifically for Windows. Powered by the **Tauri 2.0** framework, featuring a modern **Vue 3 (TypeScript)** frontend paired with an asynchronous **Rust** backend, it leverages the kernel-level **ViGEmBus** driver to deliver hardware-level, high-precision, and low-latency Xbox 360 gamepad emulation. Whether you are a core gamer looking for long-term AFK gaming or a developer running batch automated testing, AutoController offers an intuitive, sleek, and robust solution.
-
-> ℹ️ **Note**: For detailed features and release details on the current version (v0.6.1), check the [Latest Update Log](docs/update-log.md).
-
----
-
-## ✨ Key Features
-
-* **🎮 Professional Gamepad Simulation**
-    * Kernel-level emulation for Xbox 360 controller powered by the **ViGEmBus** driver.
-    * **Ultra-low latency** (<5ms) and **high-precision** (100Hz+) input simulation.
-    * Supports up to **8 virtual gamepads** running concurrently with dynamic hot-swapping.
-    * Intelligent visualization dashboard including interactive drag-and-drop joystick fields and dynamic trigger progress bars.
-* **⏱️ High-Precision Macro Recorder & Player**
-    * One-click gamepad input capture with millisecond-precision timestamps.
-    * Speed scaling controls from **50% to 200%** playback speed.
-    * Infinite looping options and **breakpoint-based resume** to continue playback seamlessly after pausing.
-* **📜 QuickJS Scripting Engine**
-    * Integrated sandboxed **QuickJS** runtime supporting modern ES2020 JavaScript/TypeScript syntax.
-    * Rich API bindings: controller actions (press, release, move axes, pull triggers), high-precision waiting mechanisms (`sleep`, `waitUntil`), game/process detection events, and logging.
-    * Embedded **Monaco Editor** with advanced syntax highlighting, custom API autocompletion, and live linting.
-* **📅 Intelligent Task Scheduler**
-    * Automates runs using **one-shot timers, daily timings, interval triggers, and standard Cron expressions**.
-    * Priority-based task preemption and conflict resolution queues ensure smooth execution.
-* **🛡️ System Integration & Performance Tuning**
-    * System tray integration (minimize to tray, quick actions, status indicators, and notification balloons).
-    * **Process Monitoring**: Automatically detects target game launch and termination.
-    * **Smart Resource Allocation**: Boosts performance when games are active; drops sampling rates during idle times to keep resource footprints minimal (CPU < 5%, Memory < 100MB).
-* **⚙️ Profiles & Structured Logging**
-    * Saves game-specific profiles independently using user-friendly TOML files.
-    * Asynchronous logging powered by Rust's `tracing` library with log-rotation, reloadable filters, and CSV/JSON exports.
-* **🔍 Native Rust-Bound PaddleOCR Offline Engine (Zero-Dependency 🌟)**
-    * **Zero External Dependencies** (`app/src-tauri/src/ocr`): The architecture has been completely overhauled. The core PaddleOCR engine is now directly embedded into the main application via **native Rust bindings**. Users **no longer need** to deploy any external Python environments, standalone EXEs, or Docker containers.
-    * **Memory-Level Ultra-Low Latency**: Screenshot data is transferred as raw pixel streams directly in memory for OCR analysis. It eliminates disk I/O and complex network serialization overhead, unlocking millisecond-level responsiveness for high-frequency state detection.
-    * **Dual Native Local Engines**: Seamlessly toggle between the fully **Built-in PaddleOCR** offline engine and **Windows Native (WinRT OCR)** to satisfy all offline text recognition needs.
-    * **Multi-Region Calibration & Scripting APIs**: Frame and select multiple target regions on the UI, and query screen text instantly via `ocr()`, `ocr(index)`, or `ocr(x,y,w,h)` scripts.
-    * **Adaptive Image Enhancing**: Automatically scales smaller bounding boxes (<600px) using GDI HALFTONE interpolation to guarantee outstanding text clarity and accuracy.
-* **🔔 Multi-Channel Notification Dispatcher**
-    * Out-of-the-box integration with **Feishu Webhook**, **ServerChan**, **ServerChan3**, and **Telegram Bot**.
-    * Automates remote message pushes on script status changes (started, success, warning, error) or manually triggered checkpoints.
-* **👁️ Prevent Game/Window Focus Loss (No Focus Loss)**
-    * Leverages **cross-process DLL Injection** and Hook technology to intercept window deactivation messages, allowing games to continue rendering at full speed, playing sounds, and auto-farming even in the background.
-    * **Sub-process Physical Isolation**: Isolates sensitive cross-process Win32 API calls within an independent background sub-process `injector.exe`, avoiding antivirus false-alarms or core shell crashes.
-    * **Native Administrator Privilege Detection**: Evaluates privilege context and guides users (via orange warning banners) to restart under administrator mode for seamless injection and clean unloads.
-    * **Space-Saving Collapsible Headers**: Toggles warning banners and guidelines in a single-row collapsible container to keep workspaces clean.
-    * *(Credit for focus loss prevention goes to the open-source project [NoFocusLoss](https://github.com/araghon007/NoFocusLoss))*
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology | Description |
-| :--- | :--- | :--- |
-| **Desktop Shell** | Tauri 2.0 (Rust) | Manages IPC communications, tray integration, file I/O, and native system events |
-| **Frontend UI** | Vue 3 + TypeScript | Modular, responsive interface with customized high-fidelity interactions |
-| **State Management** | Pinia 2.x | Manages application state across devices, macro players, and active scripts |
-| **Styling & Assets** | Vanilla CSS + Lucide Icons | Premium, dark-mode industrial visual style (Vibrant & Block-based) with Lucide SVGs |
-| **Script Engine** | QuickJS (Rust bindings) | Secure, lightweight sandbox executing custom user automation scripts |
-| **OCR Engine** | PaddleOCR (Rust Bindings) | Fully embedded, high-performance offline OCR engine (Zero setup required) |
-| **Simulation Driver** | ViGEmBus Driver (1.17+) | Kernel-level driver generating virtual game controller signals |
-
----
-
-## 📂 Directory Structure
-
-Both frontend and backend resources are contained under the `app/` directory:
-
-```
-AutoController/
-├── app/                           # Core Application Directory
-│   ├── src-tauri/                 # Rust Backend (Tauri 2.0 Shell)
-│   │   ├── Cargo.toml             # Rust dependencies
-│   │   └── src/
-│   │       ├── controller/        # Gamepad emulation & ViGEmBus client
-│   │       ├── macro_engine/      # Macro record & playback system
-│   │       ├── script_engine/     # QuickJS sandboxing & API bindings
-│   │       ├── scheduler/         # Task queue & Cron parser
-│   │       └── system/            # Tray & process monitor integration
-│   └── src/                       # Vue 3 Frontend (TypeScript)
-│       ├── views/                 # View pages (Device, Editor, Scheduler, etc.)
-│       ├── components/            # Reusable UI components (Stick/Trigger visualizations)
-│       └── stores/                # Pinia state stores
-├── design-system/                 # UI Design guidelines & tokens
-├── docs/                          # Architecture designs & checklist documents
-└── assets/                        # Static assets and icons
-```
-
----
-
-## 🚀 Usage Guide
-
-### 1. Download & Install
-- Go to the [GitHub Releases page](https://github.com/chao-eng/AutoController/releases) and download the latest Windows installer (e.g., `.msi` or standalone `.exe`).
-- Follow the wizard to complete the installation. The required **ViGEmBus** kernel driver is **fully bundled with the software** and will be configured automatically—**no manual driver installation is required** for end-users.
-
-### 2. Running & Configuring
-- **Standard Mode**: Double-click the **AutoController** desktop icon to start simulating controllers, recording macros, or writing QuickJS scripts.
-- **Administrator Mode (Recommended 🛡️)**: If the target game runs under elevated privileges or if you wish to use the **Prevent Focus Loss (No Focus Loss)** injection feature, right-click the shortcut and select **"Run as Administrator"**.
-- **OCR Integration**: If your automation scripts require high-precision screen text detection, follow the [🐳 PaddleOCR Local Service Deployment Guide](#🐳-paddleocr-local-service-deployment-guide-exe--docker) below to set up your local OCR endpoint.
-
----
-
-
-### 🐳 Option B: Docker Container Deployment
-Ideal for developers who prefer containerized services or already have Docker Desktop configured.
-
-1. **Prerequisites: Enable WSL 2** (if not installed):
-   - Open PowerShell as Administrator, and run:
-     ```powershell
-     wsl --install
-     ```
-   - Restart your computer after installation to apply the changes.
-2. **Install Docker Desktop** (if not installed):
-   - Visit [Docker Desktop for Windows Official Page](https://www.docker.com/products/docker-desktop/) to download and complete the setup.
-3. **Pull and Run the PaddleOCR Image**:
-   - Run the following command in PowerShell/CMD to pull and run the OCR container in the background (mapping to the default `8050` port):
-     ```powershell
-     docker run -d -p 8050:8000 --name win-paddleocr --restart always crpi-a1liy20beodq2bdl.cn-beijing.personal.cr.aliyuncs.com/bujic/win-paddleocr-x86:latest
-     ```
-4. **Verification & Configuration**:
-   - **Verify**: Open your browser and navigate to `http://127.0.0.1:8050/docs#/` to view the API documentation page.
-   - **Configure**: In **AutoController**'s **OCR Configuration** tab, switch engine to `PaddleOCR (HTTP API)` and input endpoint: `http://127.0.0.1:8050/ocr`. Click **Test Connection**.
-
-</details>
+- **Forza 遥测**：进入 **Forza 遥测** 页面后，在游戏中开启 Data Out，并将 UDP 目标指向运行本程序的电脑，即可查看实时仪表盘、记录历史会话和回放遥测数据。

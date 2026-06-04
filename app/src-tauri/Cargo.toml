@@ -1,6 +1,6 @@
 [package]
 name = "autocontroller"
-version = "0.6.1"
+version = "0.7.0"
 description = "AutoController - 高性能游戏手柄宏录制与脚本化自动化工具"
 authors = ["AutoController Team"]
 edition = "2021"
@@ -65,5 +65,4 @@ windows = { version = "0.58.0", features = [
 ] }
 paddle-ocr-rs = "0.6.1"
 ort = { version = "=2.0.0-rc.10", default-features = false, features = ["load-dynamic"] }
-
 
