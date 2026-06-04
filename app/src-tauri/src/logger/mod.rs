@@ -1,5 +1,5 @@
-pub mod types;
 mod layer;
+pub mod types;
 
-pub use types::*;
 pub use layer::TauriEventLayer;
+pub use types::*;

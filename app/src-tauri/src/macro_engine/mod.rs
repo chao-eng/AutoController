@@ -1,8 +1,8 @@
-pub mod types;
-pub mod recorder;
 pub mod player;
+pub mod recorder;
+pub mod types;
 pub mod xinput;
 
-pub use recorder::MacroRecorder;
 pub use player::MacroPlayer;
+pub use recorder::MacroRecorder;
 pub use types::*;

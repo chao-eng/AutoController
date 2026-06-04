@@ -114,7 +114,8 @@ impl tracing::field::Visit for MessageVisitor {
         if field.name() == "message" {
             self.message.push_str(value);
         } else {
-            self.fields.push((field.name().to_string(), value.to_string()));
+            self.fields
+                .push((field.name().to_string(), value.to_string()));
         }
     }
 
@@ -126,7 +127,8 @@ impl tracing::field::Visit for MessageVisitor {
         if field.name() == "message" {
             self.message.push_str(&value.to_string());
         } else {
-            self.fields.push((field.name().to_string(), value.to_string()));
+            self.fields
+                .push((field.name().to_string(), value.to_string()));
         }
     }
 }

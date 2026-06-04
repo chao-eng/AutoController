@@ -1,6 +1,22 @@
 #[derive(Debug, Clone, serde::Serialize)]
+pub struct OcrTextPoint {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct OcrTextBlock {
+    pub text: String,
+    pub box_score: Option<f32>,
+    pub text_score: Option<f32>,
+    pub points: Vec<OcrTextPoint>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct OcrRegionResult {
     pub text: String,
+    pub raw_text: String,
+    pub blocks: Vec<OcrTextBlock>,
     pub engine: String,
     pub profile: String,
     pub x: i32,
@@ -18,9 +34,10 @@ pub struct OcrRegionResult {
 
 #[cfg(target_os = "windows")]
 mod win_impl {
-    use super::OcrRegionResult;
+    use super::{OcrRegionResult, OcrTextBlock, OcrTextPoint};
     use paddle_ocr_rs::ocr_lite::OcrLite;
     use parking_lot::Mutex;
+    use std::cell::RefCell;
     use std::cmp::{max, min};
     use std::ffi::c_void;
     use std::sync::OnceLock;
@@ -50,6 +67,7 @@ mod win_impl {
         box_thresh: f32,
         unclip_ratio: f32,
         do_angle: bool,
+        stretch_mode: STRETCH_BLT_MODE,
     }
 
     fn runtime_profile(profile: &str) -> OcrRuntimeProfile {
@@ -65,6 +83,7 @@ mod win_impl {
                 box_thresh: 0.35,
                 unclip_ratio: 1.5,
                 do_angle: false,
+                stretch_mode: COLORONCOLOR,
             },
             "accurate" => OcrRuntimeProfile {
                 name: "accurate",
@@ -77,6 +96,7 @@ mod win_impl {
                 box_thresh: 0.25,
                 unclip_ratio: 1.8,
                 do_angle: false,
+                stretch_mode: HALFTONE,
             },
             _ => OcrRuntimeProfile {
                 name: "balanced",
@@ -89,8 +109,191 @@ mod win_impl {
                 box_thresh: 0.3,
                 unclip_ratio: 1.6,
                 do_angle: false,
+                stretch_mode: HALFTONE,
             },
         }
+    }
+
+    #[derive(Clone, Copy)]
+    enum CapturePixelFormat {
+        Bgra,
+        Rgb,
+    }
+
+    struct CaptureContext {
+        hdc_mem: HDC,
+        h_bitmap: Option<HBITMAP>,
+        old_obj: Option<HGDIOBJ>,
+        dib_bits: *mut c_void,
+        width: i32,
+        height: i32,
+    }
+
+    impl CaptureContext {
+        unsafe fn new(hdc_screen: HDC) -> Result<Self, String> {
+            let hdc_mem = CreateCompatibleDC(hdc_screen);
+            if hdc_mem.is_invalid() {
+                return Err("无法创建兼容的内存上下文 (CreateCompatibleDC 失败)".to_string());
+            }
+
+            Ok(Self {
+                hdc_mem,
+                h_bitmap: None,
+                old_obj: None,
+                dib_bits: std::ptr::null_mut(),
+                width: 0,
+                height: 0,
+            })
+        }
+
+        unsafe fn ensure_bitmap(
+            &mut self,
+            hdc_screen: HDC,
+            width: i32,
+            height: i32,
+        ) -> Result<(), String> {
+            if self.h_bitmap.is_some() && self.width == width && self.height == height {
+                return Ok(());
+            }
+
+            if let Some(h_bitmap) = self.h_bitmap.take() {
+                if let Some(old_obj) = self.old_obj.take() {
+                    SelectObject(self.hdc_mem, old_obj);
+                }
+                let _ = DeleteObject(h_bitmap);
+            }
+
+            let bitmap_info = BITMAPINFO {
+                bmiHeader: BITMAPINFOHEADER {
+                    biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                    biWidth: width,
+                    biHeight: -height,
+                    biPlanes: 1,
+                    biBitCount: 32,
+                    biCompression: BI_RGB.0,
+                    biSizeImage: 0,
+                    biXPelsPerMeter: 0,
+                    biYPelsPerMeter: 0,
+                    biClrUsed: 0,
+                    biClrImportant: 0,
+                },
+                bmiColors: [RGBQUAD {
+                    rgbBlue: 0,
+                    rgbGreen: 0,
+                    rgbRed: 0,
+                    rgbReserved: 0,
+                }],
+            };
+
+            let mut dib_bits: *mut c_void = std::ptr::null_mut();
+            let h_bitmap = match CreateDIBSection(
+                hdc_screen,
+                &bitmap_info,
+                DIB_RGB_COLORS,
+                &mut dib_bits,
+                HANDLE::default(),
+                0,
+            ) {
+                Ok(bitmap) => bitmap,
+                Err(e) => return Err(format!("无法创建 DIBSection 位图: {}", e)),
+            };
+
+            if dib_bits.is_null() {
+                let _ = DeleteObject(h_bitmap);
+                return Err("DIBSection 未返回有效像素缓冲区".to_string());
+            }
+
+            let old_obj = SelectObject(self.hdc_mem, h_bitmap);
+            self.h_bitmap = Some(h_bitmap);
+            self.old_obj = Some(old_obj);
+            self.dib_bits = dib_bits;
+            self.width = width;
+            self.height = height;
+
+            Ok(())
+        }
+
+        unsafe fn capture(
+            &mut self,
+            hdc_screen: HDC,
+            x: i32,
+            y: i32,
+            w: i32,
+            h: i32,
+            new_w: i32,
+            new_h: i32,
+            pixel_format: CapturePixelFormat,
+            stretch_mode: STRETCH_BLT_MODE,
+        ) -> Result<Vec<u8>, String> {
+            self.ensure_bitmap(hdc_screen, new_w, new_h)?;
+
+            let should_stretch = new_w != w || new_h != h;
+            let success = if should_stretch {
+                SetStretchBltMode(self.hdc_mem, stretch_mode);
+                StretchBlt(
+                    self.hdc_mem,
+                    0,
+                    0,
+                    new_w,
+                    new_h,
+                    hdc_screen,
+                    x,
+                    y,
+                    w,
+                    h,
+                    SRCCOPY,
+                )
+                .as_bool()
+            } else {
+                BitBlt(self.hdc_mem, 0, 0, new_w, new_h, hdc_screen, x, y, SRCCOPY).is_ok()
+            };
+
+            if !success {
+                return Err("拷贝或缩放屏幕像素失败 (Blt 失败)".to_string());
+            }
+
+            let pixel_count = (new_w as usize)
+                .checked_mul(new_h as usize)
+                .ok_or_else(|| "截图区域过大，像素数量溢出".to_string())?;
+            let bgra_len = pixel_count
+                .checked_mul(4)
+                .ok_or_else(|| "截图区域过大，像素缓冲区大小溢出".to_string())?;
+            let bgra = std::slice::from_raw_parts(self.dib_bits as *const u8, bgra_len);
+
+            match pixel_format {
+                CapturePixelFormat::Bgra => Ok(bgra.to_vec()),
+                CapturePixelFormat::Rgb => {
+                    let rgb_len = pixel_count
+                        .checked_mul(3)
+                        .ok_or_else(|| "OCR RGB 像素缓冲区大小溢出".to_string())?;
+                    let mut rgb = Vec::with_capacity(rgb_len);
+                    for chunk in bgra.chunks_exact(4) {
+                        rgb.push(chunk[2]);
+                        rgb.push(chunk[1]);
+                        rgb.push(chunk[0]);
+                    }
+                    Ok(rgb)
+                }
+            }
+        }
+    }
+
+    impl Drop for CaptureContext {
+        fn drop(&mut self) {
+            unsafe {
+                if let Some(h_bitmap) = self.h_bitmap.take() {
+                    if let Some(old_obj) = self.old_obj.take() {
+                        SelectObject(self.hdc_mem, old_obj);
+                    }
+                    let _ = DeleteObject(h_bitmap);
+                }
+                let _ = DeleteDC(self.hdc_mem);
+            }
+        }
+    }
+
+    thread_local! {
+        static CAPTURE_CONTEXT: RefCell<Option<CaptureContext>> = RefCell::new(None);
     }
 
     fn strip_unc_prefix(path: std::path::PathBuf) -> std::path::PathBuf {
@@ -261,27 +464,29 @@ mod win_impl {
         Ok(())
     }
 
-    /// 将截屏 BGRA 像素转换为 RgbImage 并调用本地 PaddleOCR 推理接口
+    struct PaddleOcrOutput {
+        raw_text: String,
+        blocks: Vec<OcrTextBlock>,
+    }
+
+    /// 将截屏 RGB 像素载入 RgbImage 并调用本地 PaddleOCR 推理接口
     fn call_paddleocr_native(
-        pixel_bytes: &[u8],
+        rgb_bytes: Vec<u8>,
         w: i32,
         h: i32,
         profile: &OcrRuntimeProfile,
         app_handle: &tauri::AppHandle,
-    ) -> Result<String, String> {
-        // 1. 无缝将 BGRA32 字节流提取并转换为 RgbImage，零临时文件 I/O，极其快速
-        let rgb_len = (w as usize)
+    ) -> Result<PaddleOcrOutput, String> {
+        let expected_rgb_len = (w as usize)
             .checked_mul(h as usize)
             .and_then(|px| px.checked_mul(3))
             .ok_or_else(|| "OCR RGB 像素缓冲区大小溢出".to_string())?;
-        let mut rgb_bytes = Vec::with_capacity(rgb_len);
-        for chunk in pixel_bytes.chunks_exact(4) {
-            let b = chunk[0];
-            let g = chunk[1];
-            let r = chunk[2];
-            rgb_bytes.push(r);
-            rgb_bytes.push(g);
-            rgb_bytes.push(b);
+        if rgb_bytes.len() != expected_rgb_len {
+            return Err(format!(
+                "OCR RGB 像素缓冲区大小不匹配: expect={}, actual={}",
+                expected_rgb_len,
+                rgb_bytes.len()
+            ));
         }
 
         let rgb_img = image::RgbImage::from_raw(w as u32, h as u32, rgb_bytes)
@@ -305,13 +510,39 @@ mod win_impl {
             )
             .map_err(|e| format!("PaddleOCR 本地推理失败: {:?}", e))?;
 
-        // 4. 提取和拼接识别出来的所有文本块
+        // 4. 按视觉顺序提取文本块与置信度，保留结构化信息供调试和 UI 展示
+        let mut blocks: Vec<OcrTextBlock> = res
+            .text_blocks
+            .into_iter()
+            .map(|block| OcrTextBlock {
+                text: block.text,
+                box_score: Some(block.box_score),
+                text_score: Some(block.text_score),
+                points: block
+                    .box_points
+                    .into_iter()
+                    .map(|point| OcrTextPoint {
+                        x: point.x as i32,
+                        y: point.y as i32,
+                    })
+                    .collect(),
+            })
+            .collect();
+        blocks.sort_by_key(|block| {
+            let min_y = block.points.iter().map(|point| point.y).min().unwrap_or(0);
+            let min_x = block.points.iter().map(|point| point.x).min().unwrap_or(0);
+            (min_y / 12, min_x)
+        });
+
         let mut text = String::new();
-        for block in res.text_blocks {
+        for block in &blocks {
             text.push_str(&block.text);
         }
 
-        Ok(text)
+        Ok(PaddleOcrOutput {
+            raw_text: text,
+            blocks,
+        })
     }
 
     fn compute_capture_scale(w: i32, h: i32, profile: &OcrRuntimeProfile) -> f64 {
@@ -338,12 +569,14 @@ mod win_impl {
         }
     }
 
-    fn capture_region_bgra(
+    fn capture_region_pixels(
         x: i32,
         y: i32,
         w: i32,
         h: i32,
         scale: f64,
+        pixel_format: CapturePixelFormat,
+        stretch_mode: STRETCH_BLT_MODE,
     ) -> Result<(Vec<u8>, i32, i32), String> {
         let new_w = ((w as f64 * scale).round().max(1.0)) as i32;
         let new_h = ((h as f64 * scale).round().max(1.0)) as i32;
@@ -354,85 +587,29 @@ mod win_impl {
                 return Err("无法获取屏幕设备上下文 (GetDC 失败)".to_string());
             }
 
-            let hdc_mem = CreateCompatibleDC(hdc_screen);
-            if hdc_mem.is_invalid() {
-                ReleaseDC(None, hdc_screen);
-                return Err("无法创建兼容的内存上下文 (CreateCompatibleDC 失败)".to_string());
-            }
-
-            let mut bitmap_info = BITMAPINFO {
-                bmiHeader: BITMAPINFOHEADER {
-                    biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
-                    biWidth: new_w,
-                    biHeight: -new_h,
-                    biPlanes: 1,
-                    biBitCount: 32,
-                    biCompression: BI_RGB.0,
-                    biSizeImage: 0,
-                    biXPelsPerMeter: 0,
-                    biYPelsPerMeter: 0,
-                    biClrUsed: 0,
-                    biClrImportant: 0,
-                },
-                bmiColors: [RGBQUAD {
-                    rgbBlue: 0,
-                    rgbGreen: 0,
-                    rgbRed: 0,
-                    rgbReserved: 0,
-                }],
-            };
-
-            let mut dib_bits: *mut c_void = std::ptr::null_mut();
-            let h_bitmap = match CreateDIBSection(
-                hdc_screen,
-                &bitmap_info,
-                DIB_RGB_COLORS,
-                &mut dib_bits,
-                HANDLE::default(),
-                0,
-            ) {
-                Ok(bitmap) => bitmap,
-                Err(e) => {
-                    let _ = DeleteDC(hdc_mem);
-                    ReleaseDC(None, hdc_screen);
-                    return Err(format!("无法创建 DIBSection 位图: {}", e));
+            let result = CAPTURE_CONTEXT.with(|cell| {
+                let mut context = cell.borrow_mut();
+                if context.is_none() {
+                    *context = Some(CaptureContext::new(hdc_screen)?);
                 }
-            };
-
-            if dib_bits.is_null() {
-                let _ = DeleteObject(h_bitmap);
-                let _ = DeleteDC(hdc_mem);
-                ReleaseDC(None, hdc_screen);
-                return Err("DIBSection 未返回有效像素缓冲区".to_string());
-            }
-
-            let old_obj = SelectObject(hdc_mem, h_bitmap);
-            let should_stretch = new_w != w || new_h != h;
-
-            let success = if should_stretch {
-                SetStretchBltMode(hdc_mem, HALFTONE);
-                StretchBlt(hdc_mem, 0, 0, new_w, new_h, hdc_screen, x, y, w, h, SRCCOPY).as_bool()
-            } else {
-                BitBlt(hdc_mem, 0, 0, new_w, new_h, hdc_screen, x, y, SRCCOPY).is_ok()
-            };
-
-            let result = if success {
-                let buffer_size = (new_w as usize)
-                    .checked_mul(new_h as usize)
-                    .and_then(|px| px.checked_mul(4))
-                    .ok_or_else(|| "截图区域过大，像素缓冲区大小溢出".to_string())?;
-                let bytes = std::slice::from_raw_parts(dib_bits as *const u8, buffer_size).to_vec();
-                Ok((bytes, new_w, new_h))
-            } else {
-                Err("拷贝或缩放屏幕像素失败 (Blt 失败)".to_string())
-            };
-
-            SelectObject(hdc_mem, old_obj);
-            let _ = DeleteObject(h_bitmap);
-            let _ = DeleteDC(hdc_mem);
+                let context = context
+                    .as_mut()
+                    .ok_or_else(|| "截图上下文初始化失败".to_string())?;
+                context.capture(
+                    hdc_screen,
+                    x,
+                    y,
+                    w,
+                    h,
+                    new_w,
+                    new_h,
+                    pixel_format,
+                    stretch_mode,
+                )
+            });
             ReleaseDC(None, hdc_screen);
 
-            result
+            result.map(|bytes| (bytes, new_w, new_h))
         }
     }
 
@@ -482,18 +659,25 @@ mod win_impl {
 
         let profile = runtime_profile(ocr_profile);
         let scale = compute_capture_scale(w, h, &profile);
+        let pixel_format = if ocr_engine == "paddleocr" {
+            CapturePixelFormat::Rgb
+        } else {
+            CapturePixelFormat::Bgra
+        };
         let capture_started_at = Instant::now();
-        let (mut pixel_bytes, new_w, new_h) = capture_region_bgra(x, y, w, h, scale)?;
+        let (pixel_bytes, new_w, new_h) =
+            capture_region_pixels(x, y, w, h, scale, pixel_format, profile.stretch_mode)?;
         let capture_ms = capture_started_at.elapsed().as_millis();
 
         let infer_started_at = Instant::now();
         let mut inverted = false;
-        let recognized_text = if ocr_engine == "paddleocr" {
+        let recognized_output = if ocr_engine == "paddleocr" {
             // 调用本地原生 PaddleOCR 引擎进行识别
             let handle = app_handle
                 .ok_or_else(|| "本地 PaddleOCR 推理需要有效的 AppHandle 传入".to_string())?;
-            call_paddleocr_native(&pixel_bytes, new_w, new_h, &profile, handle)?
+            call_paddleocr_native(pixel_bytes, new_w, new_h, &profile, handle)?
         } else {
+            let mut pixel_bytes = pixel_bytes;
             inverted = normalize_winrt_pixels(&mut pixel_bytes);
 
             // 4. 将像素载入内存 DataWriter，以输出 WinRT 的 IBuffer
@@ -536,12 +720,16 @@ mod win_impl {
                     .map_err(|e| format!("读取 OCR 文本失败: {}", e))?;
                 text.push_str(&line_text.to_string());
             }
-            text
+            PaddleOcrOutput {
+                raw_text: text,
+                blocks: Vec::new(),
+            }
         };
         let infer_ms = infer_started_at.elapsed().as_millis();
 
         // 过滤掉所有空格、换行、制表符等空白字符，输出干净统一的文案以方便做包含匹配
-        let clean_text: String = recognized_text
+        let clean_text: String = recognized_output
+            .raw_text
             .chars()
             .filter(|c| !c.is_whitespace())
             .collect();
@@ -563,6 +751,8 @@ mod win_impl {
         );
         Ok(OcrRegionResult {
             text: clean_text,
+            raw_text: recognized_output.raw_text,
+            blocks: recognized_output.blocks,
             engine: ocr_engine.to_string(),
             profile: profile.name.to_string(),
             x,

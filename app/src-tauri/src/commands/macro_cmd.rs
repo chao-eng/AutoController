@@ -1,5 +1,5 @@
-use crate::macro_engine::{MacroRecorder, MacroPlayer, Macro, MacroMeta};
 use crate::controller::ControllerManager;
+use crate::macro_engine::{Macro, MacroMeta, MacroPlayer, MacroRecorder};
 use crate::script_engine::ScriptRuntime;
 
 fn button_to_str(btn: &crate::controller::Button) -> &'static str {
@@ -102,7 +102,9 @@ pub fn macro_play(
     speed: f32,
     loop_count: u32,
 ) -> Result<String, String> {
-    let mac = recorder.get_macro(&macro_id).ok_or_else(|| "宏不存在".to_string())?;
+    let mac = recorder
+        .get_macro(&macro_id)
+        .ok_or_else(|| "宏不存在".to_string())?;
     player.start_playback(controller.inner().clone(), mac, speed, loop_count)
 }
 
@@ -131,9 +133,7 @@ pub fn macro_stop(
 }
 
 #[tauri::command]
-pub fn macro_list(
-    recorder: tauri::State<'_, MacroRecorder>,
-) -> Vec<MacroMeta> {
+pub fn macro_list(recorder: tauri::State<'_, MacroRecorder>) -> Vec<MacroMeta> {
     recorder.list_macros()
 }
 
@@ -169,12 +169,10 @@ pub fn macro_xinput_status() -> XInputStatus {
                 connected_devices: connected,
             }
         }
-        Err(e) => {
-            XInputStatus {
-                available: false,
-                error: Some(e),
-                connected_devices: Vec::new(),
-            }
-        }
+        Err(e) => XInputStatus {
+            available: false,
+            error: Some(e),
+            connected_devices: Vec::new(),
+        },
     }
 }

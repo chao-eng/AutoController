@@ -1,4 +1,4 @@
-use crate::script_engine::{ScriptRuntime, Script, ScriptMeta};
+use crate::script_engine::{Script, ScriptMeta, ScriptRuntime};
 
 #[tauri::command]
 pub fn script_create(
@@ -26,17 +26,12 @@ pub fn script_stop(
 }
 
 #[tauri::command]
-pub fn script_list(
-    runtime: tauri::State<'_, ScriptRuntime>,
-) -> Vec<ScriptMeta> {
+pub fn script_list(runtime: tauri::State<'_, ScriptRuntime>) -> Vec<ScriptMeta> {
     runtime.list_scripts()
 }
 
 #[tauri::command]
-pub fn script_get(
-    runtime: tauri::State<'_, ScriptRuntime>,
-    script_id: String,
-) -> Option<Script> {
+pub fn script_get(runtime: tauri::State<'_, ScriptRuntime>, script_id: String) -> Option<Script> {
     runtime.get_script(&script_id)
 }
 
@@ -65,4 +60,3 @@ pub fn script_delete(
 ) -> Result<(), String> {
     runtime.delete_script(&script_id)
 }
-

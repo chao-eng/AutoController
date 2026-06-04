@@ -1,6 +1,6 @@
-use crate::scheduler::{TaskQueue, ScheduledTask};
-use crate::script_engine::ScriptRuntime;
 use crate::scheduler::types::TaskAction;
+use crate::scheduler::{ScheduledTask, TaskQueue};
+use crate::script_engine::ScriptRuntime;
 
 #[tauri::command]
 pub fn scheduler_create_task(
@@ -17,7 +17,6 @@ pub fn scheduler_update_task(
 ) -> Result<(), String> {
     queue.update_task(task)
 }
-
 
 #[tauri::command]
 pub fn scheduler_remove_task(
@@ -37,9 +36,7 @@ pub fn scheduler_toggle_task(
 }
 
 #[tauri::command]
-pub fn scheduler_list(
-    queue: tauri::State<'_, TaskQueue>,
-) -> Vec<ScheduledTask> {
+pub fn scheduler_list(queue: tauri::State<'_, TaskQueue>) -> Vec<ScheduledTask> {
     queue.list_tasks()
 }
 
@@ -49,11 +46,14 @@ pub fn scheduler_execute_sequence(
     queue: tauri::State<'_, TaskQueue>,
     task_id: String,
 ) -> Result<(), String> {
-    let task = queue.get_task(&task_id).ok_or_else(|| "任务不存在".to_string())?;
+    let task = queue
+        .get_task(&task_id)
+        .ok_or_else(|| "任务不存在".to_string())?;
     match task.action {
-        TaskAction::ExecuteSequence { steps, task_loop_count } => {
-            runtime.execute_sequence(&task_id, steps, task_loop_count)
-        }
+        TaskAction::ExecuteSequence {
+            steps,
+            task_loop_count,
+        } => runtime.execute_sequence(&task_id, steps, task_loop_count),
         _ => Err("该任务不是多脚本串联序列任务".to_string()),
     }
 }

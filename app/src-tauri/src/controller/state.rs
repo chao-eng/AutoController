@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use super::types::*;
 use super::vigem::{ViGEmBindings, ViGEmClient, PVIGEM_TARGET};
+use crate::macro_engine::{MacroEventType, MacroRecorder};
 use crate::persistence::DataDir;
-use crate::macro_engine::{MacroRecorder, MacroEventType};
 use tauri::{AppHandle, Emitter};
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -373,12 +373,7 @@ impl ControllerManager {
         }
     }
 
-    pub fn set_thumb(
-        &self,
-        device_id: &str,
-        axis: ThumbAxis,
-        value: f32,
-    ) -> Result<(), String> {
+    pub fn set_thumb(&self, device_id: &str, axis: ThumbAxis, value: f32) -> Result<(), String> {
         let resolved_id = self.resolve_device_id(device_id)?;
         let mut devices = self.devices.lock();
         if let Some(device) = devices.get_mut(&resolved_id) {
@@ -409,7 +404,9 @@ impl ControllerManager {
                         state.right_thumb_y as f32 / 32767.0,
                     ),
                 };
-                let _ = self.macro_recorder.add_event(MacroEventType::ThumbMove(stick_name, x, y));
+                let _ = self
+                    .macro_recorder
+                    .add_event(MacroEventType::ThumbMove(stick_name, x, y));
             }
 
             self.submit_report(&device_snapshot);
@@ -446,7 +443,9 @@ impl ControllerManager {
                     TriggerSide::Left => "left".to_string(),
                     TriggerSide::Right => "right".to_string(),
                 };
-                let _ = self.macro_recorder.add_event(MacroEventType::TriggerMove(side_str, clamped));
+                let _ = self
+                    .macro_recorder
+                    .add_event(MacroEventType::TriggerMove(side_str, clamped));
             }
 
             self.submit_report(&device_snapshot);
@@ -503,18 +502,26 @@ impl ControllerManager {
         let connected = vigem.is_some();
         let error_code_val = *error_code;
 
-        let message = if connected {
-            "ViGEmBus 已连接，虚拟手柄将被系统识别".to_string()
-        } else if dll_found {
-            match error_code_val {
-                Some(1) => "ViGEmBus 驱动未找到（错误码: 1）。请安装 ViGEmBus 驱动后重启电脑".to_string(),
-                Some(2) => "无法访问 ViGEmBus 驱动（错误码: 2）。请尝试以管理员身份运行程序".to_string(),
-                Some(code) => format!("ViGEmBus 连接失败（错误码: {} / 0x{:08X}）。请确认驱动已正确安装", code, code),
-                None => "ViGEmClient.dll 已找到，但驱动连接失败。请确认已安装 ViGEmBus 驱动".to_string(),
-            }
-        } else {
-            "ViGEmClient.dll 未找到，使用模拟模式。请将 ViGEmClient.dll 放到程序目录下".to_string()
-        };
+        let message =
+            if connected {
+                "ViGEmBus 已连接，虚拟手柄将被系统识别".to_string()
+            } else if dll_found {
+                match error_code_val {
+                    Some(1) => "ViGEmBus 驱动未找到（错误码: 1）。请安装 ViGEmBus 驱动后重启电脑"
+                        .to_string(),
+                    Some(2) => "无法访问 ViGEmBus 驱动（错误码: 2）。请尝试以管理员身份运行程序"
+                        .to_string(),
+                    Some(code) => format!(
+                        "ViGEmBus 连接失败（错误码: {} / 0x{:08X}）。请确认驱动已正确安装",
+                        code, code
+                    ),
+                    None => "ViGEmClient.dll 已找到，但驱动连接失败。请确认已安装 ViGEmBus 驱动"
+                        .to_string(),
+                }
+            } else {
+                "ViGEmClient.dll 未找到，使用模拟模式。请将 ViGEmClient.dll 放到程序目录下"
+                    .to_string()
+            };
 
         ViGEmStatus {
             available: connected,
@@ -539,13 +546,12 @@ impl ControllerManager {
             }
         }
         if let Some(ref bindings_arc) = *bindings_lock {
-            let client = ViGEmClient::new(bindings_arc.clone())
-                .map_err(|(code, msg)| {
-                    let mut error_code = self.vigem_error_code.lock();
-                    *error_code = Some(code);
-                    msg
-                })?;
-            
+            let client = ViGEmClient::new(bindings_arc.clone()).map_err(|(code, msg)| {
+                let mut error_code = self.vigem_error_code.lock();
+                *error_code = Some(code);
+                msg
+            })?;
+
             // 重新挂载那些本应连接但因驱动失效而未激活的设备
             let mut devices = self.devices.lock();
             for device in devices.values_mut() {

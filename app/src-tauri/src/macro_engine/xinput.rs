@@ -60,9 +60,10 @@ impl XInputBindings {
                 errors.join("\n- ")
             )
         })?;
-        
+
         let xinput_get_state = unsafe {
-            let sym: Symbol<FnXInputGetState> = dll.get(b"XInputGetState\0")
+            let sym: Symbol<FnXInputGetState> = dll
+                .get(b"XInputGetState\0")
                 .map_err(|e| format!("无法找到 XInputGetState 符号: {}", e))?;
             *sym.into_raw()
         };

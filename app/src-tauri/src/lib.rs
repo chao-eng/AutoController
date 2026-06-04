@@ -1,29 +1,27 @@
 #![allow(dead_code)]
 
-mod persistence;
-mod controller;
-mod macro_engine;
-mod script_engine;
-mod scheduler;
-mod config;
-mod logger;
-mod system;
 mod commands;
-pub mod notify;
+mod config;
+mod controller;
 mod fh6_telemetry;
+mod logger;
+mod macro_engine;
+pub mod notify;
+mod persistence;
+mod scheduler;
+mod script_engine;
+mod system;
 
-
-use tauri::Manager;
 use commands::*;
+use config::AppConfigManager;
 use controller::ControllerManager;
 use logger::TauriEventLayer;
 use macro_engine::MacroPlayer;
-use script_engine::ScriptRuntime;
 use scheduler::TaskQueue;
-use config::AppConfigManager;
-use system::ProcessMonitor;
+use script_engine::ScriptRuntime;
 use system::injector::InjectedProcessesState;
-
+use system::ProcessMonitor;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -37,8 +35,9 @@ pub fn run() {
     };
 
     use tracing_subscriber::prelude::*;
-    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(format!("{},tao=error", initial_level)));
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        tracing_subscriber::EnvFilter::new(format!("{},tao=error", initial_level))
+    });
 
     let (filter_layer, reload_handle) = tracing_subscriber::reload::Layer::new(filter);
 
@@ -56,7 +55,9 @@ pub fn run() {
     let auto_record = loaded_settings.auto_record;
     let telemetry_state: fh6_telemetry::Shared = std::sync::Arc::new(fh6_telemetry::AppState {
         db: std::sync::Mutex::new(fh6_telemetry::db::open().expect("failed to open database")),
-        session_manager: std::sync::Mutex::new(fh6_telemetry::session::SessionManager::new(auto_record)),
+        session_manager: std::sync::Mutex::new(fh6_telemetry::session::SessionManager::new(
+            auto_record,
+        )),
         settings: std::sync::Mutex::new(loaded_settings),
     });
 
@@ -95,7 +96,8 @@ pub fn run() {
                 let config_manager = app.state::<AppConfigManager>();
                 let ocr_engine = config_manager.get().ocr_engine;
                 std::thread::spawn(move || {
-                    if let Err(e) = script_engine::ocr::preheat_ocr_engine(&ocr_handle, &ocr_engine) {
+                    if let Err(e) = script_engine::ocr::preheat_ocr_engine(&ocr_handle, &ocr_engine)
+                    {
                         tracing::warn!(target: "ocr", error = %e, "OCR engine preheat skipped");
                     }
                 });
@@ -116,14 +118,25 @@ pub fn run() {
 
                         // 获取当前进程的内存 WorkingSetSize
                         let mem_output = std::process::Command::new("wmic")
-                            .args(["process", "where", &format!("processid={}", _pid), "get", "WorkingSetSize", "/format:value"])
+                            .args([
+                                "process",
+                                "where",
+                                &format!("processid={}", _pid),
+                                "get",
+                                "WorkingSetSize",
+                                "/format:value",
+                            ])
                             .creation_flags(0x08000000)
                             .output();
                         if let Ok(output) = mem_output {
                             let stdout = String::from_utf8_lossy(&output.stdout);
                             for line in stdout.lines() {
                                 if line.starts_with("WorkingSetSize=") {
-                                    if let Ok(bytes) = line.trim_start_matches("WorkingSetSize=").trim().parse::<u64>() {
+                                    if let Ok(bytes) = line
+                                        .trim_start_matches("WorkingSetSize=")
+                                        .trim()
+                                        .parse::<u64>()
+                                    {
                                         mem_str = format!("{} MB", bytes / 1024 / 1024);
                                     }
                                 }
@@ -132,14 +145,26 @@ pub fn run() {
 
                         // 获取当前进程的 CPU PercentProcessorTime
                         let cpu_output = std::process::Command::new("wmic")
-                            .args(["path", "Win32_PerfFormattedData_PerfProc_Process", "where", &format!("IDProcess={}", _pid), "get", "PercentProcessorTime", "/format:value"])
+                            .args([
+                                "path",
+                                "Win32_PerfFormattedData_PerfProc_Process",
+                                "where",
+                                &format!("IDProcess={}", _pid),
+                                "get",
+                                "PercentProcessorTime",
+                                "/format:value",
+                            ])
                             .creation_flags(0x08000000)
                             .output();
                         if let Ok(output) = cpu_output {
                             let stdout = String::from_utf8_lossy(&output.stdout);
                             for line in stdout.lines() {
                                 if line.starts_with("PercentProcessorTime=") {
-                                    if let Ok(percent) = line.trim_start_matches("PercentProcessorTime=").trim().parse::<u64>() {
+                                    if let Ok(percent) = line
+                                        .trim_start_matches("PercentProcessorTime=")
+                                        .trim()
+                                        .parse::<u64>()
+                                    {
                                         cpu_str = format!("{}%", percent);
                                     }
                                 }
@@ -159,10 +184,13 @@ pub fn run() {
                         memory: String,
                     }
 
-                    let _ = handle_clone.emit("system-resources", SystemResources {
-                        cpu: cpu_str,
-                        memory: mem_str,
-                    });
+                    let _ = handle_clone.emit(
+                        "system-resources",
+                        SystemResources {
+                            cpu: cpu_str,
+                            memory: mem_str,
+                        },
+                    );
 
                     std::thread::sleep(std::time::Duration::from_secs(2));
                 }
@@ -233,7 +261,6 @@ pub fn run() {
             fh6_telemetry::commands::get_settings,
             fh6_telemetry::commands::save_settings,
         ])
-
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

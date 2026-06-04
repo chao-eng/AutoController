@@ -5,8 +5,8 @@ use std::time::Instant;
 
 use super::types::*;
 use super::xinput::{XInputBindings, XinputGamepad};
-use crate::persistence::DataDir;
 use crate::controller::types::Button;
+use crate::persistence::DataDir;
 use chrono::Utc;
 
 #[derive(Clone)]
@@ -141,24 +141,38 @@ impl MacroRecorder {
                                 }
 
                                 // 2. 监测扳机键变化（防抖去噪滤波，变化量 > 2/255 才记录）
-                                if (gamepad.b_left_trigger as i16 - prev.b_left_trigger as i16).abs() > 2 {
+                                if (gamepad.b_left_trigger as i16 - prev.b_left_trigger as i16)
+                                    .abs()
+                                    > 2
+                                {
                                     new_events.push(MacroEvent {
                                         timestamp_ms,
                                         device_id: device_id_clone.clone(),
-                                        event_type: MacroEventType::TriggerMove("left".to_string(), gamepad.b_left_trigger as f32 / 255.0),
+                                        event_type: MacroEventType::TriggerMove(
+                                            "left".to_string(),
+                                            gamepad.b_left_trigger as f32 / 255.0,
+                                        ),
                                     });
                                 }
-                                if (gamepad.b_right_trigger as i16 - prev.b_right_trigger as i16).abs() > 2 {
+                                if (gamepad.b_right_trigger as i16 - prev.b_right_trigger as i16)
+                                    .abs()
+                                    > 2
+                                {
                                     new_events.push(MacroEvent {
                                         timestamp_ms,
                                         device_id: device_id_clone.clone(),
-                                        event_type: MacroEventType::TriggerMove("right".to_string(), gamepad.b_right_trigger as f32 / 255.0),
+                                        event_type: MacroEventType::TriggerMove(
+                                            "right".to_string(),
+                                            gamepad.b_right_trigger as f32 / 255.0,
+                                        ),
                                     });
                                 }
 
                                 // 3. 监测摇杆变化（防抖去噪滤波，偏转增量 > 300 才记录）
-                                if (gamepad.s_thumb_lx as i32 - prev.s_thumb_lx as i32).abs() > 300 ||
-                                   (gamepad.s_thumb_ly as i32 - prev.s_thumb_ly as i32).abs() > 300 {
+                                if (gamepad.s_thumb_lx as i32 - prev.s_thumb_lx as i32).abs() > 300
+                                    || (gamepad.s_thumb_ly as i32 - prev.s_thumb_ly as i32).abs()
+                                        > 300
+                                {
                                     new_events.push(MacroEvent {
                                         timestamp_ms,
                                         device_id: device_id_clone.clone(),
@@ -169,8 +183,10 @@ impl MacroRecorder {
                                         ),
                                     });
                                 }
-                                if (gamepad.s_thumb_rx as i32 - prev.s_thumb_rx as i32).abs() > 300 ||
-                                   (gamepad.s_thumb_ry as i32 - prev.s_thumb_ry as i32).abs() > 300 {
+                                if (gamepad.s_thumb_rx as i32 - prev.s_thumb_rx as i32).abs() > 300
+                                    || (gamepad.s_thumb_ry as i32 - prev.s_thumb_ry as i32).abs()
+                                        > 300
+                                {
                                     new_events.push(MacroEvent {
                                         timestamp_ms,
                                         device_id: device_id_clone.clone(),
@@ -200,7 +216,9 @@ impl MacroRecorder {
 
                 if !has_any_connected {
                     if last_warn_time.elapsed() > std::time::Duration::from_secs(3) {
-                        tracing::warn!("未检测到任何可用的物理手柄连接，请确认手柄已打开并连接到电脑！");
+                        tracing::warn!(
+                            "未检测到任何可用的物理手柄连接，请确认手柄已打开并连接到电脑！"
+                        );
                         last_warn_time = std::time::Instant::now();
                     }
                 }
@@ -216,9 +234,7 @@ impl MacroRecorder {
 
     pub fn stop_record(&self) -> Result<Macro, String> {
         let mut recording = self.recording.lock();
-        let state = recording
-            .take()
-            .ok_or("没有正在进行的录制")?;
+        let state = recording.take().ok_or("没有正在进行的录制")?;
 
         let total_duration_ms = state.start_time.elapsed().as_millis() as u64;
         let mac = Macro {

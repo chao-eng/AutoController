@@ -1,19 +1,22 @@
+use chrono::{DateTime, Duration, NaiveTime, Utc};
+use cron::Schedule;
 use parking_lot::Mutex;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::str::FromStr;
-use chrono::{DateTime, Utc, NaiveTime, Duration};
-use cron::Schedule;
+use std::sync::Arc;
 use tauri::Manager;
 
 use super::types::*;
-use crate::persistence::DataDir;
 use crate::controller::ControllerManager;
 use crate::macro_engine::MacroPlayer;
+use crate::persistence::DataDir;
 use crate::script_engine::ScriptRuntime;
 
 /// 核心辅助：计算下一次执行的时间
-pub fn calculate_next_run(schedule: &ScheduleType, last_run: Option<DateTime<Utc>>) -> Option<DateTime<Utc>> {
+pub fn calculate_next_run(
+    schedule: &ScheduleType,
+    last_run: Option<DateTime<Utc>>,
+) -> Option<DateTime<Utc>> {
     let now = Utc::now();
     match schedule {
         ScheduleType::Once(dt) => {
@@ -28,16 +31,30 @@ pub fn calculate_next_run(schedule: &ScheduleType, last_run: Option<DateTime<Utc
         ScheduleType::Daily { time } => {
             // 解析 "HH:MM:SS" 或 "HH:MM"
             let time_parts: Vec<&str> = time.split(':').collect();
-            if time_parts.is_empty() { return None; }
-            let h = time_parts.get(0).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
-            let m = time_parts.get(1).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
-            let s = time_parts.get(2).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
-            
+            if time_parts.is_empty() {
+                return None;
+            }
+            let h = time_parts
+                .get(0)
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(0);
+            let m = time_parts
+                .get(1)
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(0);
+            let s = time_parts
+                .get(2)
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(0);
+
             let local_now = chrono::Local::now();
             let naive_time = NaiveTime::from_hms_opt(h, m, s)?;
             let naive_date = local_now.date_naive();
-            
-            let mut next_local = naive_date.and_time(naive_time).and_local_timezone(chrono::Local).single()?;
+
+            let mut next_local = naive_date
+                .and_time(naive_time)
+                .and_local_timezone(chrono::Local)
+                .single()?;
             if next_local <= local_now {
                 // 今天的时间已过，安排在明天
                 next_local = next_local + Duration::days(1);
@@ -110,21 +127,21 @@ impl TaskQueue {
         if !tasks.contains_key(&updated_task.id) {
             return Err(format!("任务不存在: {}", updated_task.id));
         }
-        
+
         // 如果任务已启用，基于上次运行时间计算下一次运行时间
         if updated_task.enabled {
-            updated_task.next_run = calculate_next_run(&updated_task.schedule, updated_task.last_run);
+            updated_task.next_run =
+                calculate_next_run(&updated_task.schedule, updated_task.last_run);
         } else {
             updated_task.next_run = None;
         }
-        
+
         tracing::info!(task_id = %updated_task.id, name = %updated_task.name, "定时任务已更新");
         tasks.insert(updated_task.id.clone(), updated_task);
         drop(tasks);
         self.persist();
         Ok(())
     }
-
 
     pub fn remove_task(&self, task_id: &str) -> Result<(), String> {
         let mut tasks = self.tasks.lock();
@@ -176,15 +193,15 @@ pub fn start_scheduler_loop(app_handle: tauri::AppHandle) {
         loop {
             // 每秒心跳轮询一次，保证高精度与低功耗
             std::thread::sleep(std::time::Duration::from_millis(1000));
-            
+
             let queue = match app_handle.try_state::<TaskQueue>() {
                 Some(q) => q,
                 None => continue,
             };
-            
+
             let now = Utc::now();
             let mut tasks_to_run = Vec::new();
-            
+
             // 1. 扫描当前需要执行的任务列表
             {
                 let tasks = queue.tasks.lock();
@@ -192,37 +209,52 @@ pub fn start_scheduler_loop(app_handle: tauri::AppHandle) {
                     if task.enabled {
                         if let Some(next) = task.next_run {
                             if next <= now {
-                                tasks_to_run.push((task.id.clone(), task.action.clone(), task.priority));
+                                tasks_to_run.push((
+                                    task.id.clone(),
+                                    task.action.clone(),
+                                    task.priority,
+                                ));
                             }
                         }
                     }
                 }
             }
-            
+
             if tasks_to_run.is_empty() {
                 continue;
             }
-            
+
             // 2. 依据任务优先级进行高优先级抢占排序（优先级高的先执行）
             tasks_to_run.sort_by(|a, b| b.2.cmp(&a.2));
-            
+
             // 3. 多线程异步非阻塞分发执行任务，防止耗时操作拖慢主轮询心跳
             for (task_id, action, _) in tasks_to_run {
                 tracing::info!(task_id = %task_id, "触发定时调度任务");
-                
+
                 let handle_clone = app_handle.clone();
                 let tid = task_id.clone();
-                
+
                 std::thread::spawn(move || {
                     let result = match &action {
-                        TaskAction::PlayMacro { macro_id, speed, loop_count } => {
+                        TaskAction::PlayMacro {
+                            macro_id,
+                            speed,
+                            loop_count,
+                        } => {
                             if let (Some(player), Some(recorder), Some(controller)) = (
                                 handle_clone.try_state::<MacroPlayer>(),
                                 handle_clone.try_state::<crate::macro_engine::MacroRecorder>(),
                                 handle_clone.try_state::<ControllerManager>(),
                             ) {
                                 if let Some(mac) = recorder.get_macro(macro_id) {
-                                    player.start_playback(controller.inner().clone(), mac, *speed, *loop_count).map(|_| ())
+                                    player
+                                        .start_playback(
+                                            controller.inner().clone(),
+                                            mac,
+                                            *speed,
+                                            *loop_count,
+                                        )
+                                        .map(|_| ())
                                 } else {
                                     Err("指定手柄宏已不存在".to_string())
                                 }
@@ -237,7 +269,10 @@ pub fn start_scheduler_loop(app_handle: tauri::AppHandle) {
                                 Err("脚本自动化引擎未就绪".to_string())
                             }
                         }
-                        TaskAction::ExecuteSequence { steps, task_loop_count } => {
+                        TaskAction::ExecuteSequence {
+                            steps,
+                            task_loop_count,
+                        } => {
                             if let Some(runtime) = handle_clone.try_state::<ScriptRuntime>() {
                                 runtime.execute_sequence(&tid, steps.clone(), *task_loop_count)
                             } else {
@@ -245,14 +280,14 @@ pub fn start_scheduler_loop(app_handle: tauri::AppHandle) {
                             }
                         }
                     };
-                    
+
                     if let Err(e) = result {
                         tracing::error!(task_id = %tid, error = %e, "定时调度任务执行失败");
                     } else {
                         tracing::info!(task_id = %tid, "定时调度任务执行成功");
                     }
                 });
-                
+
                 // 4. 更新调度任务状态并计算下一次运行时间
                 {
                     let mut tasks = queue.tasks.lock();

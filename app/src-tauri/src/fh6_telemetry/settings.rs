@@ -52,10 +52,18 @@ pub struct Settings {
 }
 
 impl Settings {
-    fn default_theme() -> String { "dark".to_string() }
-    fn default_map_max_zoom() -> i32 { 5 }
-    fn default_map_tile_size() -> i32 { 256 }
-    fn default_tires_visible() -> bool { true }
+    fn default_theme() -> String {
+        "dark".to_string()
+    }
+    fn default_map_max_zoom() -> i32 {
+        5
+    }
+    fn default_map_tile_size() -> i32 {
+        256
+    }
+    fn default_tires_visible() -> bool {
+        true
+    }
 }
 
 impl Default for Settings {
@@ -149,7 +157,11 @@ mod tests {
 
     #[test]
     fn roundtrip_to_json() {
-        let s = Settings { port: 9999, use_mph: false, ..Settings::default() };
+        let s = Settings {
+            port: 9999,
+            use_mph: false,
+            ..Settings::default()
+        };
         let json = serde_json::to_string(&s).unwrap();
         let s2: Settings = serde_json::from_str(&json).unwrap();
         assert_eq!(s2.port, 9999);

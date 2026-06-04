@@ -3,13 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::net::UdpSocket;
 use tokio::sync::broadcast;
 
-use super::{
-    db,
-    event::ServerEvent,
-    parser,
-    session::SessionAction,
-    AppState,
-};
+use super::{db, event::ServerEvent, parser, session::SessionAction, AppState};
 
 pub async fn run(state: Arc<AppState>, port: u16, tx: broadcast::Sender<ServerEvent>) {
     let addr = format!("0.0.0.0:{port}");
@@ -17,7 +11,9 @@ pub async fn run(state: Arc<AppState>, port: u16, tx: broadcast::Sender<ServerEv
         Ok(s) => s,
         Err(e) => {
             eprintln!("[udp] failed to bind {addr}: {e}");
-            let _ = tx.send(ServerEvent::BindFailed(format!("Cannot bind port {port}: {e}")));
+            let _ = tx.send(ServerEvent::BindFailed(format!(
+                "Cannot bind port {port}: {e}"
+            )));
             return;
         }
     };
@@ -111,10 +107,21 @@ fn handle_session(
     };
 
     // Apply event transition before inserting so the opening packet is captured
-    let action = sm.on_race_on_change(prev_in_event, in_event, pkt.car_ordinal, pkt.car_class, pkt.car_pi);
+    let action = sm.on_race_on_change(
+        prev_in_event,
+        in_event,
+        pkt.car_ordinal,
+        pkt.car_class,
+        pkt.car_pi,
+    );
 
     // Open/reopen first so the opening packet is captured below.
-    if let SessionAction::Open { car_ordinal, car_class, car_pi } = &action {
+    if let SessionAction::Open {
+        car_ordinal,
+        car_class,
+        car_pi,
+    } = &action
+    {
         let (car_ordinal, car_class, car_pi) = (*car_ordinal, *car_class, *car_pi);
         // Check if the new stream looks like a rewind into the previous
         // session: race time went backward within the rewind window.
@@ -137,7 +144,9 @@ fn handle_session(
                 }
                 Err(e) => {
                     eprintln!("[session] open error: {e}");
-                    let _ = tx.send(ServerEvent::SessionError(format!("Failed to open session: {e}")));
+                    let _ = tx.send(ServerEvent::SessionError(format!(
+                        "Failed to open session: {e}"
+                    )));
                 }
             }
         }
@@ -155,12 +164,21 @@ fn handle_session(
         }
         if let Err(e) = db::insert_packet(&db, session_id, pkt.timestamp_ms, raw) {
             eprintln!("[session] insert error: {e}");
-            let _ = tx.send(ServerEvent::SessionError(format!("Failed to write telemetry: {e}")));
+            let _ = tx.send(ServerEvent::SessionError(format!(
+                "Failed to write telemetry: {e}"
+            )));
         }
         // Lazily fill car metadata: the opening packet sometimes arrives before the
         // game has populated car_ordinal. This no-ops once car_ordinal is non-zero.
         if pkt.car_ordinal != 0 {
-            db::update_session_car_if_unknown(&db, session_id, pkt.car_ordinal, pkt.car_class, pkt.car_pi).ok();
+            db::update_session_car_if_unknown(
+                &db,
+                session_id,
+                pkt.car_ordinal,
+                pkt.car_class,
+                pkt.car_pi,
+            )
+            .ok();
         }
     }
 
@@ -193,7 +211,9 @@ fn handle_session(
                 let best = db::min_lap_time(&db, id).ok().flatten().unwrap_or(-1.0);
                 if let Err(e) = db::close_session(&db, id, now_ms as i64, best) {
                     eprintln!("[session] close error: {e}");
-                    let _ = tx.send(ServerEvent::SessionError(format!("Failed to close session: {e}")));
+                    let _ = tx.send(ServerEvent::SessionError(format!(
+                        "Failed to close session: {e}"
+                    )));
                 } else {
                     println!("[session] closed #{id}");
                 }

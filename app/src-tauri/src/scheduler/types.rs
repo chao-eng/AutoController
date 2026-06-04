@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -20,8 +20,14 @@ pub struct ScriptStep {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskAction {
-    PlayMacro { macro_id: String, speed: f32, loop_count: u32 },
-    ExecuteScript { script_id: String },
+    PlayMacro {
+        macro_id: String,
+        speed: f32,
+        loop_count: u32,
+    },
+    ExecuteScript {
+        script_id: String,
+    },
     ExecuteSequence {
         steps: Vec<ScriptStep>,
         task_loop_count: u32,
@@ -41,4 +47,3 @@ pub struct ScheduledTask {
     #[serde(default)]
     pub notification_channels: Vec<String>,
 }
-

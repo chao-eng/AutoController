@@ -68,8 +68,8 @@ pub fn save_settings(state: &AppState, new_settings: settings::Settings) -> Resu
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::session::SessionManager;
+    use super::*;
     use std::sync::Mutex;
 
     // save_settings is covered by the server integration test (Task 7) — it writes to disk.

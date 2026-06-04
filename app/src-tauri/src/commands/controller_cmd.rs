@@ -1,4 +1,6 @@
-use crate::controller::{ControllerManager, Button, ThumbAxis, TriggerSide, DeviceInfo, ControllerState, ViGEmStatus};
+use crate::controller::{
+    Button, ControllerManager, ControllerState, DeviceInfo, ThumbAxis, TriggerSide, ViGEmStatus,
+};
 
 #[tauri::command]
 pub fn controller_create(
@@ -54,16 +56,12 @@ pub fn controller_get_state(
 }
 
 #[tauri::command]
-pub fn controller_list(
-    manager: tauri::State<'_, ControllerManager>,
-) -> Vec<DeviceInfo> {
+pub fn controller_list(manager: tauri::State<'_, ControllerManager>) -> Vec<DeviceInfo> {
     manager.list_devices()
 }
 
 #[tauri::command]
-pub fn controller_vigem_status(
-    manager: tauri::State<'_, ControllerManager>,
-) -> ViGEmStatus {
+pub fn controller_vigem_status(manager: tauri::State<'_, ControllerManager>) -> ViGEmStatus {
     manager.get_vigem_status()
 }
 

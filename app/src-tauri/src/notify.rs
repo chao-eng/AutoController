@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::config::ChannelConfig;
+use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -129,9 +129,10 @@ pub async fn send_notification(
 ) -> Result<(), String> {
     let client = reqwest::Client::new();
     match config {
-        ChannelConfig::Feishu { webhook_url, secret } => {
-            send_feishu(&client, webhook_url, secret.clone(), payload).await
-        }
+        ChannelConfig::Feishu {
+            webhook_url,
+            secret,
+        } => send_feishu(&client, webhook_url, secret.clone(), payload).await,
         ChannelConfig::ServerChan { send_key } => {
             send_server_chan(&client, send_key, payload).await
         }
@@ -143,7 +144,6 @@ pub async fn send_notification(
         }
     }
 }
-
 
 #[tauri::command]
 pub async fn send_aggregated_notification(
@@ -222,8 +222,16 @@ pub fn trigger_task_notification(
         }
 
         // 3. 构建载荷
-        let emoji = if status_str == "completed" { "✅" } else { "⚠️" };
-        let status_cn = if status_str == "completed" { "已完成" } else { "已中断/失败" };
+        let emoji = if status_str == "completed" {
+            "✅"
+        } else {
+            "⚠️"
+        };
+        let status_cn = if status_str == "completed" {
+            "已完成"
+        } else {
+            "已中断/失败"
+        };
         let title = format!("{} AutoController 任务通知 - {}", emoji, tname);
         let content = format!(
             "任务名称：{}\n执行状态：{}\n详细信息：{}\n通知时间：{}",

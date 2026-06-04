@@ -43,7 +43,8 @@ type FnTargetX360Alloc = unsafe extern "system" fn() -> PVIGEM_TARGET;
 type FnTargetAdd = unsafe extern "system" fn(PVIGEM_CLIENT, PVIGEM_TARGET) -> VIGEM_ERROR;
 type FnTargetRemove = unsafe extern "system" fn(PVIGEM_CLIENT, PVIGEM_TARGET) -> VIGEM_ERROR;
 type FnTargetFree = unsafe extern "system" fn(PVIGEM_TARGET);
-type FnTargetX360Update = unsafe extern "system" fn(PVIGEM_CLIENT, PVIGEM_TARGET, XusbReport) -> VIGEM_ERROR;
+type FnTargetX360Update =
+    unsafe extern "system" fn(PVIGEM_CLIENT, PVIGEM_TARGET, XusbReport) -> VIGEM_ERROR;
 type FnTargetGetIndex = unsafe extern "system" fn(PVIGEM_TARGET) -> u32;
 
 pub struct ViGEmBindings {
@@ -88,8 +89,7 @@ impl ViGEmBindings {
             let vigem_target_add = Self::load_sym::<FnTargetAdd>(&dll, b"vigem_target_add\0")?;
             let vigem_target_remove =
                 Self::load_sym::<FnTargetRemove>(&dll, b"vigem_target_remove\0")?;
-            let vigem_target_free =
-                Self::load_sym::<FnTargetFree>(&dll, b"vigem_target_free\0")?;
+            let vigem_target_free = Self::load_sym::<FnTargetFree>(&dll, b"vigem_target_free\0")?;
             let vigem_target_x360_update =
                 Self::load_sym::<FnTargetX360Update>(&dll, b"vigem_target_x360_update\0")?;
             let vigem_target_get_index =
@@ -155,15 +155,18 @@ impl ViGEmClient {
         let error = unsafe { (bindings.vigem_connect)(client) };
         if !vigem_success(error) {
             unsafe { (bindings.vigem_free)(client) };
-            return Err((error, match error {
-                VIGEM_ERROR_BUS_NOT_FOUND => {
-                    "ViGEmBus 驱动未找到，请先安装 ViGEmBus 驱动".to_string()
-                }
-                VIGEM_ERROR_BUS_ACCESS_FAILED => {
-                    "无法访问 ViGEmBus 驱动，请尝试以管理员身份运行".to_string()
-                }
-                _ => format!("vigem_connect 失败，错误码: {} (0x{:08X})", error, error),
-            }));
+            return Err((
+                error,
+                match error {
+                    VIGEM_ERROR_BUS_NOT_FOUND => {
+                        "ViGEmBus 驱动未找到，请先安装 ViGEmBus 驱动".to_string()
+                    }
+                    VIGEM_ERROR_BUS_ACCESS_FAILED => {
+                        "无法访问 ViGEmBus 驱动，请尝试以管理员身份运行".to_string()
+                    }
+                    _ => format!("vigem_connect 失败，错误码: {} (0x{:08X})", error, error),
+                },
+            ));
         }
 
         tracing::info!("已成功连接到 ViGEmBus 驱动");
@@ -197,20 +200,26 @@ impl ViGEmClient {
         Ok(target)
     }
 
-
     pub fn remove_target(&self, target: PVIGEM_TARGET) -> Result<(), String> {
         let error = unsafe { (self.bindings.vigem_target_remove)(self.client, target) };
         if !vigem_success(error) {
-            return Err(format!("vigem_target_remove 失败，错误码: {} (0x{:08X})", error, error));
+            return Err(format!(
+                "vigem_target_remove 失败，错误码: {} (0x{:08X})",
+                error, error
+            ));
         }
         unsafe { (self.bindings.vigem_target_free)(target) };
         Ok(())
     }
 
     pub fn update_x360(&self, target: PVIGEM_TARGET, report: XusbReport) -> Result<(), String> {
-        let error = unsafe { (self.bindings.vigem_target_x360_update)(self.client, target, report) };
+        let error =
+            unsafe { (self.bindings.vigem_target_x360_update)(self.client, target, report) };
         if !vigem_success(error) {
-            return Err(format!("vigem_target_x360_update 失败，错误码: {} (0x{:08X})", error, error));
+            return Err(format!(
+                "vigem_target_x360_update 失败，错误码: {} (0x{:08X})",
+                error, error
+            ));
         }
         Ok(())
     }

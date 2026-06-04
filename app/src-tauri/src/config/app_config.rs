@@ -30,10 +30,21 @@ pub struct OcrRegion {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ChannelConfig {
-    Feishu { webhook_url: String, secret: Option<String> },
-    ServerChan { send_key: String },
-    ServerChan3 { uid: String, send_key: String },
-    Telegram { bot_token: String, chat_id: String },
+    Feishu {
+        webhook_url: String,
+        secret: Option<String>,
+    },
+    ServerChan {
+        send_key: String,
+    },
+    ServerChan3 {
+        uid: String,
+        send_key: String,
+    },
+    Telegram {
+        bot_token: String,
+        chat_id: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,8 +105,6 @@ impl Default for AppConfig {
         }
     }
 }
-
-
 
 #[derive(Clone)]
 pub struct AppConfigManager {

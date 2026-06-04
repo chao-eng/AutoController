@@ -1,8 +1,8 @@
 // app/src-tauri/src/system/injector.rs
 // 系统底层注入器调用，运行安全的进程扫描，并通过物理隔离的独立进程 injector.exe 执行注入和卸载操作。
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ProcessInfo {
@@ -25,19 +25,18 @@ impl InjectedProcessesState {
 }
 
 #[cfg(target_os = "windows")]
-use windows::Win32::Foundation::{HWND, LPARAM, BOOL, CloseHandle};
-#[cfg(target_os = "windows")]
-use windows::Win32::UI::WindowsAndMessaging::{
-    EnumWindows, IsWindowVisible, GetWindowTextW, GetWindowThreadProcessId,
-};
+use windows::Win32::Foundation::{CloseHandle, BOOL, HWND, LPARAM};
 #[cfg(target_os = "windows")]
 use windows::Win32::System::Diagnostics::ToolHelp::{
-    CreateToolhelp32Snapshot, Process32FirstW, Process32NextW,
-    TH32CS_SNAPPROCESS, PROCESSENTRY32W,
+    CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
 };
 #[cfg(target_os = "windows")]
 use windows::Win32::System::Threading::{
-    OpenProcess, IsWow64Process, PROCESS_QUERY_LIMITED_INFORMATION,
+    IsWow64Process, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+};
+#[cfg(target_os = "windows")]
+use windows::Win32::UI::WindowsAndMessaging::{
+    EnumWindows, GetWindowTextW, GetWindowThreadProcessId, IsWindowVisible,
 };
 
 #[cfg(target_os = "windows")]
@@ -48,7 +47,7 @@ struct EnumWindowsData {
 #[cfg(target_os = "windows")]
 unsafe extern "system" fn enum_windows_callback(hwnd: HWND, lparam: LPARAM) -> BOOL {
     let data = &mut *(lparam.0 as *mut EnumWindowsData);
-    
+
     // 只考虑可见的窗口
     if !IsWindowVisible(hwnd).as_bool() {
         return BOOL(1);
@@ -60,9 +59,9 @@ unsafe extern "system" fn enum_windows_callback(hwnd: HWND, lparam: LPARAM) -> B
     if len == 0 {
         return BOOL(1);
     }
-    
+
     let title = String::from_utf16_lossy(&title_buf[..len as usize]);
-    
+
     // 忽略一些常见的空标题、系统浮动条
     if title.trim().is_empty() {
         return BOOL(1);
@@ -70,7 +69,7 @@ unsafe extern "system" fn enum_windows_callback(hwnd: HWND, lparam: LPARAM) -> B
 
     let mut pid = 0u32;
     GetWindowThreadProcessId(hwnd, Some(&mut pid));
-    
+
     if pid != 0 {
         data.windows.push((pid, title));
     }
@@ -96,7 +95,7 @@ fn is_process_64bit(pid: u32) -> bool {
 #[cfg(target_os = "windows")]
 pub fn list_windowed_processes() -> Vec<ProcessInfo> {
     let mut process_map = HashMap::new();
-    
+
     unsafe {
         // 1. 获取所有活动进程的 PID 和 进程名称 映射
         if let Ok(h_snap) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) {
@@ -105,10 +104,14 @@ pub fn list_windowed_processes() -> Vec<ProcessInfo> {
 
             if Process32FirstW(h_snap, &mut pe).is_ok() {
                 loop {
-                    let len = pe.szExeFile.iter().position(|&c| c == 0).unwrap_or(pe.szExeFile.len());
+                    let len = pe
+                        .szExeFile
+                        .iter()
+                        .position(|&c| c == 0)
+                        .unwrap_or(pe.szExeFile.len());
                     let exe_name = String::from_utf16_lossy(&pe.szExeFile[..len]);
                     process_map.insert(pe.th32ProcessID, exe_name);
-                    
+
                     if Process32NextW(h_snap, &mut pe).is_err() {
                         break;
                     }
@@ -118,9 +121,11 @@ pub fn list_windowed_processes() -> Vec<ProcessInfo> {
         }
 
         // 2. 枚举所有拥有可见窗口的窗口标题与 PID
-        let mut data = EnumWindowsData { windows: Vec::new() };
+        let mut data = EnumWindowsData {
+            windows: Vec::new(),
+        };
         let data_ptr = &mut data as *mut EnumWindowsData as isize;
-        
+
         let _ = EnumWindows(Some(enum_windows_callback), LPARAM(data_ptr));
 
         // 3. 将结果整合成 ProcessInfo 列表
@@ -171,9 +176,10 @@ pub fn list_windowed_processes() -> Vec<ProcessInfo> {
 
 #[cfg(target_os = "windows")]
 fn get_injector_exe_path() -> Result<std::path::PathBuf, String> {
-    let current_exe = std::env::current_exe().map_err(|e| format!("无法获取当前程序运行路径: {}", e))?;
+    let current_exe =
+        std::env::current_exe().map_err(|e| format!("无法获取当前程序运行路径: {}", e))?;
     let dir = current_exe.parent().ok_or("无法获取当前程序的运行目录")?;
-    
+
     // 自适应开发环境（target/debug/）和打包发布安装环境
     let injector_path = dir.join("injector.exe");
     if injector_path.exists() {
@@ -195,14 +201,19 @@ fn get_injector_exe_path() -> Result<std::path::PathBuf, String> {
 #[cfg(target_os = "windows")]
 pub fn run_injector_inject(pid: u32, is_64bit: bool) -> Result<(), String> {
     let injector_exe = get_injector_exe_path()?;
-    
+
     // 定位 DLL 路径
-    let current_exe = std::env::current_exe().map_err(|e| format!("无法获取当前程序路径: {}", e))?;
+    let current_exe =
+        std::env::current_exe().map_err(|e| format!("无法获取当前程序路径: {}", e))?;
     let dir = current_exe.parent().ok_or("无法获取当前程序的运行目录")?;
-    
-    let dll_name = if is_64bit { "NoFocusLoss64.dll" } else { "NoFocusLoss.dll" };
+
+    let dll_name = if is_64bit {
+        "NoFocusLoss64.dll"
+    } else {
+        "NoFocusLoss.dll"
+    };
     let dll_path = dir.join(dll_name);
-    
+
     if !dll_path.exists() {
         return Err(format!(
             "防失去焦点核心 DLL 组件不存在，请确保 {} 放在软件目录下！",
@@ -213,8 +224,8 @@ pub fn run_injector_inject(pid: u32, is_64bit: bool) -> Result<(), String> {
     // 启动独立进程
     let mut cmd = std::process::Command::new(&injector_exe);
     cmd.arg("--inject")
-       .arg(pid.to_string())
-       .arg(dll_path.to_string_lossy().to_string());
+        .arg(pid.to_string())
+        .arg(dll_path.to_string_lossy().to_string());
 
     // Windows 平台强力隐藏子进程的小黑框命令行窗口
     use std::os::windows::process::CommandExt;
@@ -254,23 +265,23 @@ pub fn run_injector_inject(pid: u32, is_64bit: bool) -> Result<(), String> {
 #[cfg(target_os = "windows")]
 pub fn run_injector_unload(pid: u32, is_64bit: bool) -> Result<(), String> {
     let injector_exe = get_injector_exe_path()?;
-    let dll_name = if is_64bit { "NoFocusLoss64.dll" } else { "NoFocusLoss.dll" };
+    let dll_name = if is_64bit {
+        "NoFocusLoss64.dll"
+    } else {
+        "NoFocusLoss.dll"
+    };
 
     let mut cmd = std::process::Command::new(&injector_exe);
-    cmd.arg("--unload")
-       .arg(pid.to_string())
-       .arg(dll_name);
+    cmd.arg("--unload").arg(pid.to_string()).arg(dll_name);
 
     use std::os::windows::process::CommandExt;
     cmd.creation_flags(0x08000000);
 
-    let output = cmd.output().map_err(|e| {
-        match e.kind() {
-            std::io::ErrorKind::PermissionDenied => {
-                "启动卸载核心组件被拦截，请在杀毒软件中予以信任项！".to_string()
-            }
-            _ => format!("启动卸载组件子进程失败: {}", e),
+    let output = cmd.output().map_err(|e| match e.kind() {
+        std::io::ErrorKind::PermissionDenied => {
+            "启动卸载核心组件被拦截，请在杀毒软件中予以信任项！".to_string()
         }
+        _ => format!("启动卸载组件子进程失败: {}", e),
     })?;
 
     if output.status.success() {

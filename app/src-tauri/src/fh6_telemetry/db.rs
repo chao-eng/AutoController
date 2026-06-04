@@ -64,7 +64,12 @@ fn migrate(conn: &Connection) {
     );
 }
 
-pub fn insert_lap(conn: &Connection, session_id: i64, lap_number: i64, lap_time: f32) -> Result<()> {
+pub fn insert_lap(
+    conn: &Connection,
+    session_id: i64,
+    lap_number: i64,
+    lap_time: f32,
+) -> Result<()> {
     conn.execute(
         "INSERT INTO session_laps (session_id, lap_number, lap_time) VALUES (?1, ?2, ?3)
          ON CONFLICT(session_id, lap_number) DO UPDATE SET lap_time=excluded.lap_time",
@@ -96,7 +101,10 @@ pub fn get_session_laps(conn: &Connection, session_id: i64) -> Result<Vec<LapRow
          WHERE session_id=?1 ORDER BY lap_number ASC",
     )?;
     let rows = stmt.query_map([session_id], |r| {
-        Ok(LapRow { lap_number: r.get(0)?, lap_time: r.get(1)? })
+        Ok(LapRow {
+            lap_number: r.get(0)?,
+            lap_time: r.get(1)?,
+        })
     })?;
     rows.collect()
 }
@@ -133,10 +141,7 @@ pub fn update_session_car_if_unknown(
 }
 
 pub fn reopen_session(conn: &Connection, id: i64) -> Result<()> {
-    conn.execute(
-        "UPDATE sessions SET ended_at = NULL WHERE id=?1",
-        [id],
-    )?;
+    conn.execute("UPDATE sessions SET ended_at = NULL WHERE id=?1", [id])?;
     Ok(())
 }
 
@@ -279,7 +284,9 @@ mod tests {
         assert!(id > 0);
         close_session(&conn, id, 1000, 78.5).unwrap();
         let ended: Option<i64> = conn
-            .query_row("SELECT ended_at FROM sessions WHERE id=?1", [id], |r| r.get(0))
+            .query_row("SELECT ended_at FROM sessions WHERE id=?1", [id], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert!(ended.is_some());
     }
@@ -291,7 +298,9 @@ mod tests {
         close_session(&conn, id, 1000, 78.5).unwrap();
         reopen_session(&conn, id).unwrap();
         let ended: Option<i64> = conn
-            .query_row("SELECT ended_at FROM sessions WHERE id=?1", [id], |r| r.get(0))
+            .query_row("SELECT ended_at FROM sessions WHERE id=?1", [id], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert!(ended.is_none());
     }
@@ -307,7 +316,9 @@ mod tests {
         reopen_session(&conn, id).unwrap();
         close_session(&conn, id, 200, 54.0).unwrap(); // true min after upsert
         let best: Option<f32> = conn
-            .query_row("SELECT best_lap FROM sessions WHERE id=?1", [id], |r| r.get(0))
+            .query_row("SELECT best_lap FROM sessions WHERE id=?1", [id], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(best, Some(54.0));
     }
@@ -321,7 +332,9 @@ mod tests {
         // Better lap after rewind — should update
         close_session(&conn, id, 200, 60.0).unwrap();
         let best: Option<f32> = conn
-            .query_row("SELECT best_lap FROM sessions WHERE id=?1", [id], |r| r.get(0))
+            .query_row("SELECT best_lap FROM sessions WHERE id=?1", [id], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(best, Some(60.0));
     }
@@ -335,7 +348,9 @@ mod tests {
         // -1.0 means no lap was recorded post-rewind
         close_session(&conn, id, 200, -1.0).unwrap();
         let best: Option<f32> = conn
-            .query_row("SELECT best_lap FROM sessions WHERE id=?1", [id], |r| r.get(0))
+            .query_row("SELECT best_lap FROM sessions WHERE id=?1", [id], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(best, Some(65.5));
     }
@@ -409,7 +424,11 @@ mod tests {
         delete_session(&conn, id).unwrap();
         assert_eq!(get_session_laps(&conn, id).unwrap().len(), 0);
         let pkts: i64 = conn
-            .query_row("SELECT COUNT(*) FROM session_packets WHERE session_id=?1", [id], |r| r.get(0))
+            .query_row(
+                "SELECT COUNT(*) FROM session_packets WHERE session_id=?1",
+                [id],
+                |r| r.get(0),
+            )
             .unwrap();
         assert_eq!(pkts, 0);
     }
@@ -442,7 +461,9 @@ mod tests {
         insert_packet(&conn, id, 1000, &blob).unwrap();
         insert_packet(&conn, id, 2000, &blob).unwrap();
         let count: i64 = conn
-            .query_row("SELECT packet_count FROM sessions WHERE id=?1", [id], |r| r.get(0))
+            .query_row("SELECT packet_count FROM sessions WHERE id=?1", [id], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(count, 2);
     }

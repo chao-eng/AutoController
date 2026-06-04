@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 
 #[allow(dead_code)]
 pub struct ProcessMonitor {
@@ -28,8 +28,8 @@ impl ProcessMonitor {
     pub fn is_game_running(&self, process_name: &str) -> bool {
         #[cfg(target_os = "windows")]
         {
-            use std::process::Command;
             use std::os::windows::process::CommandExt;
+            use std::process::Command;
             let output = Command::new("tasklist")
                 .args(["/FI", &format!("IMAGENAME eq {}", process_name), "/NH"])
                 .creation_flags(0x08000000)

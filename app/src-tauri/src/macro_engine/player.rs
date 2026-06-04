@@ -2,8 +2,8 @@ use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::controller::{ControllerManager, ThumbAxis, TriggerSide};
 use super::types::{Macro, MacroEventType};
+use crate::controller::{ControllerManager, ThumbAxis, TriggerSide};
 
 #[derive(Clone)]
 #[allow(dead_code)]
@@ -120,8 +120,13 @@ impl MacroPlayer {
                     }
 
                     let event = &events[next_event_idx];
-                    let elapsed = loop_start_time.elapsed().checked_sub(pause_offset).unwrap_or(std::time::Duration::ZERO);
-                    let target_time = std::time::Duration::from_millis((event.timestamp_ms as f32 / speed_factor) as u64);
+                    let elapsed = loop_start_time
+                        .elapsed()
+                        .checked_sub(pause_offset)
+                        .unwrap_or(std::time::Duration::ZERO);
+                    let target_time = std::time::Duration::from_millis(
+                        (event.timestamp_ms as f32 / speed_factor) as u64,
+                    );
 
                     if elapsed < target_time {
                         let to_sleep = target_time - elapsed;
@@ -144,18 +149,30 @@ impl MacroPlayer {
                         }
                         MacroEventType::ThumbMove(axis_str, x, y) => {
                             if axis_str == "left" {
-                                let _ = controller.set_thumb(&event.device_id, ThumbAxis::LeftX, *x);
-                                let _ = controller.set_thumb(&event.device_id, ThumbAxis::LeftY, *y);
+                                let _ =
+                                    controller.set_thumb(&event.device_id, ThumbAxis::LeftX, *x);
+                                let _ =
+                                    controller.set_thumb(&event.device_id, ThumbAxis::LeftY, *y);
                             } else if axis_str == "right" {
-                                let _ = controller.set_thumb(&event.device_id, ThumbAxis::RightX, *x);
-                                let _ = controller.set_thumb(&event.device_id, ThumbAxis::RightY, *y);
+                                let _ =
+                                    controller.set_thumb(&event.device_id, ThumbAxis::RightX, *x);
+                                let _ =
+                                    controller.set_thumb(&event.device_id, ThumbAxis::RightY, *y);
                             }
                         }
                         MacroEventType::TriggerMove(side_str, value) => {
                             if side_str == "left" || side_str == "l" {
-                                let _ = controller.set_trigger(&event.device_id, TriggerSide::Left, *value);
+                                let _ = controller.set_trigger(
+                                    &event.device_id,
+                                    TriggerSide::Left,
+                                    *value,
+                                );
                             } else if side_str == "right" || side_str == "r" {
-                                let _ = controller.set_trigger(&event.device_id, TriggerSide::Right, *value);
+                                let _ = controller.set_trigger(
+                                    &event.device_id,
+                                    TriggerSide::Right,
+                                    *value,
+                                );
                             }
                         }
                     }

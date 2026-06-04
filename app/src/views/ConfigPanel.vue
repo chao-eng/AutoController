@@ -102,6 +102,13 @@ const profileForm = ref({
 
 interface OcrTestResult {
   text: string
+  raw_text: string
+  blocks: Array<{
+    text: string
+    box_score?: number | null
+    text_score?: number | null
+    points: Array<{ x: number; y: number }>
+  }>
   engine: string
   profile: string
   x: number
@@ -226,6 +233,14 @@ function ocrProfileName(profile?: string) {
 
 function getOcrTestResult(index: number) {
   return ocrTestResults.value[index]
+}
+
+function averageTextScore(result?: OcrTestResult) {
+  const scores = result?.blocks
+    ?.map(block => block.text_score)
+    .filter((score): score is number => typeof score === 'number' && Number.isFinite(score))
+  if (!scores || scores.length === 0) return null
+  return scores.reduce((sum, score) => sum + score, 0) / scores.length
 }
 
 async function testOcrRegion(index: number, region: { x: number; y: number; w: number; h: number }) {
@@ -624,10 +639,14 @@ function importBackup(event: Event) {
                   <span>总耗时 {{ getOcrTestResult(idx + 1)?.total_ms }} ms</span>
                   <span>截图 {{ getOcrTestResult(idx + 1)?.capture_ms }} ms</span>
                   <span>推理 {{ getOcrTestResult(idx + 1)?.infer_ms }} ms</span>
+                  <span v-if="getOcrTestResult(idx + 1)?.blocks?.length">文本块 {{ getOcrTestResult(idx + 1)?.blocks?.length }}</span>
+                  <span v-if="averageTextScore(getOcrTestResult(idx + 1)) !== null">
+                    平均置信度 {{ ((averageTextScore(getOcrTestResult(idx + 1)) || 0) * 100).toFixed(1) }}%
+                  </span>
                 </div>
                 <Textarea
                   readonly
-                  :model-value="getOcrTestResult(idx + 1)?.text || '（未识别到文字）'"
+                  :model-value="getOcrTestResult(idx + 1)?.raw_text || getOcrTestResult(idx + 1)?.text || '（未识别到文字）'"
                   class="min-h-16 resize-none bg-muted/20 font-mono text-xs"
                 />
                 <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">

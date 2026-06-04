@@ -6,7 +6,11 @@ const REWIND_WINDOW_MS: u64 = 30_000;
 const REWIND_MIN_RACE_TIME: f32 = 5.0;
 
 pub enum SessionAction {
-    Open { car_ordinal: i32, car_class: i32, car_pi: i32 },
+    Open {
+        car_ordinal: i32,
+        car_class: i32,
+        car_pi: i32,
+    },
     Close,
     None,
 }
@@ -101,7 +105,11 @@ impl SessionManager {
     /// The best lap to persist on close: -1.0 means "no lap recorded", which
     /// `db::close_session` treats as "keep the existing best" (rewind-safe).
     pub fn best_for_close(&self) -> f32 {
-        if self.best_lap == f32::MAX { -1.0 } else { self.best_lap }
+        if self.best_lap == f32::MAX {
+            -1.0
+        } else {
+            self.best_lap
+        }
     }
 
     /// Minimum running time before a `current_lap` reset counts as a real lap.
@@ -144,9 +152,7 @@ impl SessionManager {
         // Rewind indicators: paused/rewinding stream, or the cumulative race
         // clock jumped backward. (race_time is 0 in Time Trial — there the
         // is_race_on drop is the signal.)
-        if !is_race_on
-            || (race_time > 0.0 && race_time + 0.25 < self.prev_race_time)
-        {
+        if !is_race_on || (race_time > 0.0 && race_time + 0.25 < self.prev_race_time) {
             self.rewind_guard = Self::REWIND_GUARD_TICKS;
         }
         if race_time > 0.0 {
@@ -163,7 +169,10 @@ impl SessionManager {
             let idx = self.laps_recorded;
             self.laps_recorded += 1;
             self.update_best_lap(t);
-            Some(CompletedLap { lap_number: idx, lap_time: t })
+            Some(CompletedLap {
+                lap_number: idx,
+                lap_time: t,
+            })
         } else {
             None
         };
@@ -192,7 +201,10 @@ impl SessionManager {
         };
         if t >= floor {
             self.update_best_lap(t);
-            Some(CompletedLap { lap_number: self.laps_recorded, lap_time: t })
+            Some(CompletedLap {
+                lap_number: self.laps_recorded,
+                lap_time: t,
+            })
         } else {
             None
         }
@@ -238,7 +250,11 @@ impl SessionManager {
         car_pi: i32,
     ) -> SessionAction {
         match (was_racing, is_racing) {
-            (false, true) if self.auto_record => SessionAction::Open { car_ordinal, car_class, car_pi },
+            (false, true) if self.auto_record => SessionAction::Open {
+                car_ordinal,
+                car_class,
+                car_pi,
+            },
             (true, false) if self.active_id.is_some() => SessionAction::Close,
             _ => SessionAction::None,
         }
@@ -259,7 +275,13 @@ mod tests {
     fn opens_session_on_race_start() {
         let mut sm = SessionManager::new(true);
         let action = sm.on_race_on_change(false, true, 99, 3, 800);
-        assert!(matches!(action, SessionAction::Open { car_ordinal: 99, .. }));
+        assert!(matches!(
+            action,
+            SessionAction::Open {
+                car_ordinal: 99,
+                ..
+            }
+        ));
     }
 
     #[test]
@@ -278,7 +300,9 @@ mod tests {
         // race_time is cumulative and ever-increasing across laps.
         assert!(sm.note_tick(true, 5.0, 5.0).is_none());
         assert!(sm.note_tick(true, 57.2, 57.2).is_none()); // peak builds
-        let l1 = sm.note_tick(true, 0.43, 57.4).expect("lap 1 (line crossed)");
+        let l1 = sm
+            .note_tick(true, 0.43, 57.4)
+            .expect("lap 1 (line crossed)");
         assert_eq!(l1.lap_number, 0);
         assert!((l1.lap_time - 57.2).abs() < 0.001);
         assert!(sm.note_tick(true, 30.0, 87.0).is_none());
@@ -297,10 +321,13 @@ mod tests {
         sm.set_active_id(Some(1));
         sm.note_tick(true, 20.0, 20.0);
         sm.note_tick(true, 45.0, 45.0); // peak 45 so far
-        // Rewind: brief is_race_on=0 blip, race clock + current_lap backward.
+                                        // Rewind: brief is_race_on=0 blip, race clock + current_lap backward.
         sm.note_tick(false, 0.0, 0.0);
         // current_lap scrubs down past ~0 while race_time is well behind 45.
-        assert!(sm.note_tick(true, 0.5, 30.0).is_none(), "scrub must not be a lap");
+        assert!(
+            sm.note_tick(true, 0.5, 30.0).is_none(),
+            "scrub must not be a lap"
+        );
         assert_eq!(sm.laps_recorded(), 0);
         // Re-drive the rest of the lap over many ticks (the rewind guard
         // expires well within the seconds it takes to finish the lap).
@@ -310,10 +337,16 @@ mod tests {
             t += 0.67;
             assert!(sm.note_tick(true, cl, t).is_none());
         }
-        let lap = sm.note_tick(true, 0.4, t + 0.2).expect("real lap completion");
+        let lap = sm
+            .note_tick(true, 0.4, t + 0.2)
+            .expect("real lap completion");
         assert_eq!(lap.lap_number, 0);
         // Peak reached ~54 — the full lap, not the 45 pre-rewind value.
-        assert!(lap.lap_time > 53.0 && lap.lap_time < 55.0, "got {}", lap.lap_time);
+        assert!(
+            lap.lap_time > 53.0 && lap.lap_time < 55.0,
+            "got {}",
+            lap.lap_time
+        );
     }
 
     #[test]
@@ -352,7 +385,9 @@ mod tests {
         // Rewind reopen of the same session; lap 1 continues to its true time.
         sm.set_active_id(Some(5));
         sm.note_tick(true, 55.0, 105.0);
-        let l1 = sm.note_tick(true, 0.5, 105.2).expect("lap 1 true completion");
+        let l1 = sm
+            .note_tick(true, 0.5, 105.2)
+            .expect("lap 1 true completion");
         assert_eq!(l1.lap_number, 1); // same index → DB upsert overwrites
         assert!((l1.lap_time - 55.0).abs() < 0.001);
         assert_eq!(sm.laps_recorded(), 2);
@@ -363,7 +398,9 @@ mod tests {
         let mut sm = SessionManager::new(true);
         sm.set_active_id(Some(1));
         sm.note_tick(true, 53.0, 53.0);
-        let l = sm.note_tick(true, 0.4, 53.2).expect("real final lap (crossed line)");
+        let l = sm
+            .note_tick(true, 0.4, 53.2)
+            .expect("real final lap (crossed line)");
         assert!((l.lap_time - 53.0).abs() < 0.001);
         sm.note_tick(true, 1.5, 54.5);
         sm.note_tick(true, 3.8, 56.8);
@@ -438,7 +475,7 @@ mod tests {
         let mut sm = SessionManager::new(true);
         sm.set_active_id(Some(11));
         sm.update_race_time(90.0); // peak
-        // Rewind scrubs the timer back while the close grace period runs.
+                                   // Rewind scrubs the timer back while the close grace period runs.
         sm.update_race_time(8.0);
         sm.note_close(1_000);
         sm.set_active_id(None);

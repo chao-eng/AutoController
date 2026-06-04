@@ -167,7 +167,6 @@ impl ScriptRuntime {
         }
     }
 
-
     pub fn execute_script(&self, script_id: &str) -> Result<String, String> {
         let (code, name) = {
             let scripts = self.scripts.lock();
@@ -183,11 +182,14 @@ impl ScriptRuntime {
 
         {
             let mut executions = self.executions.lock();
-            executions.insert(execution_id.clone(), Execution {
-                running: true,
-                success: false,
-                error: None,
-            });
+            executions.insert(
+                execution_id.clone(),
+                Execution {
+                    running: true,
+                    success: false,
+                    error: None,
+                },
+            );
         }
 
         let controller = self.controller.clone();
@@ -197,12 +199,15 @@ impl ScriptRuntime {
         {
             let app_handle_guard = app_handle.lock();
             if let Some(ref handle) = *app_handle_guard {
-                let _ = handle.emit("script-execution", ScriptExecutionEvent {
-                    execution_id: execution_id.clone(),
-                    script_id: script_id.to_string(),
-                    status: "started".to_string(),
-                    message: Some(format!("脚本 '{}' 开始执行", name)),
-                });
+                let _ = handle.emit(
+                    "script-execution",
+                    ScriptExecutionEvent {
+                        execution_id: execution_id.clone(),
+                        script_id: script_id.to_string(),
+                        status: "started".to_string(),
+                        message: Some(format!("脚本 '{}' 开始执行", name)),
+                    },
+                );
             }
         }
 
@@ -262,28 +267,34 @@ impl ScriptRuntime {
             let handle_press = app_handle.clone();
             let eid_press = eid.clone();
             let sid_press = sid.clone();
-            engine.register_fn("press", move |context: rhai::NativeCallContext, btn: &str| {
-                {
-                    let handle_guard = handle_press.lock();
-                    if let Some(ref handle) = *handle_guard {
-                        if let Some(line) = context.call_position().line() {
-                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                                execution_id: eid_press.clone(),
-                                script_id: sid_press.clone(),
-                                line,
-                            });
+            engine.register_fn(
+                "press",
+                move |context: rhai::NativeCallContext, btn: &str| {
+                    {
+                        let handle_guard = handle_press.lock();
+                        if let Some(ref handle) = *handle_guard {
+                            if let Some(line) = context.call_position().line() {
+                                let _ = handle.emit(
+                                    "script-line-change",
+                                    ScriptLineChangeEvent {
+                                        execution_id: eid_press.clone(),
+                                        script_id: sid_press.clone(),
+                                        line,
+                                    },
+                                );
+                            }
                         }
                     }
-                }
-                let dev = def_device.lock().clone();
-                if let Some(b) = parse_button(btn) {
-                    if let Err(e) = ctrl.set_button(&dev, b, true) {
-                        tracing::warn!(target: "script", error = %e, "press 失败");
+                    let dev = def_device.lock().clone();
+                    if let Some(b) = parse_button(btn) {
+                        if let Err(e) = ctrl.set_button(&dev, b, true) {
+                            tracing::warn!(target: "script", error = %e, "press 失败");
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "未知按键: {}", btn);
                     }
-                } else {
-                    tracing::warn!(target: "script", "未知按键: {}", btn);
-                }
-            });
+                },
+            );
 
             // release(device_id, button) & release(button)
             let ctrl = controller.clone();
@@ -313,28 +324,34 @@ impl ScriptRuntime {
             let handle_release = app_handle.clone();
             let eid_release = eid.clone();
             let sid_release = sid.clone();
-            engine.register_fn("release", move |context: rhai::NativeCallContext, btn: &str| {
-                {
-                    let handle_guard = handle_release.lock();
-                    if let Some(ref handle) = *handle_guard {
-                        if let Some(line) = context.call_position().line() {
-                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                                execution_id: eid_release.clone(),
-                                script_id: sid_release.clone(),
-                                line,
-                            });
+            engine.register_fn(
+                "release",
+                move |context: rhai::NativeCallContext, btn: &str| {
+                    {
+                        let handle_guard = handle_release.lock();
+                        if let Some(ref handle) = *handle_guard {
+                            if let Some(line) = context.call_position().line() {
+                                let _ = handle.emit(
+                                    "script-line-change",
+                                    ScriptLineChangeEvent {
+                                        execution_id: eid_release.clone(),
+                                        script_id: sid_release.clone(),
+                                        line,
+                                    },
+                                );
+                            }
                         }
                     }
-                }
-                let dev = def_device.lock().clone();
-                if let Some(b) = parse_button(btn) {
-                    if let Err(e) = ctrl.set_button(&dev, b, false) {
-                        tracing::warn!(target: "script", error = %e, "release 失败");
+                    let dev = def_device.lock().clone();
+                    if let Some(b) = parse_button(btn) {
+                        if let Err(e) = ctrl.set_button(&dev, b, false) {
+                            tracing::warn!(target: "script", error = %e, "release 失败");
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "未知按键: {}", btn);
                     }
-                } else {
-                    tracing::warn!(target: "script", "未知按键: {}", btn);
-                }
-            });
+                },
+            );
 
             // set_thumb(device_id, axis, value) & set_thumb(axis, value)
             let ctrl = controller.clone();
@@ -386,157 +403,193 @@ impl ScriptRuntime {
             let handle_thumb_f = app_handle.clone();
             let eid_thumb_f = eid.clone();
             let sid_thumb_f = sid.clone();
-            engine.register_fn("set_thumb", move |context: rhai::NativeCallContext, axis: &str, val: f64| {
-                {
-                    let handle_guard = handle_thumb_f.lock();
-                    if let Some(ref handle) = *handle_guard {
-                        if let Some(line) = context.call_position().line() {
-                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                                execution_id: eid_thumb_f.clone(),
-                                script_id: sid_thumb_f.clone(),
-                                line,
-                            });
+            engine.register_fn(
+                "set_thumb",
+                move |context: rhai::NativeCallContext, axis: &str, val: f64| {
+                    {
+                        let handle_guard = handle_thumb_f.lock();
+                        if let Some(ref handle) = *handle_guard {
+                            if let Some(line) = context.call_position().line() {
+                                let _ = handle.emit(
+                                    "script-line-change",
+                                    ScriptLineChangeEvent {
+                                        execution_id: eid_thumb_f.clone(),
+                                        script_id: sid_thumb_f.clone(),
+                                        line,
+                                    },
+                                );
+                            }
                         }
                     }
-                }
-                let dev = def_device.lock().clone();
-                if let Some(a) = parse_axis(axis) {
-                    if let Err(e) = ctrl.set_thumb(&dev, a, val as f32) {
-                        tracing::warn!(target: "script", error = %e, "set_thumb 失败");
+                    let dev = def_device.lock().clone();
+                    if let Some(a) = parse_axis(axis) {
+                        if let Err(e) = ctrl.set_thumb(&dev, a, val as f32) {
+                            tracing::warn!(target: "script", error = %e, "set_thumb 失败");
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "未知摇杆轴: {}", axis);
                     }
-                } else {
-                    tracing::warn!(target: "script", "未知摇杆轴: {}", axis);
-                }
-            });
+                },
+            );
 
             let ctrl = controller.clone();
             let def_device = default_device.clone();
             let handle_thumb_i = app_handle.clone();
             let eid_thumb_i = eid.clone();
             let sid_thumb_i = sid.clone();
-            engine.register_fn("set_thumb", move |context: rhai::NativeCallContext, axis: &str, val: i64| {
-                {
-                    let handle_guard = handle_thumb_i.lock();
-                    if let Some(ref handle) = *handle_guard {
-                        if let Some(line) = context.call_position().line() {
-                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                                execution_id: eid_thumb_i.clone(),
-                                script_id: sid_thumb_i.clone(),
-                                line,
-                            });
+            engine.register_fn(
+                "set_thumb",
+                move |context: rhai::NativeCallContext, axis: &str, val: i64| {
+                    {
+                        let handle_guard = handle_thumb_i.lock();
+                        if let Some(ref handle) = *handle_guard {
+                            if let Some(line) = context.call_position().line() {
+                                let _ = handle.emit(
+                                    "script-line-change",
+                                    ScriptLineChangeEvent {
+                                        execution_id: eid_thumb_i.clone(),
+                                        script_id: sid_thumb_i.clone(),
+                                        line,
+                                    },
+                                );
+                            }
                         }
                     }
-                }
-                let dev = def_device.lock().clone();
-                if let Some(a) = parse_axis(axis) {
-                    if let Err(e) = ctrl.set_thumb(&dev, a, val as f32) {
-                        tracing::warn!(target: "script", error = %e, "set_thumb 失败");
+                    let dev = def_device.lock().clone();
+                    if let Some(a) = parse_axis(axis) {
+                        if let Err(e) = ctrl.set_thumb(&dev, a, val as f32) {
+                            tracing::warn!(target: "script", error = %e, "set_thumb 失败");
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "未知摇杆轴: {}", axis);
                     }
-                } else {
-                    tracing::warn!(target: "script", "未知摇杆轴: {}", axis);
-                }
-            });
+                },
+            );
 
             // set_trigger(device_id, side, value) & set_trigger(side, value)
             let ctrl = controller.clone();
-            engine.register_fn("set_trigger", move |device_id: i64, side: &str, val: f64| {
-                if let Some(s) = parse_trigger(side) {
-                    if let Err(e) = ctrl.set_trigger(&device_id.to_string(), s, val as f32) {
-                        tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+            engine.register_fn(
+                "set_trigger",
+                move |device_id: i64, side: &str, val: f64| {
+                    if let Some(s) = parse_trigger(side) {
+                        if let Err(e) = ctrl.set_trigger(&device_id.to_string(), s, val as f32) {
+                            tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "未知扳机侧: {}", side);
                     }
-                } else {
-                    tracing::warn!(target: "script", "未知扳机侧: {}", side);
-                }
-            });
+                },
+            );
 
             let ctrl = controller.clone();
-            engine.register_fn("set_trigger", move |device_id: i64, side: &str, val: i64| {
-                if let Some(s) = parse_trigger(side) {
-                    if let Err(e) = ctrl.set_trigger(&device_id.to_string(), s, val as f32) {
-                        tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+            engine.register_fn(
+                "set_trigger",
+                move |device_id: i64, side: &str, val: i64| {
+                    if let Some(s) = parse_trigger(side) {
+                        if let Err(e) = ctrl.set_trigger(&device_id.to_string(), s, val as f32) {
+                            tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "未知扳机侧: {}", side);
                     }
-                } else {
-                    tracing::warn!(target: "script", "未知扳机侧: {}", side);
-                }
-            });
+                },
+            );
 
             let ctrl = controller.clone();
-            engine.register_fn("set_trigger", move |device_id: &str, side: &str, val: f64| {
-                if let Some(s) = parse_trigger(side) {
-                    if let Err(e) = ctrl.set_trigger(device_id, s, val as f32) {
-                        tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+            engine.register_fn(
+                "set_trigger",
+                move |device_id: &str, side: &str, val: f64| {
+                    if let Some(s) = parse_trigger(side) {
+                        if let Err(e) = ctrl.set_trigger(device_id, s, val as f32) {
+                            tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "未知扳机侧: {}", side);
                     }
-                } else {
-                    tracing::warn!(target: "script", "未知扳机侧: {}", side);
-                }
-            });
+                },
+            );
 
             let ctrl = controller.clone();
-            engine.register_fn("set_trigger", move |device_id: &str, side: &str, val: i64| {
-                if let Some(s) = parse_trigger(side) {
-                    if let Err(e) = ctrl.set_trigger(device_id, s, val as f32) {
-                        tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+            engine.register_fn(
+                "set_trigger",
+                move |device_id: &str, side: &str, val: i64| {
+                    if let Some(s) = parse_trigger(side) {
+                        if let Err(e) = ctrl.set_trigger(device_id, s, val as f32) {
+                            tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "未知扳机侧: {}", side);
                     }
-                } else {
-                    tracing::warn!(target: "script", "未知扳机侧: {}", side);
-                }
-            });
+                },
+            );
 
             let ctrl = controller.clone();
             let def_device = default_device.clone();
             let handle_trig_f = app_handle.clone();
             let eid_trig_f = eid.clone();
             let sid_trig_f = sid.clone();
-            engine.register_fn("set_trigger", move |context: rhai::NativeCallContext, side: &str, val: f64| {
-                {
-                    let handle_guard = handle_trig_f.lock();
-                    if let Some(ref handle) = *handle_guard {
-                        if let Some(line) = context.call_position().line() {
-                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                                execution_id: eid_trig_f.clone(),
-                                script_id: sid_trig_f.clone(),
-                                line,
-                            });
+            engine.register_fn(
+                "set_trigger",
+                move |context: rhai::NativeCallContext, side: &str, val: f64| {
+                    {
+                        let handle_guard = handle_trig_f.lock();
+                        if let Some(ref handle) = *handle_guard {
+                            if let Some(line) = context.call_position().line() {
+                                let _ = handle.emit(
+                                    "script-line-change",
+                                    ScriptLineChangeEvent {
+                                        execution_id: eid_trig_f.clone(),
+                                        script_id: sid_trig_f.clone(),
+                                        line,
+                                    },
+                                );
+                            }
                         }
                     }
-                }
-                let dev = def_device.lock().clone();
-                if let Some(s) = parse_trigger(side) {
-                    if let Err(e) = ctrl.set_trigger(&dev, s, val as f32) {
-                        tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+                    let dev = def_device.lock().clone();
+                    if let Some(s) = parse_trigger(side) {
+                        if let Err(e) = ctrl.set_trigger(&dev, s, val as f32) {
+                            tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "未知扳机侧: {}", side);
                     }
-                } else {
-                    tracing::warn!(target: "script", "未知扳机侧: {}", side);
-                }
-            });
+                },
+            );
 
             let ctrl = controller.clone();
             let def_device = default_device.clone();
             let handle_trig_i = app_handle.clone();
             let eid_trig_i = eid.clone();
             let sid_trig_i = sid.clone();
-            engine.register_fn("set_trigger", move |context: rhai::NativeCallContext, side: &str, val: i64| {
-                {
-                    let handle_guard = handle_trig_i.lock();
-                    if let Some(ref handle) = *handle_guard {
-                        if let Some(line) = context.call_position().line() {
-                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                                execution_id: eid_trig_i.clone(),
-                                script_id: sid_trig_i.clone(),
-                                line,
-                            });
+            engine.register_fn(
+                "set_trigger",
+                move |context: rhai::NativeCallContext, side: &str, val: i64| {
+                    {
+                        let handle_guard = handle_trig_i.lock();
+                        if let Some(ref handle) = *handle_guard {
+                            if let Some(line) = context.call_position().line() {
+                                let _ = handle.emit(
+                                    "script-line-change",
+                                    ScriptLineChangeEvent {
+                                        execution_id: eid_trig_i.clone(),
+                                        script_id: sid_trig_i.clone(),
+                                        line,
+                                    },
+                                );
+                            }
                         }
                     }
-                }
-                let dev = def_device.lock().clone();
-                if let Some(s) = parse_trigger(side) {
-                    if let Err(e) = ctrl.set_trigger(&dev, s, val as f32) {
-                        tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+                    let dev = def_device.lock().clone();
+                    if let Some(s) = parse_trigger(side) {
+                        if let Err(e) = ctrl.set_trigger(&dev, s, val as f32) {
+                            tracing::warn!(target: "script", error = %e, "set_trigger 失败");
+                        }
+                    } else {
+                        tracing::warn!(target: "script", "未知扳机侧: {}", side);
                     }
-                } else {
-                    tracing::warn!(target: "script", "未知扳机侧: {}", side);
-                }
-            });
+                },
+            );
 
             let executions_check = executions.clone();
             let check_id = eid.clone();
@@ -559,11 +612,14 @@ impl ScriptRuntime {
                     let handle_guard = handle_sleep.lock();
                     if let Some(ref handle) = *handle_guard {
                         if let Some(line) = context.call_position().line() {
-                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                                execution_id: eid_sleep.clone(),
-                                script_id: sid_sleep.clone(),
-                                line,
-                            });
+                            let _ = handle.emit(
+                                "script-line-change",
+                                ScriptLineChangeEvent {
+                                    execution_id: eid_sleep.clone(),
+                                    script_id: sid_sleep.clone(),
+                                    line,
+                                },
+                            );
                         }
                     }
                 }
@@ -592,11 +648,14 @@ impl ScriptRuntime {
                     let handle_guard = handle_log.lock();
                     if let Some(ref handle) = *handle_guard {
                         if let Some(line) = context.call_position().line() {
-                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                                execution_id: eid_log.clone(),
-                                script_id: sid_log.clone(),
-                                line,
-                            });
+                            let _ = handle.emit(
+                                "script-line-change",
+                                ScriptLineChangeEvent {
+                                    execution_id: eid_log.clone(),
+                                    script_id: sid_log.clone(),
+                                    line,
+                                },
+                            );
                         }
                     }
                 }
@@ -606,34 +665,59 @@ impl ScriptRuntime {
             let handle_ocr_params = app_handle.clone();
             let eid_ocr_params = eid.clone();
             let sid_ocr_params = sid.clone();
-            engine.register_fn("ocr", move |context: rhai::NativeCallContext, x: i64, y: i64, w: i64, h: i64| -> String {
-                let (ocr_engine, ocr_profile, paddleocr_url, opt_handle) = {
-                    let handle_guard = handle_ocr_params.lock();
-                    if let Some(ref handle) = *handle_guard {
-                        if let Some(line) = context.call_position().line() {
-                            let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                                execution_id: eid_ocr_params.clone(),
-                                script_id: sid_ocr_params.clone(),
-                                line,
-                            });
+            engine.register_fn(
+                "ocr",
+                move |context: rhai::NativeCallContext, x: i64, y: i64, w: i64, h: i64| -> String {
+                    let (ocr_engine, ocr_profile, paddleocr_url, opt_handle) = {
+                        let handle_guard = handle_ocr_params.lock();
+                        if let Some(ref handle) = *handle_guard {
+                            if let Some(line) = context.call_position().line() {
+                                let _ = handle.emit(
+                                    "script-line-change",
+                                    ScriptLineChangeEvent {
+                                        execution_id: eid_ocr_params.clone(),
+                                        script_id: sid_ocr_params.clone(),
+                                        line,
+                                    },
+                                );
+                            }
+                            use tauri::Manager;
+                            let config_mgr = handle.state::<crate::config::AppConfigManager>();
+                            let config = config_mgr.get();
+                            (
+                                config.ocr_engine.clone(),
+                                config.ocr_profile.clone(),
+                                config.paddleocr_url.clone(),
+                                Some(handle.clone()),
+                            )
+                        } else {
+                            (
+                                "paddleocr".to_string(),
+                                "balanced".to_string(),
+                                "http://127.0.0.1:8050/ocr".to_string(),
+                                None,
+                            )
                         }
-                        use tauri::Manager;
-                        let config_mgr = handle.state::<crate::config::AppConfigManager>();
-                        let config = config_mgr.get();
-                        (config.ocr_engine.clone(), config.ocr_profile.clone(), config.paddleocr_url.clone(), Some(handle.clone()))
-                    } else {
-                        ("paddleocr".to_string(), "balanced".to_string(), "http://127.0.0.1:8050/ocr".to_string(), None)
-                    }
-                };
+                    };
 
-                match crate::script_engine::ocr::ocr_region_sync(x as i32, y as i32, w as i32, h as i32, &ocr_engine, &ocr_profile, &paddleocr_url, opt_handle.as_ref()) {
-                    Ok(text) => text,
-                    Err(e) => {
-                        tracing::error!(target: "script", "OCR 识别出错: {}", e);
-                        String::new()
+                    match crate::script_engine::ocr::ocr_region_sync(
+                        x as i32,
+                        y as i32,
+                        w as i32,
+                        h as i32,
+                        &ocr_engine,
+                        &ocr_profile,
+                        &paddleocr_url,
+                        opt_handle.as_ref(),
+                    ) {
+                        Ok(text) => text,
+                        Err(e) => {
+                            tracing::error!(target: "script", "OCR 识别出错: {}", e);
+                            String::new()
+                        }
                     }
-                }
-            });
+                },
+            );
 
             let handle_ocr_def = app_handle.clone();
             let eid_ocr_def = eid.clone();
@@ -652,7 +736,7 @@ impl ScriptRuntime {
                         use tauri::Manager;
                         let config_mgr = handle.state::<crate::config::AppConfigManager>();
                         let config = config_mgr.get();
-                        
+
                         // 优先使用 ocr_regions 的第一个作为默认识别区，其次使用老字段 ocr_region 兼容
                         let target_region = if !config.ocr_regions.is_empty() {
                             Some(config.ocr_regions[0].clone())
@@ -703,7 +787,7 @@ impl ScriptRuntime {
                         let config_mgr = handle.state::<crate::config::AppConfigManager>();
                         let config = config_mgr.get();
                         let u_idx = (index - 1) as usize;
-                        
+
                         if u_idx < config.ocr_regions.len() {
                             let region = &config.ocr_regions[u_idx];
                             let ocr_engine = config.ocr_engine.clone();
@@ -726,7 +810,6 @@ impl ScriptRuntime {
                 String::new()
             });
 
-
             let wrapped_code = Self::wrap_script(&code);
 
             let (success, err_msg) = match engine.eval::<()>(&wrapped_code) {
@@ -735,12 +818,15 @@ impl ScriptRuntime {
                     {
                         let handle_guard = app_handle.lock();
                         if let Some(ref handle) = *handle_guard {
-                            let _ = handle.emit("script-execution", ScriptExecutionEvent {
-                                execution_id: eid.clone(),
-                                script_id: sid.clone(),
-                                status: "completed".to_string(),
-                                message: Some("脚本执行完成".to_string()),
-                            });
+                            let _ = handle.emit(
+                                "script-execution",
+                                ScriptExecutionEvent {
+                                    execution_id: eid.clone(),
+                                    script_id: sid.clone(),
+                                    status: "completed".to_string(),
+                                    message: Some("脚本执行完成".to_string()),
+                                },
+                            );
                         }
                     }
                     (true, None)
@@ -761,12 +847,15 @@ impl ScriptRuntime {
                         {
                             let handle_guard = app_handle.lock();
                             if let Some(ref handle) = *handle_guard {
-                                let _ = handle.emit("script-execution", ScriptExecutionEvent {
-                                    execution_id: eid.clone(),
-                                    script_id: sid.clone(),
-                                    status: "error".to_string(),
-                                    message: Some(format!("脚本执行出错: {}", e)),
-                                });
+                                let _ = handle.emit(
+                                    "script-execution",
+                                    ScriptExecutionEvent {
+                                        execution_id: eid.clone(),
+                                        script_id: sid.clone(),
+                                        status: "error".to_string(),
+                                        message: Some(format!("脚本执行出错: {}", e)),
+                                    },
+                                );
                             }
                         }
                         (false, Some(e.to_string()))
@@ -780,11 +869,14 @@ impl ScriptRuntime {
             {
                 let handle_guard = app_handle.lock();
                 if let Some(ref handle) = *handle_guard {
-                    let _ = handle.emit("script-line-change", ScriptLineChangeEvent {
-                        execution_id: eid.clone(),
-                        script_id: sid.clone(),
-                        line: 0,
-                    });
+                    let _ = handle.emit(
+                        "script-line-change",
+                        ScriptLineChangeEvent {
+                            execution_id: eid.clone(),
+                            script_id: sid.clone(),
+                            line: 0,
+                        },
+                    );
                 }
             }
 
@@ -806,7 +898,7 @@ impl ScriptRuntime {
         total_task_loops: u32,
     ) -> Result<(), String> {
         let eid = task_id.to_string();
-        
+
         {
             let mut seq_execs = self.sequence_executions.lock();
             seq_execs.insert(eid.clone(), SequenceExecution { running: true });
@@ -818,13 +910,17 @@ impl ScriptRuntime {
 
         std::thread::spawn(move || {
             tracing::info!(task_id = %task_id_str, "开始顺序执行多脚本任务序列");
-            
+
             let total_steps = steps.len();
             let mut cancelled = false;
             let mut sequence_error: Option<String> = None;
 
             // Define overall loops (if 0 or 1, run once)
-            let loops = if total_task_loops == 0 { 1 } else { total_task_loops };
+            let loops = if total_task_loops == 0 {
+                1
+            } else {
+                total_task_loops
+            };
 
             for task_loop in 1..=loops {
                 if cancelled || sequence_error.is_some() {
@@ -839,10 +935,17 @@ impl ScriptRuntime {
                     // Get script name
                     let script_name = {
                         let scripts = runtime.scripts.lock();
-                        scripts.get(&step.script_id).map(|s| s.name.clone()).unwrap_or_else(|| "未知脚本".to_string())
+                        scripts
+                            .get(&step.script_id)
+                            .map(|s| s.name.clone())
+                            .unwrap_or_else(|| "未知脚本".to_string())
                     };
 
-                    let step_loops = if step.loop_count == 0 { 1 } else { step.loop_count };
+                    let step_loops = if step.loop_count == 0 {
+                        1
+                    } else {
+                        step.loop_count
+                    };
 
                     for step_loop in 1..=step_loops {
                         // Check cancel signal
@@ -920,7 +1023,8 @@ impl ScriptRuntime {
                         if script_failed {
                             let err_msg = {
                                 let executions = runtime.executions.lock();
-                                executions.get(&exec_id)
+                                executions
+                                    .get(&exec_id)
                                     .and_then(|exec| exec.error.clone())
                                     .unwrap_or_else(|| "步骤脚本执行出错".to_string())
                             };
@@ -957,11 +1061,15 @@ impl ScriptRuntime {
                     let _ = handle.emit("sequence-execution-progress", &progress);
 
                     // 异步触发通知
-                    let task_name = if let Some(queue) = handle.try_state::<crate::scheduler::TaskQueue>() {
-                        queue.get_task(&task_id_str).map(|t| t.name.clone()).unwrap_or_else(|| "未知任务".to_string())
-                    } else {
-                        "未知任务".to_string()
-                    };
+                    let task_name =
+                        if let Some(queue) = handle.try_state::<crate::scheduler::TaskQueue>() {
+                            queue
+                                .get_task(&task_id_str)
+                                .map(|t| t.name.clone())
+                                .unwrap_or_else(|| "未知任务".to_string())
+                        } else {
+                            "未知任务".to_string()
+                        };
 
                     let (status, msg) = if let Some(ref err) = sequence_error {
                         ("interrupted", err.as_str())
@@ -971,12 +1079,17 @@ impl ScriptRuntime {
                         ("completed", "任务序列已成功执行完毕所有步骤与循环！")
                     };
 
-                    crate::notify::trigger_task_notification(handle, &task_id_str, &task_name, status, msg);
+                    crate::notify::trigger_task_notification(
+                        handle,
+                        &task_id_str,
+                        &task_name,
+                        status,
+                        msg,
+                    );
                 }
             }
 
             tracing::info!(task_id = %task_id_str, cancelled, "顺序执行任务序列已结束");
-
         });
 
         Ok(())
