@@ -43,7 +43,7 @@ export interface AppConfig {
   ocr_regions?: OcrRegion[]
   notification_channels?: NotificationChannel[]
   ocr_engine?: string
+  ocr_profile?: string
   paddleocr_url?: string
 }
-
 

@@ -89,6 +89,18 @@ pub fn run() {
 
             *log_handle.lock() = Some(handle.clone());
 
+            #[cfg(target_os = "windows")]
+            {
+                let ocr_handle = handle.clone();
+                let config_manager = app.state::<AppConfigManager>();
+                let ocr_engine = config_manager.get().ocr_engine;
+                std::thread::spawn(move || {
+                    if let Err(e) = script_engine::ocr::preheat_ocr_engine(&ocr_handle, &ocr_engine) {
+                        tracing::warn!(target: "ocr", error = %e, "OCR engine preheat skipped");
+                    }
+                });
+            }
+
             // 启动后台 CPU 和内存资源监控线程 (每 2 秒采集一次并通过 Tauri 事件推送给前端)
             let handle_clone = handle.clone();
             std::thread::spawn(move || {
@@ -198,6 +210,8 @@ pub fn run() {
             config_cmd::open_ocr_viewfinder,
             config_cmd::save_ocr_region,
             config_cmd::run_ocr,
+            config_cmd::run_ocr_detailed,
+            config_cmd::preheat_ocr,
             config_cmd::export_backup_data,
             config_cmd::import_backup_data,
             log_cmd::log_query,

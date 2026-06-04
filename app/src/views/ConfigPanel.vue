@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -99,11 +100,32 @@ const profileForm = ref({
   game_process: ''
 })
 
+interface OcrTestResult {
+  text: string
+  engine: string
+  profile: string
+  x: number
+  y: number
+  w: number
+  h: number
+  scaled_w: number
+  scaled_h: number
+  scale: number
+  capture_ms: number
+  infer_ms: number
+  total_ms: number
+  inverted: boolean
+}
+
+const testingOcrIndex = ref<number | null>(null)
+const ocrTestResults = ref<Record<number, OcrTestResult>>({})
+
 let unlistenOcrRegion: UnlistenFn | null = null
 
 onMounted(async () => {
-  store.fetchConfig()
+  await store.fetchConfig()
   scriptStore.fetchScripts()
+  void preheatCurrentOcr()
 
   try {
     unlistenOcrRegion = await listen<any>('ocr-region-saved', (event) => {
@@ -188,6 +210,50 @@ async function startOcrCalibration(index?: number) {
   }
 }
 
+async function preheatCurrentOcr() {
+  try {
+    await invoke('preheat_ocr')
+  } catch (err) {
+    console.debug('OCR preheat skipped:', err)
+  }
+}
+
+function ocrProfileName(profile?: string) {
+  if (profile === 'fast') return '极速'
+  if (profile === 'accurate') return '精细'
+  return '平衡'
+}
+
+function getOcrTestResult(index: number) {
+  return ocrTestResults.value[index]
+}
+
+async function testOcrRegion(index: number, region: { x: number; y: number; w: number; h: number }) {
+  if (region.w <= 0 || region.h <= 0) {
+    uiStore.showToast(`OCR 识别区 #${index} 坐标无效`, 'warning')
+    return
+  }
+
+  testingOcrIndex.value = index
+  try {
+    const result = await invoke<OcrTestResult>('run_ocr_detailed', {
+      x: region.x,
+      y: region.y,
+      w: region.w,
+      h: region.h
+    })
+    ocrTestResults.value = {
+      ...ocrTestResults.value,
+      [index]: result
+    }
+    uiStore.showToast(`OCR 识别区 #${index} 测试完成`, 'success')
+  } catch (err) {
+    uiStore.showAlert('识别失败', `OCR 识别区 #${index} 测试失败：${err}`)
+  } finally {
+    testingOcrIndex.value = null
+  }
+}
+
 async function clearOcrRegion(index: number) {
   const confirmed = await uiStore.showConfirm('清除配置', `确定要清除当前标定的 OCR 识别区 #${index} 吗？`)
   if (confirmed) {
@@ -203,6 +269,9 @@ async function clearOcrRegion(index: number) {
       }
       
       await store.saveConfig()
+      const nextResults = { ...ocrTestResults.value }
+      delete nextResults[index]
+      ocrTestResults.value = nextResults
       uiStore.showToast(`OCR 识别区 #${index} 配置已清除`, 'info')
     }
   }
@@ -500,31 +569,72 @@ function importBackup(event: Event) {
               </SelectContent>
             </Select>
           </div>
+          <div class="flex items-center justify-between py-2 border-b border-border/30">
+            <Label class="text-xs text-muted-foreground">识别策略</Label>
+            <Select v-model="store.config.ocr_profile">
+              <SelectTrigger class="w-[230px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fast">极速 - 高频状态检测</SelectItem>
+                <SelectItem value="balanced">平衡 - 默认推荐</SelectItem>
+                <SelectItem value="accurate">精细 - 小字与弱对比</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div v-if="store.config.ocr_engine === 'paddleocr'" class="flex items-center gap-1.5 text-xs text-muted-foreground bg-primary/5 rounded-md px-3 py-2">
             <span>⚡</span>
-            <span>已启用内置 PaddleOCR V4 本地推理引擎（免配置，零延迟，100% 离线）</span>
+            <span>已启用内置 PaddleOCR V4 本地推理引擎，启动后会后台预热模型。</span>
           </div>
 
           <div class="space-y-3">
-            <div v-for="(region, idx) in (store.config.ocr_regions || [])" :key="idx" class="flex items-center justify-between bg-muted/30 border border-border rounded-lg p-3">
-              <div class="space-y-1.5">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-semibold">OCR 识别区 #{{ idx + 1 }}</span>
-                  <Badge variant="secondary" class="text-[10px] h-5">🎯 已标定</Badge>
+            <div v-for="(region, idx) in (store.config.ocr_regions || [])" :key="idx" class="flex flex-col gap-3 bg-muted/30 border border-border rounded-lg p-3">
+              <div class="flex items-center justify-between gap-3">
+                <div class="space-y-1.5 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold">OCR 识别区 #{{ idx + 1 }}</span>
+                    <Badge variant="secondary" class="text-[10px] h-5">🎯 已标定</Badge>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">X: {{ region.x }}</span>
+                    <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">Y: {{ region.y }}</span>
+                    <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">W: {{ region.w }}</span>
+                    <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">H: {{ region.h }}</span>
+                  </div>
+                  <div class="text-[11px] text-muted-foreground">
+                    脚本调用: <code class="bg-muted/50 text-primary px-1 rounded font-mono text-[11px]">ocr({{ idx + 1 }})</code>
+                  </div>
                 </div>
-                <div class="flex gap-1.5">
-                  <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">X: {{ region.x }}</span>
-                  <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">Y: {{ region.y }}</span>
-                  <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">W: {{ region.w }}</span>
-                  <span class="text-[11px] bg-muted/50 border border-border px-1.5 py-0.5 rounded text-muted-foreground font-mono">H: {{ region.h }}</span>
-                </div>
-                <div class="text-[11px] text-muted-foreground">
-                  脚本调用: <code class="bg-muted/50 text-primary px-1 rounded font-mono text-[11px]">ocr({{ idx + 1 }})</code>
+
+                <div class="flex gap-2 shrink-0">
+                  <Button variant="outline" size="sm" class="h-7 text-xs" :disabled="testingOcrIndex === idx + 1" @click="testOcrRegion(idx + 1, region)" title="对当前区域执行一次 OCR">
+                    <FileCode2 :size="13" /> {{ testingOcrIndex === idx + 1 ? '识别中' : '测试识别' }}
+                  </Button>
+                  <Button variant="outline" size="sm" class="h-7 text-xs" @click="clearOcrRegion(idx + 1)" title="清除此标定区域">删除</Button>
+                  <Button variant="default" size="sm" class="h-7 text-xs" @click="startOcrCalibration(idx + 1)" title="重新框选此标定区">重新标定</Button>
                 </div>
               </div>
-              <div class="flex gap-2">
-                <Button variant="outline" size="sm" class="h-7 text-xs" @click="clearOcrRegion(idx + 1)" title="清除此标定区域">删除</Button>
-                <Button variant="default" size="sm" class="h-7 text-xs" @click="startOcrCalibration(idx + 1)" title="重新框选此标定区">重新标定</Button>
+
+              <div v-if="getOcrTestResult(idx + 1)" class="rounded-md border border-border bg-background/60 p-2.5">
+                <div class="flex flex-wrap items-center gap-2 mb-2 text-[11px] text-muted-foreground">
+                  <Badge variant="secondary" class="text-[10px] h-5">
+                    {{ getOcrTestResult(idx + 1)?.engine === 'winocr' ? 'WinRT' : 'PaddleOCR' }}
+                  </Badge>
+                  <span>策略: {{ ocrProfileName(getOcrTestResult(idx + 1)?.profile) }}</span>
+                  <span>总耗时 {{ getOcrTestResult(idx + 1)?.total_ms }} ms</span>
+                  <span>截图 {{ getOcrTestResult(idx + 1)?.capture_ms }} ms</span>
+                  <span>推理 {{ getOcrTestResult(idx + 1)?.infer_ms }} ms</span>
+                </div>
+                <Textarea
+                  readonly
+                  :model-value="getOcrTestResult(idx + 1)?.text || '（未识别到文字）'"
+                  class="min-h-16 resize-none bg-muted/20 font-mono text-xs"
+                />
+                <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                  <span>缩放 {{ getOcrTestResult(idx + 1)?.scale.toFixed(2) }}x</span>
+                  <span>输入 {{ getOcrTestResult(idx + 1)?.scaled_w }} × {{ getOcrTestResult(idx + 1)?.scaled_h }} px</span>
+                  <span v-if="getOcrTestResult(idx + 1)?.inverted">已启用暗底反色</span>
+                </div>
               </div>
             </div>
 

@@ -308,6 +308,7 @@ pub async fn run_ocr(
     let config_mgr = app_handle.state::<crate::config::AppConfigManager>();
     let config = config_mgr.get();
     let ocr_engine = config.ocr_engine.clone();
+    let ocr_profile = config.ocr_profile.clone();
     let paddleocr_url = config.paddleocr_url.clone();
 
     // 在 tokio 线程池 of 独立线程中执行，杜绝 UI 渲染卡顿
@@ -318,12 +319,58 @@ pub async fn run_ocr(
             w,
             h,
             &ocr_engine,
+            &ocr_profile,
             &paddleocr_url,
             Some(&app_handle),
         )
     })
     .await
     .map_err(|e| format!("OCR 线程执行异常中断: {}", e))?
+}
+
+#[tauri::command]
+pub async fn run_ocr_detailed(
+    app_handle: tauri::AppHandle,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+) -> Result<crate::script_engine::ocr::OcrRegionResult, String> {
+    use tauri::Manager;
+    let config_mgr = app_handle.state::<crate::config::AppConfigManager>();
+    let config = config_mgr.get();
+    let ocr_engine = config.ocr_engine.clone();
+    let ocr_profile = config.ocr_profile.clone();
+    let paddleocr_url = config.paddleocr_url.clone();
+
+    tokio::task::spawn_blocking(move || {
+        crate::script_engine::ocr::ocr_region_detailed_sync(
+            x,
+            y,
+            w,
+            h,
+            &ocr_engine,
+            &ocr_profile,
+            &paddleocr_url,
+            Some(&app_handle),
+        )
+    })
+    .await
+    .map_err(|e| format!("OCR 线程执行异常中断: {}", e))?
+}
+
+#[tauri::command]
+pub async fn preheat_ocr(app_handle: tauri::AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+    let config_mgr = app_handle.state::<crate::config::AppConfigManager>();
+    let config = config_mgr.get();
+    let ocr_engine = config.ocr_engine.clone();
+
+    tokio::task::spawn_blocking(move || {
+        crate::script_engine::ocr::preheat_ocr_engine(&app_handle, &ocr_engine)
+    })
+    .await
+    .map_err(|e| format!("OCR 预热线程执行异常中断: {}", e))?
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]

@@ -51,6 +51,10 @@ fn default_paddleocr_url() -> String {
     "http://127.0.0.1:8050/ocr".to_string()
 }
 
+fn default_ocr_profile() -> String {
+    "balanced".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub devices: Vec<DeviceConfig>,
@@ -66,6 +70,8 @@ pub struct AppConfig {
     pub notification_channels: Vec<NotificationChannel>,
     #[serde(default = "default_ocr_engine")]
     pub ocr_engine: String,
+    #[serde(default = "default_ocr_profile")]
+    pub ocr_profile: String,
     #[serde(default = "default_paddleocr_url")]
     pub paddleocr_url: String,
 }
@@ -83,6 +89,7 @@ impl Default for AppConfig {
             ocr_regions: Vec::new(),
             notification_channels: Vec::new(),
             ocr_engine: default_ocr_engine(),
+            ocr_profile: default_ocr_profile(),
             paddleocr_url: default_paddleocr_url(),
         }
     }
