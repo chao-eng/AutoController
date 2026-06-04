@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, computed, defineAsyncComponent } from 'vue'
 import { useScriptStore } from '../stores/script'
 import { useMacroStore } from '../stores/macro'
 import { useUIStore } from '../stores/ui'
@@ -7,9 +7,10 @@ import { useConfigStore } from '../stores/config'
 import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link, BookOpen, ChevronLeft, ChevronRight, List, PanelLeftClose, PanelLeftOpen } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import CodeEditor from '../components/script/CodeEditor.vue'
 import PageShell from '@/components/layout/PageShell.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+
+const CodeEditor = defineAsyncComponent(() => import('../components/script/CodeEditor.vue'))
 
 const store = useScriptStore()
 const macroStore = useMacroStore()

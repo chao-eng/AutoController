@@ -1,30 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import * as monaco from 'monaco-editor'
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js'
 
-// Import Monaco workers using Vite ?worker syntax to allow proper modular builds
+// Rhai only needs the core editor worker; avoid bundling TS/JSON/CSS/HTML workers.
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
-import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
-import CssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
-import HtmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 
 // Initialize Monaco Environment for Web Workers loading
-if (!self.MonacoEnvironment) {
-  self.MonacoEnvironment = {
-    getWorker(_: any, label: string) {
-      if (label === 'json') {
-        return new JsonWorker()
-      }
-      if (label === 'css' || label === 'less' || label === 'scss') {
-        return new CssWorker()
-      }
-      if (label === 'html' || label === 'handlebars' || label === 'razor') {
-        return new HtmlWorker()
-      }
-      if (label === 'typescript' || label === 'javascript') {
-        return new TsWorker()
-      }
+if (!globalThis.MonacoEnvironment) {
+  globalThis.MonacoEnvironment = {
+    getWorker() {
       return new EditorWorker()
     }
   }
