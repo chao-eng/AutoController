@@ -1,6 +1,8 @@
 #[cfg(target_os = "windows")]
 mod win_impl {
-    use std::cmp::min;
+    use std::cmp::{max, min};
+    use std::ffi::c_void;
+    use std::time::Instant;
     use std::sync::OnceLock;
     use parking_lot::Mutex;
     use paddle_ocr_rs::ocr_lite::OcrLite;
@@ -9,9 +11,17 @@ mod win_impl {
     use windows::Graphics::Imaging::{BitmapPixelFormat, SoftwareBitmap};
     use windows::Media::Ocr::OcrEngine;
     use windows::Storage::Streams::DataWriter;
+    use windows::Win32::Foundation::HANDLE;
     use windows::Win32::Graphics::Gdi::*;
 
     pub static OCR_ENGINE: OnceLock<Mutex<OcrLite>> = OnceLock::new();
+    static OCR_INIT_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    static WINRT_OCR_ENGINE: OnceLock<OcrEngine> = OnceLock::new();
+    static WINRT_OCR_INIT_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+    const OCR_TARGET_SHORT_SIDE: f64 = 600.0;
+    const OCR_MAX_SCALE: f64 = 5.0;
+    const OCR_MAX_SIDE_LEN: f64 = 1024.0;
 
     fn strip_unc_prefix(path: std::path::PathBuf) -> std::path::PathBuf {
         use std::path::{Component, Prefix};
@@ -41,6 +51,11 @@ mod win_impl {
 
     /// 初始化并获取全局缓存的 PaddleOCR 推理引擎实例
     pub fn get_or_init_ocr(app_handle: &tauri::AppHandle) -> Result<&Mutex<OcrLite>, String> {
+        if let Some(engine) = OCR_ENGINE.get() {
+            return Ok(engine);
+        }
+
+        let _init_guard = OCR_INIT_LOCK.get_or_init(|| Mutex::new(())).lock();
         if let Some(engine) = OCR_ENGINE.get() {
             return Ok(engine);
         }
@@ -113,9 +128,34 @@ mod win_impl {
         Ok(OCR_ENGINE.get().unwrap())
     }
 
+    fn get_or_init_winrt_ocr_engine() -> Result<&'static OcrEngine, String> {
+        if let Some(engine) = WINRT_OCR_ENGINE.get() {
+            return Ok(engine);
+        }
+
+        let _init_guard = WINRT_OCR_INIT_LOCK.get_or_init(|| Mutex::new(())).lock();
+        if let Some(engine) = WINRT_OCR_ENGINE.get() {
+            return Ok(engine);
+        }
+
+        let lang = Language::CreateLanguage(&HSTRING::from("zh-Hans-CN"))
+            .map_err(|e| format!("创建语言包（zh-Hans-CN）失败: {}", e))?;
+
+        let engine = if OcrEngine::IsLanguageSupported(&lang).unwrap_or(false) {
+            OcrEngine::TryCreateFromLanguage(&lang)
+                .map_err(|e| format!("利用 zh-Hans-CN 初始化 OcrEngine 失败: {}", e))?
+        } else {
+            OcrEngine::TryCreateFromUserProfileLanguages()
+                .map_err(|e| format!("无法创建用户默认语言 of OcrEngine: {}", e))?
+        };
+
+        let _ = WINRT_OCR_ENGINE.set(engine);
+        Ok(WINRT_OCR_ENGINE.get().unwrap())
+    }
+
     /// 将截屏 BGRA 像素转换为 RgbImage 并调用本地 PaddleOCR 推理接口
     fn call_paddleocr_native(
-        pixel_bytes: Vec<u8>,
+        pixel_bytes: &[u8],
         w: i32,
         h: i32,
         app_handle: &tauri::AppHandle,
@@ -159,6 +199,125 @@ mod win_impl {
         Ok(text)
     }
 
+    fn compute_capture_scale(w: i32, h: i32) -> f64 {
+        let short_side = min(w, h) as f64;
+        let long_side = max(w, h) as f64;
+        let mut scale = if short_side < OCR_TARGET_SHORT_SIDE {
+            OCR_TARGET_SHORT_SIDE / short_side
+        } else {
+            1.0
+        };
+
+        if scale > OCR_MAX_SCALE {
+            scale = OCR_MAX_SCALE;
+        }
+
+        if long_side * scale > OCR_MAX_SIDE_LEN {
+            scale = OCR_MAX_SIDE_LEN / long_side;
+        }
+
+        if scale.is_finite() && scale > 0.0 {
+            scale
+        } else {
+            1.0
+        }
+    }
+
+    fn capture_region_bgra(x: i32, y: i32, w: i32, h: i32, scale: f64) -> Result<(Vec<u8>, i32, i32), String> {
+        let new_w = ((w as f64 * scale).round().max(1.0)) as i32;
+        let new_h = ((h as f64 * scale).round().max(1.0)) as i32;
+
+        unsafe {
+            let hdc_screen = GetDC(None);
+            if hdc_screen.is_invalid() {
+                return Err("无法获取屏幕设备上下文 (GetDC 失败)".to_string());
+            }
+
+            let hdc_mem = CreateCompatibleDC(hdc_screen);
+            if hdc_mem.is_invalid() {
+                ReleaseDC(None, hdc_screen);
+                return Err("无法创建兼容的内存上下文 (CreateCompatibleDC 失败)".to_string());
+            }
+
+            let mut bitmap_info = BITMAPINFO {
+                bmiHeader: BITMAPINFOHEADER {
+                    biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+                    biWidth: new_w,
+                    biHeight: -new_h,
+                    biPlanes: 1,
+                    biBitCount: 32,
+                    biCompression: BI_RGB.0,
+                    biSizeImage: 0,
+                    biXPelsPerMeter: 0,
+                    biYPelsPerMeter: 0,
+                    biClrUsed: 0,
+                    biClrImportant: 0,
+                },
+                bmiColors: [RGBQUAD { rgbBlue: 0, rgbGreen: 0, rgbRed: 0, rgbReserved: 0 }],
+            };
+
+            let mut dib_bits: *mut c_void = std::ptr::null_mut();
+            let h_bitmap = match CreateDIBSection(
+                hdc_screen,
+                &bitmap_info,
+                DIB_RGB_COLORS,
+                &mut dib_bits,
+                HANDLE::default(),
+                0,
+            ) {
+                Ok(bitmap) => bitmap,
+                Err(e) => {
+                    let _ = DeleteDC(hdc_mem);
+                    ReleaseDC(None, hdc_screen);
+                    return Err(format!("无法创建 DIBSection 位图: {}", e));
+                }
+            };
+
+            if dib_bits.is_null() {
+                let _ = DeleteObject(h_bitmap);
+                let _ = DeleteDC(hdc_mem);
+                ReleaseDC(None, hdc_screen);
+                return Err("DIBSection 未返回有效像素缓冲区".to_string());
+            }
+
+            let old_obj = SelectObject(hdc_mem, h_bitmap);
+            let should_stretch = new_w != w || new_h != h;
+
+            let success = if should_stretch {
+                SetStretchBltMode(hdc_mem, HALFTONE);
+                StretchBlt(
+                    hdc_mem, 0, 0, new_w, new_h,
+                    hdc_screen, x, y, w, h,
+                    SRCCOPY
+                ).as_bool()
+            } else {
+                BitBlt(
+                    hdc_mem, 0, 0, new_w, new_h,
+                    hdc_screen, x, y,
+                    SRCCOPY
+                ).is_ok()
+            };
+
+            let result = if success {
+                let buffer_size = (new_w as usize)
+                    .checked_mul(new_h as usize)
+                    .and_then(|px| px.checked_mul(4))
+                    .ok_or_else(|| "截图区域过大，像素缓冲区大小溢出".to_string())?;
+                let bytes = std::slice::from_raw_parts(dib_bits as *const u8, buffer_size).to_vec();
+                Ok((bytes, new_w, new_h))
+            } else {
+                Err("拷贝或缩放屏幕像素失败 (Blt 失败)".to_string())
+            };
+
+            SelectObject(hdc_mem, old_obj);
+            let _ = DeleteObject(h_bitmap);
+            let _ = DeleteDC(hdc_mem);
+            ReleaseDC(None, hdc_screen);
+
+            result
+        }
+    }
+
     /// 截取屏幕上的指定矩形区域，并使用指定的 OCR 引擎进行识别。
     pub fn ocr_region_sync(
         x: i32,
@@ -169,119 +328,22 @@ mod win_impl {
         _paddleocr_url: &str,
         app_handle: Option<&tauri::AppHandle>,
     ) -> Result<String, String> {
+        let total_started_at = Instant::now();
+
         if w <= 0 || h <= 0 {
             return Err("识别区域的宽度和高度必须大于 0".to_string());
         }
 
-        // 1. 计算缩放因子。如果短边小于 600 像素，进行高清晰度缩放，最高放大 5 倍
-        let short_side = min(w, h);
-        let mut scale = 1.0;
-        if short_side < 600 {
-            scale = 600.0 / short_side as f64;
-            if scale > 5.0 {
-                scale = 5.0;
-            }
-        }
+        let scale = compute_capture_scale(w, h);
+        let capture_started_at = Instant::now();
+        let (pixel_bytes, new_w, new_h) = capture_region_bgra(x, y, w, h, scale)?;
+        let capture_ms = capture_started_at.elapsed().as_millis();
 
-        let new_w = (w as f64 * scale) as i32;
-        let new_h = (h as f64 * scale) as i32;
-
-        let pixel_bytes = unsafe {
-            // 获取桌面屏幕上下文
-            let hdc_screen = GetDC(None);
-            if hdc_screen.is_invalid() {
-                return Err("无法获取屏幕设备上下文 (GetDC 失败)".to_string());
-            }
-
-            // 创建兼容的内存上下文
-            let hdc_mem = CreateCompatibleDC(hdc_screen);
-            if hdc_mem.is_invalid() {
-                ReleaseDC(None, hdc_screen);
-                return Err("无法创建兼容的内存上下文 (CreateCompatibleDC 失败)".to_string());
-            }
-
-            // 创建对应大小的兼容位图
-            let h_bitmap = CreateCompatibleBitmap(hdc_screen, new_w, new_h);
-            if h_bitmap.is_invalid() {
-                let _ = DeleteDC(hdc_mem);
-                ReleaseDC(None, hdc_screen);
-                return Err("无法创建兼容的位图 (CreateCompatibleBitmap 失败)".to_string());
-            }
-
-            // 选择位图进入内存上下文
-            let old_obj = SelectObject(hdc_mem, h_bitmap);
-
-            // 如果需要缩放，采用 GDI HALFTONE 插值进行高品质拷贝
-            let success = if scale > 1.0 {
-                SetStretchBltMode(hdc_mem, HALFTONE);
-                StretchBlt(
-                    hdc_mem, 0, 0, new_w, new_h,
-                    hdc_screen, x, y, w, h,
-                    SRCCOPY
-                ).as_bool()
-            } else {
-                BitBlt(
-                    hdc_mem, 0, 0, w, h,
-                    hdc_screen, x, y,
-                    SRCCOPY
-                ).is_ok()
-            };
-
-            if !success {
-                SelectObject(hdc_mem, old_obj);
-                let _ = DeleteObject(h_bitmap);
-                let _ = DeleteDC(hdc_mem);
-                ReleaseDC(None, hdc_screen);
-                return Err("拷贝或缩放屏幕像素失败 (Blt 失败)".to_string());
-            }
-
-            // 设置 DIB 结构体以读取 BGRA32 格式 data
-            let mut bitmap_info = BITMAPINFO {
-                bmiHeader: BITMAPINFOHEADER {
-                    biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
-                    biWidth: new_w,
-                    biHeight: -new_h,
-                    biPlanes: 1,
-                    biBitCount: 32,
-                    biCompression: 0, // BI_RGB
-                    biSizeImage: 0,
-                    biXPelsPerMeter: 0,
-                    biYPelsPerMeter: 0,
-                    biClrUsed: 0,
-                    biClrImportant: 0,
-                },
-                bmiColors: [RGBQUAD { rgbBlue: 0, rgbGreen: 0, rgbRed: 0, rgbReserved: 0 }],
-            };
-
-            let buffer_size = (new_w * new_h * 4) as usize;
-            let mut bytes = vec![0u8; buffer_size];
-
-            let lines_copied = GetDIBits(
-                hdc_screen,
-                h_bitmap,
-                0,
-                new_h as u32,
-                Some(bytes.as_mut_ptr() as *mut _),
-                &mut bitmap_info,
-                DIB_RGB_COLORS
-            );
-
-            // 释放 GDI 句柄资源
-            SelectObject(hdc_mem, old_obj);
-            let _ = DeleteObject(h_bitmap);
-            let _ = DeleteDC(hdc_mem);
-            ReleaseDC(None, hdc_screen);
-
-            if lines_copied == 0 {
-                return Err("读取位图像素失败 (GetDIBits 失败)".to_string());
-            }
-            Ok::<Vec<u8>, String>(bytes)
-        }?;
-
+        let infer_started_at = Instant::now();
         let recognized_text = if ocr_engine == "paddleocr" {
             // 调用本地原生 PaddleOCR 引擎进行识别
             let handle = app_handle.ok_or_else(|| "本地 PaddleOCR 推理需要有效的 AppHandle 传入".to_string())?;
-            call_paddleocr_native(pixel_bytes, new_w, new_h, handle)?
+            call_paddleocr_native(&pixel_bytes, new_w, new_h, handle)?
         } else {
             // 4. 将像素载入内存 DataWriter，以输出 WinRT 的 IBuffer
             let data_writer = DataWriter::new().map_err(|e| format!("创建 DataWriter 失败: {}", e))?;
@@ -296,18 +358,8 @@ mod win_impl {
                 new_h
             ).map_err(|e| format!("创建 SoftwareBitmap 失败: {}", e))?;
 
-            // 6. 初始化本地 OcrEngine 进行识别
-            let lang = Language::CreateLanguage(&HSTRING::from("zh-Hans-CN"))
-                .map_err(|e| format!("创建语言包（zh-Hans-CN）失败: {}", e))?;
-
-            let engine = if OcrEngine::IsLanguageSupported(&lang).unwrap_or(false) {
-                OcrEngine::TryCreateFromLanguage(&lang)
-                    .map_err(|e| format!("利用 zh-Hans-CN 初始化 OcrEngine 失败: {}", e))?
-            } else {
-                // 回退尝试使用系统用户默认语言
-                OcrEngine::TryCreateFromUserProfileLanguages()
-                    .map_err(|e| format!("无法创建用户默认语言 of OcrEngine: {}", e))?
-            };
+            // 6. 复用本地 OcrEngine，避免每次识别重复初始化语言与引擎实例
+            let engine = get_or_init_winrt_ocr_engine()?;
 
             // 异步识别并在当前后台执行线程中同步等待结果 (Rhai 执行器运行在 thread 中)
             let ocr_result = engine.RecognizeAsync(&software_bitmap)
@@ -323,9 +375,26 @@ mod win_impl {
             }
             text
         };
+        let infer_ms = infer_started_at.elapsed().as_millis();
 
         // 过滤掉所有空格、换行、制表符等空白字符，输出干净统一的文案以方便做包含匹配
         let clean_text: String = recognized_text.chars().filter(|c| !c.is_whitespace()).collect();
+        tracing::debug!(
+            target: "ocr",
+            engine = %ocr_engine,
+            x,
+            y,
+            w,
+            h,
+            scaled_w = new_w,
+            scaled_h = new_h,
+            scale,
+            capture_ms,
+            infer_ms,
+            total_ms = total_started_at.elapsed().as_millis(),
+            text_len = clean_text.chars().count(),
+            "OCR region recognition completed",
+        );
         Ok(clean_text)
     }
 }
@@ -345,4 +414,3 @@ pub fn ocr_region_sync(
 ) -> Result<String, String> {
     Err("OCR is only supported on Windows".to_string())
 }
-
