@@ -1,5 +1,15 @@
 # AutoController 更新日志
 
+## v0.7.1 — 2026-06-04
+
+### 🚀 优化与增强
+
+- **Rhai 脚本运行时大文件重构**：将原本庞大的 `runtime.rs` 进行了精细的模块化拆分。分离出虚拟手柄动作 API 绑定模块 `controller_bindings.rs`、OCR 识别 API 绑定模块 `ocr_bindings.rs`、单脚本执行管理模块 `execution.rs` 以及多脚本序列调度模块 `sequence.rs`，极大提升了代码可读性与后期维护效率。
+- **引入统一的无锁 `CancellationToken`**：采用基于原子变量 `AtomicBool` 的低延迟、线程安全取消令牌机制，替代了以往每次检测均需获取全局 executions 互斥锁的哈希表查询方案，彻底消除了脚本执行及高频 `sleep` 循环期间的锁竞争开销。
+- **遥测数据库集中存储**：优化了 SQLite 遥测数据库的保存路径，由原先的独立 `fh6-tel` 目录迁移至应用配置数据主目录下的 `autocontroller/forza-fh6/sessions.db`，实现了遥测数据与应用核心配置文件的一体化集中保存与备份。
+
+---
+
 ## v0.7.0 — 2026-06-04
 
 ### 🆕 新功能

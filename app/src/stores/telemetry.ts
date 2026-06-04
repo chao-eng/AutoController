@@ -79,9 +79,12 @@ export const useTelemetryStore = defineStore('telemetry', () => {
 
   let lastPacketTime = 0
   let connectionTimer: ReturnType<typeof setInterval> | null = null
+  let unsubscribeTelemetry: (() => void) | null = null
 
   async function startTelemetryListener(handlers: { onError?: (msg: string) => void; onBindFailed?: (msg: string) => void } = {}) {
-    await ipc.subscribeTelemetry({
+    stopTelemetryListener()
+
+    unsubscribeTelemetry = await ipc.subscribeTelemetry({
       onTick: (payload: TelemetryPacket) => {
         packet.value = payload
         lastPacketTime = Date.now()
@@ -99,6 +102,19 @@ export const useTelemetryStore = defineStore('telemetry', () => {
     }, 1000)
   }
 
+  function stopTelemetryListener() {
+    unsubscribeTelemetry?.()
+    unsubscribeTelemetry = null
+
+    if (connectionTimer) {
+      clearInterval(connectionTimer)
+      connectionTimer = null
+    }
+
+    lastPacketTime = 0
+    isConnected.value = false
+  }
+
   return {
     packet,
     isConnected,
@@ -110,5 +126,6 @@ export const useTelemetryStore = defineStore('telemetry', () => {
     startReplay,
     exitReplay,
     startTelemetryListener,
+    stopTelemetryListener,
   }
 })

@@ -23,6 +23,21 @@ use system::injector::InjectedProcessesState;
 use system::ProcessMonitor;
 use tauri::Manager;
 
+fn open_telemetry_db() -> rusqlite::Connection {
+    match fh6_telemetry::db::open() {
+        Ok(conn) => conn,
+        Err(e) => {
+            tracing::error!(error = %e, "Forza telemetry database failed to open; using in-memory fallback");
+            let conn = rusqlite::Connection::open_in_memory()
+                .expect("failed to open in-memory telemetry database");
+            if let Err(init_error) = fh6_telemetry::db::init(&conn) {
+                tracing::error!(error = %init_error, "Forza telemetry in-memory database init failed");
+            }
+            conn
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let (tauri_layer, log_handle) = TauriEventLayer::new();
@@ -54,7 +69,7 @@ pub fn run() {
     let loaded_settings = fh6_telemetry::settings::load();
     let auto_record = loaded_settings.auto_record;
     let telemetry_state: fh6_telemetry::Shared = std::sync::Arc::new(fh6_telemetry::AppState {
-        db: std::sync::Mutex::new(fh6_telemetry::db::open().expect("failed to open database")),
+        db: std::sync::Mutex::new(open_telemetry_db()),
         session_manager: std::sync::Mutex::new(fh6_telemetry::session::SessionManager::new(
             auto_record,
         )),

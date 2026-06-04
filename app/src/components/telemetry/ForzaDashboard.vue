@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useTelemetryStore } from '@/stores/telemetry'
 import { useSessionsStore } from '@/stores/sessions'
-import { isDesktop } from '@/fh6-tel/lib/ipc'
 import TopBar from './TopBar.vue'
 import CompassBar from './CompassBar.vue'
 import CenterPanel from './CenterPanel.vue'
@@ -34,36 +33,16 @@ function addToast(message: string) {
   }, 4000)
 }
 
-interface PendingUpdate {
-  version: string
-  install: () => Promise<void>
-}
-const pendingUpdate = ref<PendingUpdate | null>(null)
-const updateInstalling = ref(false)
-
 onMounted(async () => {
   await sessionsStore.loadSettings()
   await telemetryStore.startTelemetryListener({
     onError: (m: string) => addToast(m),
     onBindFailed: (m: string) => addToast(m),
   })
-  if (isDesktop) {
-    try {
-      const { invoke } = await import('@tauri-apps/api/core')
-      const info = await invoke<{ version: string; is_deb: boolean } | null>('check_for_update')
-      if (info) {
-        pendingUpdate.value = {
-          version: info.version,
-          install: async () => {
-            updateInstalling.value = true
-            await invoke('install_update', { isDeb: info.is_deb })
-          },
-        }
-      }
-    } catch {
-      // Offline or update endpoint unreachable — ignore
-    }
-  }
+})
+
+onUnmounted(() => {
+  telemetryStore.stopTelemetryListener()
 })
 
 // Replaying takes over the live dashboard — get the overlays out of the way.
@@ -83,18 +62,6 @@ async function handleToggleTires() {
 </script>
 
 <template>
-  <div v-if="pendingUpdate" class="fixed top-0 left-0 right-0 z-300 flex items-center gap-3 bg-[#3370FF] px-4 py-[0.35rem] text-xs text-white">
-    <span class="flex-1">Update v{{ pendingUpdate.version }} available</span>
-    <button
-      class="cursor-pointer rounded border border-white/30 bg-white/20 px-[0.65rem] py-[0.2rem] text-xs text-white disabled:opacity-60"
-      :disabled="updateInstalling"
-      @click="pendingUpdate?.install()"
-    >
-      {{ updateInstalling ? 'Installing…' : 'Install & restart' }}
-    </button>
-    <button class="cursor-pointer border-none bg-none px-[0.25rem] text-xs text-white/70 hover:text-white" @click="pendingUpdate = null">✕</button>
-  </div>
-
   <div class="flex h-full w-full flex-col">
     <TopBar
       :use-mph="settings?.useMph ?? true"

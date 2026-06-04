@@ -29,6 +29,57 @@ export default defineConfig(async () => ({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalizedId = id.replace(/\\/g, "/");
+
+          if (normalizedId.includes("/node_modules/monaco-editor/")) {
+            return "vendor-monaco";
+          }
+
+          if (
+            normalizedId.includes("/node_modules/vue/") ||
+            normalizedId.includes("/node_modules/@vue/") ||
+            normalizedId.includes("/node_modules/pinia/") ||
+            normalizedId.includes("/node_modules/vue-router/")
+          ) {
+            return "vendor-vue";
+          }
+
+          if (
+            normalizedId.includes("/node_modules/reka-ui/") ||
+            normalizedId.includes("/node_modules/@vueuse/") ||
+            normalizedId.includes("/node_modules/class-variance-authority/") ||
+            normalizedId.includes("/node_modules/clsx/") ||
+            normalizedId.includes("/node_modules/tailwind-merge/") ||
+            normalizedId.includes("/node_modules/vue-sonner/")
+          ) {
+            return "vendor-ui";
+          }
+
+          if (
+            normalizedId.includes("/node_modules/@lucide/") ||
+            normalizedId.includes("/node_modules/lucide-vue-next/")
+          ) {
+            return "vendor-icons";
+          }
+
+          if (
+            normalizedId.includes("/node_modules/leaflet/") ||
+            normalizedId.includes("/node_modules/uplot/")
+          ) {
+            return "vendor-visualization";
+          }
+
+          if (normalizedId.includes("/node_modules/")) {
+            return "vendor";
+          }
+        },
+      },
+    },
+  },
   // 3. tauri expects a fixed port, fail if that port is not available
   server: {
     port: 1420,

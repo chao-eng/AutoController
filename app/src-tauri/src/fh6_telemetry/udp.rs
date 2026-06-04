@@ -1,37 +1,43 @@
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::net::UdpSocket;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc};
 
 use super::{db, event::ServerEvent, parser, session::SessionAction, AppState};
+
+const SESSION_QUEUE_CAPACITY: usize = 512;
+const CLOSE_GRACE: u32 = 150;
+
+struct SessionIngest {
+    pkt: parser::TelemetryPacket,
+    raw: Vec<u8>,
+}
 
 pub async fn run(state: Arc<AppState>, port: u16, tx: broadcast::Sender<ServerEvent>) {
     let addr = format!("0.0.0.0:{port}");
     let socket = match UdpSocket::bind(&addr).await {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("[udp] failed to bind {addr}: {e}");
+            tracing::error!(target: "fh6_telemetry::udp", address = %addr, error = %e, "failed to bind UDP socket");
             let _ = tx.send(ServerEvent::BindFailed(format!(
                 "Cannot bind port {port}: {e}"
             )));
             return;
         }
     };
-    println!("[udp] listening on {addr}");
+    tracing::info!(target: "fh6_telemetry::udp", address = %addr, "listening for telemetry packets");
 
+    let session_tx = start_session_writer(state, tx.clone());
     let mut buf = vec![0u8; 1024];
-    let mut prev_in_event = false;
     let mut debug_logged = false;
-    // Grace period before closing session — prevents pause-menu from splitting a run.
-    // At ~30 packets/s, 150 ≈ 5 seconds of tolerance.
-    let mut close_pending: u32 = 0;
-    const CLOSE_GRACE: u32 = 150;
+    let mut dropped_session_packets: u64 = 0;
+    let mut writer_closed_logged = false;
 
     loop {
         let (len, _) = match socket.recv_from(&mut buf).await {
             Ok(r) => r,
             Err(e) => {
-                eprintln!("[udp] recv error: {e}");
+                tracing::warn!(target: "fh6_telemetry::udp", error = %e, "failed to receive UDP packet");
                 continue;
             }
         };
@@ -40,7 +46,7 @@ pub async fn run(state: Arc<AppState>, port: u16, tx: broadcast::Sender<ServerEv
 
         if !debug_logged {
             debug_logged = true;
-            println!("[udp] first packet: {len} bytes");
+            tracing::info!(target: "fh6_telemetry::udp", bytes = len, "received first telemetry packet");
             if raw.len() >= 323 {
                 let speed = f32::from_le_bytes(raw[256..260].try_into().unwrap_or([0; 4]));
                 let thr = raw[315];
@@ -48,7 +54,16 @@ pub async fn run(state: Arc<AppState>, port: u16, tx: broadcast::Sender<ServerEv
                 let gear = raw[319];
                 let pos = raw[314];
                 let tire_f_raw = f32::from_le_bytes(raw[268..272].try_into().unwrap_or([0; 4]));
-                println!("[udp] speed={speed:.2}m/s thr={thr} brk={brk} gear={gear} race_pos={pos} tire_fl_raw={tire_f_raw:.1}°F");
+                tracing::debug!(
+                    target: "fh6_telemetry::udp",
+                    speed_ms = speed,
+                    throttle = thr,
+                    brake = brk,
+                    gear = gear,
+                    race_position = pos,
+                    tire_fl_raw = tire_f_raw,
+                    "first packet sample"
+                );
             }
         }
 
@@ -57,28 +72,84 @@ pub async fn run(state: Arc<AppState>, port: u16, tx: broadcast::Sender<ServerEv
             Err(_) => continue,
         };
 
-        // Always emit live data regardless of session state
+        // Always emit live data regardless of session recording state.
         let _ = tx.send(ServerEvent::Tick(pkt.clone()));
 
-        // Record whenever a lap is being timed: races/Rivals (race_position > 0)
-        // and Time Trial (race_position 0 but the lap clock runs). Free-roam has
-        // no lap timer so it stays unrecorded. Grace period stops pause-menu
-        // packets from splitting a session.
-        // Only the live lap clock means "timing now". last_lap / lap_number
-        // persist as stale values from the previous race while you're in the
-        // pre-race / menu screen, which spuriously spawned tiny sessions.
-        let timed_lap = pkt.current_lap > 0.0;
-        let raw_in_event = pkt.is_race_on && (pkt.race_position > 0 || timed_lap);
-        if raw_in_event {
-            close_pending = 0;
-        } else {
-            close_pending = close_pending.saturating_add(1);
+        let ingest = SessionIngest {
+            pkt,
+            raw: raw.to_vec(),
+        };
+        match session_tx.try_send(ingest) {
+            Ok(()) => {}
+            Err(mpsc::error::TrySendError::Full(_)) => {
+                dropped_session_packets = dropped_session_packets.saturating_add(1);
+                if dropped_session_packets == 1 || dropped_session_packets % 100 == 0 {
+                    tracing::warn!(
+                        target: "fh6_telemetry::session",
+                        dropped_packets = dropped_session_packets,
+                        "session writer queue is full; dropping telemetry packet for recording"
+                    );
+                }
+            }
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+                if !writer_closed_logged {
+                    writer_closed_logged = true;
+                    tracing::error!(
+                        target: "fh6_telemetry::session",
+                        "session writer is closed; live telemetry will continue without recording"
+                    );
+                }
+            }
         }
-        let in_event = raw_in_event || close_pending < CLOSE_GRACE;
-
-        handle_session(&state, &tx, &pkt, raw, prev_in_event, in_event);
-        prev_in_event = in_event;
     }
+}
+
+fn start_session_writer(
+    state: Arc<AppState>,
+    tx: broadcast::Sender<ServerEvent>,
+) -> mpsc::Sender<SessionIngest> {
+    let (session_tx, mut session_rx) = mpsc::channel::<SessionIngest>(SESSION_QUEUE_CAPACITY);
+
+    if let Err(e) = std::thread::Builder::new()
+        .name("fh6-telemetry-writer".to_string())
+        .spawn(move || {
+            let mut prev_in_event = false;
+            let mut close_pending: u32 = 0;
+
+            while let Some(ingest) = session_rx.blocking_recv() {
+                // Record whenever a lap is being timed: races/Rivals
+                // (race_position > 0) and Time Trial (race_position 0 but the
+                // lap clock runs). Free-roam has no lap timer so it stays
+                // unrecorded. Grace period stops pause-menu packets from
+                // splitting a session.
+                let timed_lap = ingest.pkt.current_lap > 0.0;
+                let raw_in_event =
+                    ingest.pkt.is_race_on && (ingest.pkt.race_position > 0 || timed_lap);
+                if raw_in_event {
+                    close_pending = 0;
+                } else {
+                    close_pending = close_pending.saturating_add(1);
+                }
+                let in_event = raw_in_event || close_pending < CLOSE_GRACE;
+
+                handle_session(
+                    &state,
+                    &tx,
+                    &ingest.pkt,
+                    &ingest.raw,
+                    prev_in_event,
+                    in_event,
+                );
+                prev_in_event = in_event;
+            }
+
+            tracing::info!(target: "fh6_telemetry::session", "session writer stopped");
+        })
+    {
+        tracing::error!(target: "fh6_telemetry::session", error = %e, "failed to start session writer");
+    }
+
+    session_tx
 }
 
 fn handle_session(
@@ -129,9 +200,11 @@ fn handle_session(
             match db::reopen_session(&db, reopen_id) {
                 Ok(()) => {
                     sm.set_active_id(Some(reopen_id));
-                    println!("[session] rewind detected, continuing #{reopen_id}");
+                    tracing::info!(target: "fh6_telemetry::session", session_id = reopen_id, "rewind detected, continuing session");
                 }
-                Err(e) => eprintln!("[session] reopen error: {e}"),
+                Err(e) => {
+                    tracing::warn!(target: "fh6_telemetry::session", session_id = reopen_id, error = %e, "failed to reopen session")
+                }
             }
         } else {
             match db::open_session(&db, now_ms as i64, car_ordinal, car_class, car_pi) {
@@ -140,10 +213,10 @@ fn handle_session(
                     // reopen above deliberately does NOT, to continue the run.)
                     sm.begin_new_session();
                     sm.set_active_id(Some(id));
-                    println!("[session] opened #{id}");
+                    tracing::info!(target: "fh6_telemetry::session", session_id = id, "opened session");
                 }
                 Err(e) => {
-                    eprintln!("[session] open error: {e}");
+                    tracing::error!(target: "fh6_telemetry::session", error = %e, "failed to open session");
                     let _ = tx.send(ServerEvent::SessionError(format!(
                         "Failed to open session: {e}"
                     )));
@@ -159,11 +232,11 @@ fn handle_session(
         sm.update_race_time(progress);
         if let Some(lap) = sm.note_tick(pkt.is_race_on, pkt.current_lap, pkt.current_race_time) {
             if let Err(e) = db::insert_lap(&db, session_id, lap.lap_number, lap.lap_time) {
-                eprintln!("[session] lap insert error: {e}");
+                tracing::warn!(target: "fh6_telemetry::session", session_id, lap_number = lap.lap_number, error = %e, "failed to insert lap");
             }
         }
         if let Err(e) = db::insert_packet(&db, session_id, pkt.timestamp_ms, raw) {
-            eprintln!("[session] insert error: {e}");
+            tracing::error!(target: "fh6_telemetry::session", session_id, error = %e, "failed to insert telemetry packet");
             let _ = tx.send(ServerEvent::SessionError(format!(
                 "Failed to write telemetry: {e}"
             )));
@@ -193,7 +266,7 @@ fn handle_session(
             let final_lap = sm.finalize_final_lap();
             if let Some(lap) = &final_lap {
                 if let Err(e) = db::insert_lap(&db, id, lap.lap_number, lap.lap_time) {
-                    eprintln!("[session] final lap insert error: {e}");
+                    tracing::warn!(target: "fh6_telemetry::session", session_id = id, lap_number = lap.lap_number, error = %e, "failed to insert final lap");
                 }
             }
             // Discard only a *tiny* lapless session (a pre-race / aborted
@@ -201,21 +274,21 @@ fn handle_session(
             // / sprint race and must be kept. ~400 packets ≈ 10s.
             if sm.laps_recorded() == 0 && final_lap.is_none() && sm.ticks() < 400 {
                 if let Err(e) = db::delete_session(&db, id) {
-                    eprintln!("[session] discard error: {e}");
+                    tracing::warn!(target: "fh6_telemetry::session", session_id = id, error = %e, "failed to discard empty session");
                 } else {
-                    println!("[session] discarded empty session #{id}");
+                    tracing::info!(target: "fh6_telemetry::session", session_id = id, "discarded empty session");
                 }
             } else {
                 // Best is the fastest lap actually in the table (rewind
                 // upserts already corrected); -1.0 = none → keep existing.
                 let best = db::min_lap_time(&db, id).ok().flatten().unwrap_or(-1.0);
                 if let Err(e) = db::close_session(&db, id, now_ms as i64, best) {
-                    eprintln!("[session] close error: {e}");
+                    tracing::error!(target: "fh6_telemetry::session", session_id = id, error = %e, "failed to close session");
                     let _ = tx.send(ServerEvent::SessionError(format!(
                         "Failed to close session: {e}"
                     )));
                 } else {
-                    println!("[session] closed #{id}");
+                    tracing::info!(target: "fh6_telemetry::session", session_id = id, "closed session");
                 }
             }
         }

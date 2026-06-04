@@ -26,3 +26,19 @@ pub struct ScriptOutput {
     pub message: String,
     pub timestamp: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ScriptExecutionEvent {
+    pub execution_id: String,
+    pub script_id: String,
+    pub status: String,
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ScriptLineChangeEvent {
+    pub execution_id: String,
+    pub script_id: String,
+    pub line: usize,
+}
+
