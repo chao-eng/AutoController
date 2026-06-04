@@ -62,13 +62,17 @@ function formatLap(seconds: number) {
 
 const chartHost = ref<HTMLDivElement | null>(null)
 let plots: uPlot[] = []
+let resizeObserver: ResizeObserver | null = null
 
 function destroyPlots() {
   for (const p of plots) p.destroy()
   plots = []
 }
 
-onUnmounted(() => destroyPlots())
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+  destroyPlots()
+})
 
 function fmtElapsed(s: number) {
   const m = Math.floor(s / 60)
@@ -182,88 +186,259 @@ function rebuildCharts() {
   }
 }
 
-watch([coloredSelected, chartHost], () => {
+watch(chartHost, (host) => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+  if (!host) return
+
+  resizeObserver = new ResizeObserver(() => {
+    nextTick(() => rebuildCharts())
+  })
+  resizeObserver.observe(host)
+})
+
+watch([coloredSelected, chartHost, () => props.useMph], () => {
   nextTick(() => rebuildCharts())
 }, { deep: true })
 </script>
 
 <template>
-  <div class="lap-chips">
-    <button
-      v-for="chip in chips" :key="chip.key"
-      class="chip"
-      :class="{ on: selectedKeys.has(chip.key) }"
-      :style="{ '--chip': colorAssignments.get(chip.key) ?? 'var(--bd-muted)' }"
-      @click="toggle(chip.key)"
-    >
-      <span class="dot"></span>
-      <span class="chip-label">{{ chip.label }}</span>
-      <span class="chip-time">{{ chip.lapTime != null ? formatLap(chip.lapTime) : 'partial' }}</span>
-      <span v-if="chip.isBest" class="chip-best">best</span>
-    </button>
-  </div>
+  <section class="analysis-workspace">
+    <header class="analysis-toolbar">
+      <div class="min-w-0">
+        <p class="analysis-eyebrow">Lap Compare</p>
+        <h2>圈速遥测对比</h2>
+      </div>
+      <span class="selection-count">{{ selected.length }} / {{ chips.length }} 圈已选</span>
+    </header>
 
-  <div ref="chartHost" class="charts"></div>
+    <div v-if="chips.length" class="lap-strip">
+      <div class="lap-strip-label">选择圈次</div>
+      <div class="lap-chips">
+        <button
+          v-for="chip in chips" :key="chip.key"
+          class="chip"
+          :class="{ on: selectedKeys.has(chip.key) }"
+          :style="{ '--chip': colorAssignments.get(chip.key) ?? 'var(--bd-muted)' }"
+          @click="toggle(chip.key)"
+        >
+          <span class="dot"></span>
+          <span class="chip-label">{{ chip.label }}</span>
+          <span class="chip-time">{{ chip.lapTime != null ? formatLap(chip.lapTime) : 'partial' }}</span>
+          <span v-if="chip.isBest" class="chip-best">最快</span>
+        </button>
+      </div>
+    </div>
+
+    <div v-else class="analysis-empty">此会话还没有可对比的圈段。</div>
+
+    <div ref="chartHost" class="charts"></div>
+  </section>
 </template>
 
 <style scoped>
-.lap-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 1rem;
+.analysis-workspace {
+  width: 100%;
+  padding: 1.25rem;
 }
+
+.analysis-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--bd-dim);
+  border-radius: 8px;
+  background:
+    linear-gradient(120deg, color-mix(in srgb, #3370ff 9%, transparent), transparent 52%),
+    color-mix(in srgb, var(--bg-card) 86%, transparent);
+  padding: 0.85rem 0.95rem;
+}
+
+.analysis-eyebrow {
+  color: var(--tx-xdim);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.analysis-toolbar h2 {
+  margin-top: 0.28rem;
+  color: var(--tx-hi);
+  font-size: 1rem;
+  font-weight: 760;
+  line-height: 1.25;
+}
+
+.selection-count {
+  flex-shrink: 0;
+  border: 1px solid var(--bd-dim);
+  border-radius: 999px;
+  background: var(--bg-panel);
+  color: var(--tx-dim);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  padding: 0.25rem 0.55rem;
+}
+
+.lap-strip {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: start;
+  margin-top: 0.85rem;
+  border: 1px solid var(--bd-dim);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-card) 76%, transparent);
+  padding: 0.75rem;
+}
+
+.lap-strip-label {
+  padding-top: 0.45rem;
+  color: var(--tx-dim);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lap-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.45rem;
+  min-width: 0;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  background: var(--bg-card);
-  border: 1px solid var(--bd-dim);
-  border-radius: 999px;
+  min-width: 0;
+  min-height: 2.35rem;
+  gap: 0.45rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--bd-subtle);
+  border-radius: 7px;
   color: var(--tx-dim);
   font-size: 0.78rem;
-  padding: 0.3rem 0.7rem;
+  padding: 0.42rem 0.55rem;
   cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, transform 120ms ease;
 }
+
+.chip:hover {
+  border-color: color-mix(in srgb, var(--chip) 50%, var(--bd-muted));
+  color: var(--tx-mid);
+}
+
+.chip:active {
+  transform: scale(0.99);
+}
+
 .chip.on {
   border-color: var(--chip);
   color: var(--tx-hi);
-  background: color-mix(in srgb, var(--chip) 16%, transparent);
+  background: color-mix(in srgb, var(--chip) 11%, var(--bg-panel));
 }
+
 .chip .dot {
-  width: 9px; height: 9px; border-radius: 50%;
-  background: var(--chip); opacity: 0.4;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--chip);
+  opacity: 0.45;
+  flex-shrink: 0;
 }
+
 .chip.on .dot { opacity: 1; }
+
+.chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
 .chip-time {
+  margin-left: auto;
   font-variant-numeric: tabular-nums;
   color: var(--tx-mid);
+  font-weight: 760;
 }
+
 .chip-best {
-  font-size: 0.62rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #d8b4fe;
+  border-radius: 999px;
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  color: color-mix(in srgb, #f59e0b 78%, black);
+  font-size: 0.64rem;
+  font-weight: 800;
+  padding: 0.05rem 0.28rem;
 }
+
+.analysis-empty {
+  margin-top: 0.85rem;
+  border: 1px dashed var(--bd-muted);
+  border-radius: 8px;
+  color: var(--tx-dim);
+  font-size: 0.85rem;
+  padding: 1.25rem;
+  text-align: center;
+}
+
 .charts {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 640px) {
+  .analysis-workspace {
+    padding: 1rem;
+  }
+
+  .analysis-toolbar,
+  .lap-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .selection-count {
+    align-self: flex-start;
+  }
+
+  .lap-strip-label {
+    padding-top: 0;
+  }
+
+  .lap-chips {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 
 <style>
 .chart-block {
-  background: var(--bg-card);
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 86%, white), var(--bg-card)),
+    var(--bg-card);
   border: 1px solid var(--bd-dim);
   border-radius: 8px;
-  padding: 0.6rem 0.75rem 0.75rem;
+  padding: 0.72rem 0.78rem 0.82rem;
 }
 .chart-title {
-  color: var(--tx-mid);
+  color: var(--tx-dim);
   font-size: 0.8rem;
-  font-weight: 600;
-  margin-bottom: 0.4rem;
+  font-weight: 760;
+  margin-bottom: 0.5rem;
 }
 .uplot { background: transparent !important; }
 .uplot .u-select {
