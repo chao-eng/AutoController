@@ -53,6 +53,8 @@ mod win_impl {
 
     pub static OCR_ENGINE: OnceLock<Mutex<OcrLite>> = OnceLock::new();
     static OCR_INIT_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    static OCR_WARMUP_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    static OCR_WARMUP_DONE: OnceLock<()> = OnceLock::new();
     static WINRT_OCR_ENGINE: OnceLock<OcrEngine> = OnceLock::new();
     static WINRT_OCR_INIT_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     const ORT_INTRA_THREADS: usize = 2;
@@ -462,6 +464,121 @@ mod win_impl {
         Ok(OCR_ENGINE.get().unwrap())
     }
 
+    fn fill_warmup_rect(
+        img: &mut image::RgbImage,
+        x: u32,
+        y: u32,
+        w: u32,
+        h: u32,
+        color: image::Rgb<u8>,
+    ) {
+        let end_x = x.saturating_add(w).min(img.width());
+        let end_y = y.saturating_add(h).min(img.height());
+
+        for yy in y..end_y {
+            for xx in x..end_x {
+                img.put_pixel(xx, yy, color);
+            }
+        }
+    }
+
+    fn draw_warmup_digit(img: &mut image::RgbImage, digit: u8, x: u32, y: u32, scale: u32) {
+        let segments: &[usize] = match digit {
+            0 => &[0, 1, 2, 4, 5, 6],
+            1 => &[2, 5],
+            2 => &[0, 2, 3, 4, 6],
+            3 => &[0, 2, 3, 5, 6],
+            4 => &[1, 2, 3, 5],
+            5 => &[0, 1, 3, 5, 6],
+            6 => &[0, 1, 3, 4, 5, 6],
+            7 => &[0, 2, 5],
+            8 => &[0, 1, 2, 3, 4, 5, 6],
+            9 => &[0, 1, 2, 3, 5, 6],
+            _ => &[],
+        };
+        let black = image::Rgb([0, 0, 0]);
+        let stroke = scale;
+        let long = scale * 4;
+
+        for segment in segments {
+            match segment {
+                0 => fill_warmup_rect(img, x + stroke, y, long, stroke, black),
+                1 => fill_warmup_rect(img, x, y + stroke, stroke, long, black),
+                2 => fill_warmup_rect(img, x + long + stroke, y + stroke, stroke, long, black),
+                3 => fill_warmup_rect(img, x + stroke, y + long + stroke, long, stroke, black),
+                4 => fill_warmup_rect(img, x, y + long + stroke * 2, stroke, long, black),
+                5 => fill_warmup_rect(
+                    img,
+                    x + long + stroke,
+                    y + long + stroke * 2,
+                    stroke,
+                    long,
+                    black,
+                ),
+                6 => fill_warmup_rect(img, x + stroke, y + long * 2 + stroke * 2, long, stroke, black),
+                _ => {}
+            }
+        }
+    }
+
+    fn make_paddleocr_warmup_image() -> image::RgbImage {
+        let mut img =
+            image::RgbImage::from_pixel(280, 96, image::Rgb([255, 255, 255]));
+        let scale = 6;
+        let digit_w = scale * 6;
+        let gap = scale;
+        let mut x = 18;
+
+        for digit in [1, 2, 3, 4, 5, 6] {
+            draw_warmup_digit(&mut img, digit, x, 18, scale);
+            x += digit_w + gap;
+        }
+
+        img
+    }
+
+    fn ensure_paddleocr_warmed(app_handle: &tauri::AppHandle) -> Result<(), String> {
+        if OCR_WARMUP_DONE.get().is_some() {
+            return Ok(());
+        }
+
+        let _warmup_guard = OCR_WARMUP_LOCK.get_or_init(|| Mutex::new(())).lock();
+        if OCR_WARMUP_DONE.get().is_some() {
+            return Ok(());
+        }
+
+        let started_at = Instant::now();
+        let ocr_mutex = get_or_init_ocr(app_handle)?;
+        let warmup_img = make_paddleocr_warmup_image();
+        let profile = runtime_profile("balanced");
+        let block_count = {
+            let mut ocr = ocr_mutex.lock();
+            let result = ocr
+                .detect(
+                    &warmup_img,
+                    profile.paddle_padding,
+                    profile.paddle_max_side_len,
+                    profile.box_score_thresh,
+                    profile.box_thresh,
+                    profile.unclip_ratio,
+                    profile.do_angle,
+                    false,
+                )
+                .map_err(|e| format!("PaddleOCR 首次推理预热失败: {:?}", e))?;
+            result.text_blocks.len()
+        };
+
+        let _ = OCR_WARMUP_DONE.set(());
+        tracing::info!(
+            target: "ocr",
+            total_ms = started_at.elapsed().as_millis(),
+            block_count,
+            "PaddleOCR first-pass inference warmup completed",
+        );
+
+        Ok(())
+    }
+
     fn get_or_init_winrt_ocr_engine() -> Result<&'static OcrEngine, String> {
         if let Some(engine) = WINRT_OCR_ENGINE.get() {
             return Ok(engine);
@@ -495,7 +612,7 @@ mod win_impl {
         if ocr_engine == "winocr" {
             let _ = get_or_init_winrt_ocr_engine()?;
         } else {
-            let _ = get_or_init_ocr(app_handle)?;
+            ensure_paddleocr_warmed(app_handle)?;
         }
 
         tracing::info!(
@@ -701,6 +818,12 @@ mod win_impl {
         }
 
         let profile = runtime_profile(ocr_profile);
+        if ocr_engine == "paddleocr" {
+            let handle = app_handle
+                .ok_or_else(|| "本地 PaddleOCR 推理需要有效的 AppHandle 传入".to_string())?;
+            ensure_paddleocr_warmed(handle)?;
+        }
+
         let scale = compute_capture_scale(w, h, &profile);
         let pixel_format = if ocr_engine == "paddleocr" {
             CapturePixelFormat::Rgb

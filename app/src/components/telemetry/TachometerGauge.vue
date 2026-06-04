@@ -16,6 +16,19 @@ const speed = computed(() => props.useMph ? Math.round(telemetry.speedMph) : Mat
 const unit = computed(() => props.useMph ? 'MPH' : 'Km/h')
 const rpm = computed(() => Math.min(Math.max(telemetry.rpmPercent, 0), 100))
 const isRedline = computed(() => rpm.value > 90)
+const isGearTooHigh = computed(() => {
+  const p = pkt.value
+  if (!p) return false
+
+  const isDriveGear = p.gear >= 2 && p.gear !== 11
+  const lowRpm = rpm.value < 34
+  const heavyThrottle = throttleFrac.value > 0.55
+  const moving = p.speedMs > 8
+  const notBraking = brakeFrac.value < 0.1
+  const clutchEngaged = clutchFrac.value < 0.2
+
+  return isDriveGear && lowRpm && heavyThrottle && moving && notBraking && clutchEngaged
+})
 
 const gearLabel = computed(() => {
   if (!pkt.value) return '—'
@@ -112,7 +125,7 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
 </script>
 
 <template>
-  <div class="dash-cluster" :class="{ 'is-redline': isRedline }">
+  <div class="dash-cluster" :class="{ 'is-redline': isRedline, 'is-gear-too-high': isGearTooHigh }">
     <div class="speed-stage">
       <svg viewBox="0 0 360 260" class="speedometer" aria-label="Forza speedometer">
         <circle
@@ -152,6 +165,12 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
           <circle class="overload-wave overload-wave-1" :cx="CX" :cy="CY" r="52" />
           <circle class="overload-wave overload-wave-2" :cx="CX" :cy="CY" r="52" />
         </g>
+        <g v-else-if="isGearTooHigh" class="shift-hud">
+          <circle class="shift-wave shift-wave-1" :cx="CX" :cy="CY" r="52" />
+          <circle class="shift-wave shift-wave-2" :cx="CX" :cy="CY" r="52" />
+          <path class="shift-chevron" d="M 169 167 L 180 178 L 191 167" />
+          <path class="shift-chevron shift-chevron-2" d="M 169 181 L 180 192 L 191 181" />
+        </g>
         <circle class="center-ring" :cx="CX" :cy="CY" r="48" />
         <text class="speed-value" :x="CX" :y="CY - 3" text-anchor="middle">
           {{ speed }}
@@ -161,6 +180,9 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
         </text>
         <text v-if="isRedline" class="overload-label" :x="CX" :y="CY + 55" text-anchor="middle">
           超载
+        </text>
+        <text v-else-if="isGearTooHigh" class="shift-label" :x="CX" :y="CY + 55" text-anchor="middle">
+          降挡
         </text>
       </svg>
     </div>
@@ -200,7 +222,8 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
         <div class="status-row">
           <div class="status-chip">
             <span class="status-label">挡位</span>
-            <span class="gear-pill">{{ gearLabel }}</span>
+            <span class="gear-pill" :class="{ warning: isGearTooHigh }">{{ gearLabel }}</span>
+            <span class="shift-note" :class="{ active: isGearTooHigh }" :aria-hidden="!isGearTooHigh">拖挡</span>
           </div>
 
           <div class="status-chip">
@@ -235,6 +258,8 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
   --speed-accent: #008f5f;
   --speed-accent-glow: rgba(0, 143, 95, 0.34);
   --speed-warning: #ef4444;
+  --shift-warning: #f59e0b;
+  --shift-warning-glow: rgba(245, 158, 11, 0.38);
   --speed-idle: #d8dce0;
   position: relative;
   display: flex;
@@ -260,6 +285,14 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
 .dash-cluster.is-redline::after {
   opacity: 1;
   animation: overload-screen-flash 520ms steps(2, end) infinite;
+}
+
+.dash-cluster.is-gear-too-high:not(.is-redline)::after {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(245, 158, 11, 0.13), transparent 30%),
+    linear-gradient(90deg, rgba(245, 158, 11, 0.08), transparent 28%, transparent 72%, rgba(245, 158, 11, 0.08));
+  opacity: 1;
+  animation: shift-screen-pulse 900ms ease-in-out infinite;
 }
 
 .speed-stage {
@@ -344,6 +377,13 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
   animation: overload-ring 520ms ease-in-out infinite;
 }
 
+.is-gear-too-high:not(.is-redline) .center-ring {
+  stroke: var(--shift-warning);
+  stroke-width: 5;
+  filter: drop-shadow(0 0 10px var(--shift-warning-glow));
+  animation: shift-ring 900ms ease-in-out infinite;
+}
+
 .speed-value {
   fill: var(--tx-hi);
   font-family: var(--font-heading), "DIN Condensed", "Arial Narrow", sans-serif;
@@ -395,6 +435,50 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
   stroke: rgba(255, 255, 255, 0.75);
   stroke-width: 2px;
   animation: overload-text-flash 420ms steps(2, end) infinite;
+}
+
+.shift-wave {
+  fill: none;
+  stroke: var(--shift-warning);
+  stroke-width: 2.6;
+  transform-origin: 180px 190px;
+  opacity: 0;
+  filter: drop-shadow(0 0 8px var(--shift-warning-glow));
+}
+
+.shift-wave-1 {
+  animation: shift-wave 1100ms ease-out infinite;
+}
+
+.shift-wave-2 {
+  animation: shift-wave 1100ms ease-out 320ms infinite;
+}
+
+.shift-chevron {
+  fill: none;
+  stroke: var(--shift-warning);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px var(--shift-warning-glow));
+  animation: shift-chevron 680ms ease-in-out infinite;
+}
+
+.shift-chevron-2 {
+  opacity: 0.62;
+  animation-delay: 110ms;
+}
+
+.shift-label {
+  fill: var(--shift-warning);
+  font-family: var(--font-heading), "DIN Condensed", "Arial Narrow", sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 2px;
+  animation: shift-text-pulse 680ms ease-in-out infinite;
 }
 
 .control-deck {
@@ -506,6 +590,31 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
   font-variant-numeric: tabular-nums;
 }
 
+.gear-pill.warning {
+  border-color: rgba(245, 158, 11, 0.72);
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.13);
+  box-shadow:
+    0 0 0 1px rgba(245, 158, 11, 0.08),
+    0 0 12px rgba(245, 158, 11, 0.28);
+  animation: shift-pill-pulse 680ms ease-in-out infinite;
+}
+
+.shift-note {
+  width: 2rem;
+  color: var(--shift-warning);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.shift-note.active {
+  opacity: 1;
+  animation: shift-text-pulse 680ms ease-in-out infinite;
+}
+
 .status-led {
   width: 0.68rem;
   height: 0.68rem;
@@ -600,6 +709,65 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
   }
   50% {
     opacity: 0.58;
+  }
+}
+
+@keyframes shift-wave {
+  0% {
+    opacity: 0.48;
+    transform: scale(0.86);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+@keyframes shift-ring {
+  0%, 100% {
+    opacity: 0.88;
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 15px var(--shift-warning-glow));
+  }
+}
+
+@keyframes shift-chevron {
+  0%, 100% {
+    opacity: 0.62;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes shift-text-pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes shift-pill-pulse {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.18);
+  }
+}
+
+@keyframes shift-screen-pulse {
+  0%, 100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.42;
   }
 }
 
