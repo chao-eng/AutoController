@@ -44,8 +44,8 @@ AutoController - 专业级游戏手柄模拟挂机工具
 │  ┌──────────────────────┴─────────────────────────────┐  │
 │  │              Rust Backend (Core)                    │  │
 │  │  ┌──────────┐ ┌──────────┐ ┌───────────────────┐  │  │
-│  │  │ViGEmBus  │ │宏引擎    │ │脚本引擎(V8/QuickJS)│  │  │
-│  │  │手柄管理  │ │录制/回放 │ │JS/TS执行         │  │  │
+│  │  │ViGEmBus  │ │宏引擎    │ │脚本引擎(Rhai)     │  │  │
+│  │  │手柄管理  │ │录制/回放 │ │Rhai脚本执行      │  │  │
 │  │  └──────────┘ └──────────┘ └───────────────────┘  │  │
 │  │  ┌──────────┐ ┌──────────┐ ┌───────────────────┐  │  │
 │  │  │任务调度器│ │日志系统  │ │配置/Profile管理   │  │  │
@@ -79,7 +79,7 @@ AutoController - 专业级游戏手柄模拟挂机工具
 | 图标 | Lucide Vue | - | SVG图标 |
 | 后端语言 | Rust | 1.95+ | 核心逻辑 |
 | 手柄驱动 | ViGEmBus | 1.17+ | 虚拟手柄 |
-| 脚本引擎 | QuickJS | - | JS/TS脚本执行 |
+| 脚本引擎 | Rhai | - | Rhai脚本执行 |
 | 序列化 | serde | 1.x | Rust数据序列化 |
 | 日志 | tracing | 0.1.x | 结构化日志 |
 
@@ -96,7 +96,7 @@ Dedicated Threads:
   ├── Macro Engine Thread (宏录制/回放)
   │     └── 时间戳精确调度
   ├── Script Engine Thread (脚本执行)
-  │     └── QuickJS运行时
+  │     └── Rhai运行时
   ├── Task Scheduler Thread (任务调度)
   │     └── 定时器/日历触发
   └── Log Writer Thread (异步日志写入)
@@ -198,49 +198,32 @@ struct Macro {
 
 #### 3.3.1 引擎选型
 
-采用 QuickJS 嵌入式引擎：
-- 轻量级，内存占用低
-- 支持ES2020语法
-- 可通过 Rust FFI 绑定自定义API
-- 编译为 WASM 可选，增强安全性
+采用 Rhai 嵌入式脚本引擎：
+- Rust 原生集成，绑定自定义 API 简洁直接
+- 轻量级，内存占用低，适合本地自动化脚本
+- 支持受控执行限制，便于隔离脚本错误和资源占用
+- 语法简洁，面向 `press`、`release`、`sleep`、`ocr` 等自动化 API 调用场景
 
 #### 3.3.2 脚本API设计
 
-```typescript
-// 手柄控制API
-interface ControllerAPI {
-  press(deviceId: number, button: Button): void;
-  release(deviceId: number, button: Button): void;
-  setThumb(deviceId: number, thumb: ThumbAxis, value: number): void;
-  setTrigger(deviceId: number, trigger: TriggerSide, value: number): void;
-  getState(deviceId: number): ControllerState;
-}
+```rhai
+// 手柄控制 API
+set_default_device(0);
+press("A");
+release("A");
+set_thumb("LeftX", 0.5);
+set_trigger("Right", 1.0);
 
-// 延时与等待
-interface TimingAPI {
-  sleep(ms: number): Promise<void>;
-  waitUntil(condition: () => boolean, timeout?: number): Promise<boolean>;
-}
-
-// 游戏事件监听
-interface EventAPI {
-  onGameStart(callback: () => void): void;
-  onGameExit(callback: () => void): void;
-  onProcessChange(callback: (pid: number) => void): void;
-}
-
-// 日志API
-interface LogAPI {
-  info(msg: string): void;
-  warn(msg: string): void;
-  error(msg: string): void;
-}
+// 延时、OCR 与日志 API
+sleep(1000);
+let text = ocr(1);
+log(text);
 ```
 
 #### 3.3.3 脚本编辑器
 
 - 基于 Monaco Editor（VS Code同款编辑器）
-- 语法高亮：JavaScript/TypeScript
+- 语法高亮：Rhai
 - 代码补全：自定义API提示
 - 实时错误检测
 - 代码片段库：常用操作模板
@@ -457,7 +440,7 @@ Tauri IPC → Vue实时波形显示
 Tauri IPC → Script Engine Thread
     │
     ▼
-QuickJS执行 → 调用手柄API → Input Simulation Thread
+Rhai执行 → 调用手柄API → Input Simulation Thread
     │
     ▼
 日志/状态 → Tauri Event → Vue状态更新
@@ -555,7 +538,7 @@ autocontroller/
 │   │   │   └── types.rs
 │   │   ├── script_engine/         # 脚本引擎模块
 │   │   │   ├── mod.rs
-│   │   │   ├── runtime.rs         # QuickJS运行时
+│   │   │   ├── runtime.rs         # Rhai运行时
 │   │   │   ├── api.rs             # 脚本API绑定
 │   │   │   └── types.rs
 │   │   ├── scheduler/             # 任务调度模块
