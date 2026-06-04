@@ -4,6 +4,7 @@ import { useTelemetryStore } from '@/stores/telemetry'
 import { carName } from '@/fh6-tel/lib/car-name'
 import { CAR_CLASS_LABELS, DRIVETRAIN_LABELS } from '@/fh6-tel/lib/types'
 import { ipc } from '@/fh6-tel/lib/ipc'
+import { History, Settings } from '@lucide/vue'
 
 withDefaults(defineProps<{
   useMph?: boolean
@@ -88,16 +89,60 @@ const classBadgeColors: Record<string, string> = {
 
     <div class="flex items-center gap-1.5">
       <button
-        class="text-[0.65rem] font-bold tracking-wider px-1.5 py-[0.2rem] border rounded cursor-pointer transition-colors"
+        class="fh6-action-button text-[0.68rem] font-black"
         :class="tiresVisible
-          ? 'border-[var(--ac)] text-[var(--ac)]'
-          : 'border-[var(--bd-muted)] text-[var(--tx-xdim)] hover:text-[var(--tx-mid)]'"
+          ? 'is-active'
+          : ''"
         @click="onToggleTires?.()"
         :title="tiresVisible ? '隐藏轮胎数据' : '显示轮胎数据'"
-      >轮胎</button>
-      <button class="bg-none border-none cursor-pointer text-[1.1rem] text-[var(--tx-dim)] px-2 py-1 rounded hover:bg-[var(--bg-elevated)] hover:text-[var(--tx-mid)]" @click="onSessions?.()" title="历史会话">⏱</button>
-      <button class="bg-none border-none cursor-pointer text-[1.1rem] text-[var(--tx-dim)] px-2 py-1 rounded hover:bg-[var(--bg-elevated)] hover:text-[var(--tx-mid)]" @click="onSettings?.()" title="设置">⚙</button>
+      >胎</button>
+      <button class="fh6-action-button" @click="onSessions?.()" title="历史会话">
+        <History :size="14" />
+      </button>
+      <button class="fh6-action-button" @click="onSettings?.()" title="设置">
+        <Settings :size="14" />
+      </button>
       <span v-if="version" class="text-[0.7rem] text-[var(--tx-xdim)] tracking-wide px-[0.1rem]">v{{ version }}</span>
     </div>
   </header>
 </template>
+
+<style scoped>
+.fh6-action-button {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--bd-muted);
+  border-radius: 6px;
+  background: var(--bg-panel);
+  color: var(--tx-xdim);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.fh6-action-button :deep(svg) {
+  display: block;
+}
+
+.fh6-action-button:hover {
+  border-color: var(--bd-strong);
+  background: var(--bg-elevated);
+  color: var(--tx-mid);
+}
+
+.fh6-action-button:active {
+  transform: scale(0.96);
+}
+
+.fh6-action-button.is-active {
+  border-color: var(--ac);
+  color: var(--ac);
+  background: color-mix(in srgb, var(--ac) 8%, var(--bg-panel));
+}
+</style>

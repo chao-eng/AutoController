@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Gamepad2, Circle, FileCode2, CalendarClock, Settings, Monitor } from '@lucide/vue'
+import { Gamepad2, Circle, FileCode2, CalendarClock, Settings, Monitor, Gauge, ScanText, RadioTower } from '@lucide/vue'
 import {
   Dialog,
   DialogContent,
@@ -42,15 +42,15 @@ const emit = defineEmits<{
 
           <section class="rounded-lg border border-border bg-card p-4">
             <div class="flex items-center gap-2 mb-2 text-primary">
-              <Monitor :size="18" />
-              <h3 class="text-sm font-semibold text-primary">ViGEmBus 驱动安装</h3>
+              <RadioTower :size="18" />
+              <h3 class="text-sm font-semibold text-primary">ViGEmBus 内置驱动</h3>
             </div>
             <ul class="list-disc pl-5 flex flex-col gap-1">
-              <li class="text-sm text-muted-foreground leading-relaxed">虚拟手柄需要 ViGEmBus 驱动才能被系统识别</li>
-              <li class="text-sm text-muted-foreground leading-relaxed">1. 下载安装 ViGEmBus 驱动：github.com/nefarius/ViGEmBus/releases</li>
-              <li class="text-sm text-muted-foreground leading-relaxed">2. 将 ViGEmClient.dll 放到程序同目录下</li>
-              <li class="text-sm text-muted-foreground leading-relaxed">3. 重启程序，设备监控页面应显示「ViGEmBus 已连接」</li>
-              <li class="text-sm text-muted-foreground leading-relaxed">安装后 Xbox Accessories 应能检测到虚拟手柄</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">当前版本已内置 ViGEmBus 相关运行组件，无需手动下载驱动或复制 ViGEmClient.dll</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">首次启动后进入「设备监控」，程序会自动检测并连接虚拟手柄内核驱动</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">如果状态显示未连接，点击「尝试热重连并激活驱动」即可重新初始化驱动连接</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">绿色图标表示系统可识别虚拟手柄；黄色图标表示当前处于模拟模式，脚本仍可运行但系统/游戏可能无法识别为真实手柄</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">若热重连仍失败，优先尝试以管理员身份运行程序并重启应用</li>
             </ul>
           </section>
 
@@ -78,7 +78,21 @@ const emit = defineEmits<{
               <li class="text-sm text-muted-foreground leading-relaxed">中间区域为代码编辑器，支持手柄控制和延时等 API</li>
               <li class="text-sm text-muted-foreground leading-relaxed">右侧面板提供 API 参考文档</li>
               <li class="text-sm text-muted-foreground leading-relaxed">点击「保存」保存脚本，点击「运行」执行当前脚本</li>
-              <li class="text-sm text-muted-foreground leading-relaxed">脚本 API 示例：<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">controller.press(id, "A")</code> 按下按键，<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">await timing.sleep(1000)</code> 等待 1 秒</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">脚本 API 示例：<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">press("A")</code> 按下按键，<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">sleep(1000)</code> 等待 1 秒</li>
+            </ul>
+          </section>
+
+          <section class="rounded-lg border border-border bg-card p-4">
+            <div class="flex items-center gap-2 mb-2 text-primary">
+              <ScanText :size="18" />
+              <h3 class="text-sm font-semibold text-primary">OCR 屏幕识别</h3>
+            </div>
+            <ul class="list-disc pl-5 flex flex-col gap-1">
+              <li class="text-sm text-muted-foreground leading-relaxed">在「参数配置」的「OCR 自动化配置」中选择识别引擎：Windows 原生 OCR 或内置 PaddleOCR</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">点击「添加标定区」打开悬浮框，在屏幕上拖拽选择需要识别的文字区域</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">标定后脚本可通过 <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">ocr()</code> 读取默认区域，或通过 <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">ocr(2)</code> 读取指定编号区域</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">也可以直接调用 <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">ocr(x, y, w, h)</code> 识别指定屏幕坐标区域</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">识别结果会自动过滤空格和换行，适合配合 <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">contains("开始")</code> 等条件判断做菜单自动化</li>
             </ul>
           </section>
 
@@ -109,13 +123,28 @@ const emit = defineEmits<{
 
           <section class="rounded-lg border border-border bg-card p-4">
             <div class="flex items-center gap-2 mb-2 text-primary">
+              <Gauge :size="18" />
+              <h3 class="text-sm font-semibold text-primary">Forza 遥测</h3>
+            </div>
+            <ul class="list-disc pl-5 flex flex-col gap-1">
+              <li class="text-sm text-muted-foreground leading-relaxed">进入「Forza 遥测」页面后，应用会监听 Forza Data Out UDP 数据并显示实时仪表盘</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">默认监听端口为 <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">20440</code>；如需修改，可点击右上角设置按钮调整 UDP 接收端口，重启后生效</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">在 Forza 游戏设置中开启 Data Out，并将 IP 指向运行本程序的电脑；本机运行时可填写 <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">127.0.0.1</code></li>
+              <li class="text-sm text-muted-foreground leading-relaxed">页面顶部会显示连接状态、车辆名称、等级、PI 和驱动形式；右上角可切换轮胎数据、打开历史会话和调整设置</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">启用自动记录后，可在历史会话中查看圈速、最佳圈和回放数据</li>
+            </ul>
+          </section>
+
+          <section class="rounded-lg border border-border bg-card p-4">
+            <div class="flex items-center gap-2 mb-2 text-primary">
               <Circle :size="18" />
               <h3 class="text-sm font-semibold text-primary">快速上手</h3>
             </div>
             <ol class="list-decimal pl-5 flex flex-col gap-1">
-              <li class="text-sm text-muted-foreground leading-relaxed">安装 ViGEmBus 驱动（首次使用）</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">打开「设备监控」确认 ViGEmBus 内置驱动已连接，必要时点击热重连</li>
               <li class="text-sm text-muted-foreground leading-relaxed">在「设备监控」页面添加虚拟手柄</li>
               <li class="text-sm text-muted-foreground leading-relaxed">在「宏控制」页面录制手柄操作，或在「脚本编辑器」编写自动化脚本</li>
+              <li class="text-sm text-muted-foreground leading-relaxed">需要识别屏幕文字时，先在「参数配置」标定 OCR 区域，再在脚本中调用 <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">ocr()</code></li>
               <li class="text-sm text-muted-foreground leading-relaxed">使用「任务调度」设置定时自动执行</li>
               <li class="text-sm text-muted-foreground leading-relaxed">在「日志查看」页面排查问题</li>
             </ol>

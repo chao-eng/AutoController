@@ -4,7 +4,7 @@ import { useScriptStore } from '../stores/script'
 import { useMacroStore } from '../stores/macro'
 import { useUIStore } from '../stores/ui'
 import { useConfigStore } from '../stores/config'
-import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link, BookOpen, ChevronLeft, ChevronRight } from '@lucide/vue'
+import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link, BookOpen, ChevronLeft, ChevronRight, List, PanelLeftClose, PanelLeftOpen } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import CodeEditor from '../components/script/CodeEditor.vue'
@@ -62,6 +62,29 @@ try {
   console.warn('Unable to access localStorage:', e)
 }
 const apiPanelCollapsed = ref(collapsedDefault)
+
+let scriptListCollapsedDefault = false
+try {
+  scriptListCollapsedDefault = localStorage.getItem('script_list_collapsed') === 'true'
+} catch (e) {
+  console.warn('Unable to access localStorage:', e)
+}
+const scriptListCollapsed = ref(scriptListCollapsedDefault)
+
+function toggleScriptList() {
+  scriptListCollapsed.value = !scriptListCollapsed.value
+  try {
+    localStorage.setItem('script_list_collapsed', String(scriptListCollapsed.value))
+  } catch (e) {
+    console.warn('Unable to write to localStorage:', e)
+  }
+}
+
+function handleScriptListClick() {
+  if (scriptListCollapsed.value) {
+    toggleScriptList()
+  }
+}
 
 function toggleApiPanel() {
   apiPanelCollapsed.value = !apiPanelCollapsed.value
@@ -384,95 +407,143 @@ function saveScriptOrder(orderedScripts: any[]) {
     </PageHeader>
 
     <div class="flex min-h-0 flex-1 gap-4">
-      <div class="flex w-[260px] min-w-[260px] flex-col gap-2 overflow-hidden rounded-lg border border-border bg-surface p-2">
-        <Input
-          v-model="newScriptName"
-          placeholder="脚本名称"
-          :disabled="macroStore.isRecording"
-          class="shrink-0 text-xs"
-        />
-
-        <div class="flex shrink-0 flex-wrap gap-1">
+      <div
+        :class="[
+          'relative flex flex-col overflow-hidden rounded-lg border border-border bg-surface transition-all duration-300',
+          scriptListCollapsed ? 'w-12 min-w-12 cursor-pointer p-1 hover:border-primary hover:bg-surface-elevated' : 'w-[260px] min-w-[260px] gap-2 p-2'
+        ]"
+        @click="handleScriptListClick"
+      >
+        <div v-if="scriptListCollapsed" class="flex h-full min-h-0 flex-col items-center gap-2">
           <button
-            class="filter-pill"
-            :class="{ active: profileFilter === '' }"
-            @click="profileFilter = ''"
-          >全部</button>
-          <button
-            v-for="profile in configStore.config.profiles"
-            :key="profile.id"
-            class="filter-pill"
-            :class="{ active: profileFilter === profile.id }"
-            @click="profileFilter = profile.id"
-            :title="profile.name"
-          >{{ profile.name }}</button>
-          <button
-            class="filter-pill unbound"
-            :class="{ active: profileFilter === '__unbound__' }"
-            @click="profileFilter = '__unbound__'"
-          >未绑定</button>
-        </div>
-
-        <div class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto" @dragover.prevent>
-          <div v-if="filteredScripts.length === 0" class="py-4 text-center text-[11px] text-muted-foreground/60">无匹配脚本</div>
-          <div
-            v-for="(script, index) in filteredScripts"
-            :key="script.id"
-            :class="[
-              'flex items-center justify-between rounded px-2 py-1 transition-colors select-none',
-              store.currentScript?.id === script.id ? 'bg-green-500/10 text-green-500' : '',
-              macroStore.isRecording ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
-              dragOverIndex === index ? 'border border-dashed border-primary bg-primary/5' : '',
-            ]"
-            draggable="true"
-            @dragstart="handleDragStart(index, $event)"
-            @dragover.prevent="handleDragOver(index, $event)"
-            @dragenter.prevent="handleDragEnter(index, $event)"
-            @dragleave="handleDragLeave"
-            @drop.prevent="handleDrop(index)"
-            @click="!macroStore.isRecording && selectScript(script.id)"
+            class="flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground/70 opacity-80 transition-all hover:bg-white/8 hover:text-text hover:opacity-100"
+            @click.stop="toggleScriptList"
+            title="展开脚本列表"
           >
-            <template v-if="editingScriptId === script.id">
-              <input
-                ref="editInput"
-                v-model="editingScriptName"
-                class="w-full rounded-sm border border-primary bg-surface-elevated px-1.5 py-0.5 text-xs text-text outline-none"
-                @keydown.enter="saveScriptName(script.id)"
-                @blur="saveScriptName(script.id)"
-                @click.stop
-              />
-            </template>
-            <template v-else>
-              <div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden" draggable="false">
-                <span class="cursor-grab pr-1 text-[13px] text-muted-foreground/60 select-none active:cursor-grabbing" title="按住拖拽排序" draggable="false">☰</span>
-                <span
-                  class="min-w-0 flex-1 truncate text-xs text-muted-foreground"
-                  :class="store.currentScript?.id === script.id ? 'text-green-500' : ''"
-                  @dblclick="!macroStore.isRecording && startRename(script)"
-                  draggable="false"
-                >{{ script.name }}</span>
-                <span
-                  v-if="scriptProfileMap[script.id]"
-                  class="inline-flex h-3.5 w-3.5 shrink-0 cursor-default items-center justify-center rounded-full bg-indigo-500/20 text-primary"
-                  @mouseenter="showTooltip($event, '绑定于: ' + scriptProfileMap[script.id].join(', '))"
-                  @mousemove="moveTooltip"
-                  @mouseleave="hideTooltip"
-                  draggable="false"
-                >
-                  <Link :size="9" />
-                </span>
-              </div>
-              <div class="flex items-center gap-0.5 shrink-0">
-                <Button variant="ghost" size="icon-xs" :disabled="macroStore.isRecording" title="重命名" @click.stop="!macroStore.isRecording && startRename(script)">
-                  <Edit2 :size="12" />
-                </Button>
-                <Button variant="ghost" size="icon-xs" class="hover:text-destructive hover:bg-destructive/15" :disabled="macroStore.isRecording" title="删除" @click.stop="!macroStore.isRecording && deleteScript(script.id)">
-                  <Trash2 :size="12" />
-                </Button>
-              </div>
-            </template>
+            <PanelLeftOpen :size="14" />
+          </button>
+          <span class="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[4px] text-muted-foreground/60" style="writing-mode: vertical-lr">脚本</span>
+          <div class="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto">
+            <button
+              v-for="script in filteredScripts"
+              :key="script.id"
+              class="script-rail-button"
+              :class="{ active: store.currentScript?.id === script.id }"
+              :title="script.name"
+              :disabled="macroStore.isRecording"
+              @click.stop="!macroStore.isRecording && selectScript(script.id)"
+            >
+              {{ script.name.trim().slice(0, 1) || '#' }}
+            </button>
+            <span v-if="filteredScripts.length === 0" class="pt-2 text-[11px] text-muted-foreground/50">—</span>
           </div>
         </div>
+
+        <template v-else>
+          <div class="flex shrink-0 items-center justify-between">
+            <div class="flex min-w-0 items-center gap-1 text-text">
+              <List :size="14" />
+              <h4 class="m-0 truncate text-xs font-semibold text-text">脚本列表</h4>
+              <span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{{ filteredScripts.length }}</span>
+            </div>
+            <button
+              class="flex h-5 w-5 items-center justify-center rounded-sm text-muted-foreground/70 opacity-70 transition-all hover:opacity-100 hover:bg-white/8 hover:text-text"
+              @click.stop="toggleScriptList"
+              title="折叠为一列"
+            >
+              <PanelLeftClose :size="14" />
+            </button>
+          </div>
+
+          <Input
+            v-model="newScriptName"
+            placeholder="脚本名称"
+            :disabled="macroStore.isRecording"
+            class="shrink-0 text-xs"
+          />
+
+          <div class="flex shrink-0 flex-wrap gap-1">
+            <button
+              class="filter-pill"
+              :class="{ active: profileFilter === '' }"
+              @click="profileFilter = ''"
+            >全部</button>
+            <button
+              v-for="profile in configStore.config.profiles"
+              :key="profile.id"
+              class="filter-pill"
+              :class="{ active: profileFilter === profile.id }"
+              @click="profileFilter = profile.id"
+              :title="profile.name"
+            >{{ profile.name }}</button>
+            <button
+              class="filter-pill unbound"
+              :class="{ active: profileFilter === '__unbound__' }"
+              @click="profileFilter = '__unbound__'"
+            >未绑定</button>
+          </div>
+
+          <div class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto" @dragover.prevent>
+            <div v-if="filteredScripts.length === 0" class="py-4 text-center text-[11px] text-muted-foreground/60">无匹配脚本</div>
+            <div
+              v-for="(script, index) in filteredScripts"
+              :key="script.id"
+              :class="[
+                'flex items-center justify-between rounded px-2 py-1 transition-colors select-none',
+                store.currentScript?.id === script.id ? 'bg-green-500/10 text-green-500' : '',
+                macroStore.isRecording ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+                dragOverIndex === index ? 'border border-dashed border-primary bg-primary/5' : '',
+              ]"
+              draggable="true"
+              @dragstart="handleDragStart(index, $event)"
+              @dragover.prevent="handleDragOver(index, $event)"
+              @dragenter.prevent="handleDragEnter(index, $event)"
+              @dragleave="handleDragLeave"
+              @drop.prevent="handleDrop(index)"
+              @click="!macroStore.isRecording && selectScript(script.id)"
+            >
+              <template v-if="editingScriptId === script.id">
+                <input
+                  ref="editInput"
+                  v-model="editingScriptName"
+                  class="w-full rounded-sm border border-primary bg-surface-elevated px-1.5 py-0.5 text-xs text-text outline-none"
+                  @keydown.enter="saveScriptName(script.id)"
+                  @blur="saveScriptName(script.id)"
+                  @click.stop
+                />
+              </template>
+              <template v-else>
+                <div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden" draggable="false">
+                  <span class="cursor-grab pr-1 text-[13px] text-muted-foreground/60 select-none active:cursor-grabbing" title="按住拖拽排序" draggable="false">☰</span>
+                  <span
+                    class="min-w-0 flex-1 truncate text-xs text-muted-foreground"
+                    :class="store.currentScript?.id === script.id ? 'text-green-500' : ''"
+                    @dblclick="!macroStore.isRecording && startRename(script)"
+                    draggable="false"
+                  >{{ script.name }}</span>
+                  <span
+                    v-if="scriptProfileMap[script.id]"
+                    class="inline-flex h-3.5 w-3.5 shrink-0 cursor-default items-center justify-center rounded-full bg-indigo-500/20 text-primary"
+                    @mouseenter="showTooltip($event, '绑定于: ' + scriptProfileMap[script.id].join(', '))"
+                    @mousemove="moveTooltip"
+                    @mouseleave="hideTooltip"
+                    draggable="false"
+                  >
+                    <Link :size="9" />
+                  </span>
+                </div>
+                <div class="flex items-center gap-0.5 shrink-0">
+                  <Button variant="ghost" size="icon-xs" :disabled="macroStore.isRecording" title="重命名" @click.stop="!macroStore.isRecording && startRename(script)">
+                    <Edit2 :size="12" />
+                  </Button>
+                  <Button variant="ghost" size="icon-xs" class="hover:text-destructive hover:bg-destructive/15" :disabled="macroStore.isRecording" title="删除" @click.stop="!macroStore.isRecording && deleteScript(script.id)">
+                    <Trash2 :size="12" />
+                  </Button>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
       </div>
 
       <div class="min-w-0 flex-1">
@@ -641,6 +712,34 @@ function saveScriptOrder(orderedScripts: any[]) {
   background: rgba(245, 158, 11, 0.12);
   border-color: #f59e0b;
   color: #f59e0b;
+}
+
+.script-rail-button {
+  width: 1.7rem;
+  height: 1.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--color-surface-elevated);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.script-rail-button:hover {
+  border-color: var(--primary);
+  color: var(--foreground);
+}
+
+.script-rail-button.active {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--primary);
 }
 
 .is-recording .min-w-0.flex-1:first-of-type,
