@@ -200,7 +200,8 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
 
 <style scoped>
 .dash-cluster {
-  --speed-accent: #c6f70c;
+  --speed-accent: #008f5f;
+  --speed-accent-glow: rgba(0, 143, 95, 0.34);
   --speed-warning: #ef4444;
   --speed-idle: #d8dce0;
   position: relative;
@@ -263,26 +264,31 @@ const rpmReadout = computed(() => pkt.value ? Math.round(pkt.value.currentEngine
 
 .arc-progress {
   stroke: var(--speed-accent);
-  stroke-width: 4;
+  stroke-width: 5;
   opacity: 1;
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--speed-accent) 55%, transparent));
+  filter: drop-shadow(0 0 4px var(--speed-accent-glow));
   transition: stroke-dasharray 60ms linear;
 }
 
 .speed-tick {
   stroke: var(--speed-idle);
-  stroke-width: 1.6;
+  stroke-width: 1.7;
   stroke-linecap: square;
-  transition: stroke 60ms linear, filter 60ms linear;
+  transition: stroke 60ms linear, stroke-width 60ms linear, filter 60ms linear;
 }
 
 .speed-tick.major {
-  stroke-width: 2.1;
+  stroke-width: 2.3;
 }
 
 .speed-tick.lit {
   stroke: var(--speed-accent);
-  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--speed-accent) 45%, transparent));
+  stroke-width: 2;
+  filter: drop-shadow(0 0 2px var(--speed-accent-glow));
+}
+
+.speed-tick.major.lit {
+  stroke-width: 2.7;
 }
 
 .speed-label {

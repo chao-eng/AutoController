@@ -21,6 +21,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import PageShell from '@/components/layout/PageShell.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import EmptyState from '@/components/layout/EmptyState.vue'
 
 const configStore = useConfigStore()
 const uiStore = useUIStore()
@@ -243,32 +246,36 @@ function getTypeName(type: string): string {
 </script>
 
 <template>
-  <div class="p-6 h-full flex flex-col overflow-y-auto">
-    <!-- 头部说明 -->
-    <div class="flex justify-between items-center mb-6 flex-shrink-0">
-      <div>
-        <h2 class="text-xl font-semibold text-foreground mb-1">聚合通知配置</h2>
-        <p class="text-xs text-muted-foreground max-w-xl">配置飞书群Webhook、Server酱或Telegram Bot，在定时任务序列执行中断或完成时自动向您分发通知。</p>
-      </div>
+  <PageShell>
+    <PageHeader
+      title="聚合通知配置"
+      description="配置飞书群 Webhook、Server 酱或 Telegram Bot，在任务完成或中断时自动分发通知。"
+    >
+      <template #actions>
       <Button @click="openCreateDialog">
         <Plus :size="16" class="mr-1" />
         <span>添加通道</span>
       </Button>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- 通道卡片列表 -->
     <div class="flex-1 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6 content-start">
-      <div
+      <EmptyState
         v-if="!configStore.config.notification_channels || configStore.config.notification_channels.length === 0"
-        class="col-span-full text-center py-16 px-6 text-muted-foreground bg-card border border-dashed border-border rounded-lg flex flex-col items-center gap-2"
+        title="尚未配置通知通道"
+        description="添加通道后，可在定时任务执行完成或中断时发送聚合通知。"
+        class="col-span-full min-h-[280px]"
       >
-        <BellRing :size="48" class="text-muted-foreground opacity-50 mb-1" />
-        <h3 class="text-base text-foreground font-medium">尚未配置通知通道</h3>
-        <p class="text-xs max-w-xs mx-auto">点击右上角"添加通道"按钮，立即绑定通知分发服务。</p>
-        <Button variant="outline" class="mt-4" @click="openCreateDialog">
+        <template #icon>
+          <BellRing :size="42" />
+        </template>
+        <template #actions>
+        <Button variant="outline" @click="openCreateDialog">
           添加首个通道
         </Button>
-      </div>
+        </template>
+      </EmptyState>
 
       <Card
         v-else
@@ -483,5 +490,5 @@ function getTypeName(type: string): string {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  </div>
+  </PageShell>
 </template>

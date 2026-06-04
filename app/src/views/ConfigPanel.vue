@@ -18,6 +18,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import PageShell from '@/components/layout/PageShell.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import EmptyState from '@/components/layout/EmptyState.vue'
 
 const store = useConfigStore()
 const scriptStore = useScriptStore()
@@ -419,10 +422,11 @@ function importBackup(event: Event) {
 </script>
 
 <template>
-  <div class="flex h-full flex-col gap-4 overflow-y-auto p-4 lg:p-6">
-    <div class="flex items-center justify-between shrink-0">
-      <h2 class="text-lg font-semibold">参数配置</h2>
-    </div>
+  <PageShell>
+    <PageHeader
+      title="参数配置"
+      description="管理通用设置、OCR 标定、Profile 绑定和全局数据备份。"
+    />
 
     <div class="flex flex-col gap-6">
       <!-- 通用设置 -->
@@ -473,7 +477,7 @@ function importBackup(event: Event) {
             <Button variant="outline" size="sm" @click="triggerImportBackup" title="导入备份并恢复数据">
               📂 导入恢复数据
             </Button>
-            <input type="file" ref="backupFileInput" @change="importBackup" accept=".json" class="hidden-input" />
+            <input type="file" ref="backupFileInput" @change="importBackup" accept=".json" class="hidden" />
           </div>
         </CardContent>
       </Card>
@@ -549,13 +553,15 @@ function importBackup(event: Event) {
             <Button variant="default" size="sm" @click="openCreateModal" title="新建游戏手柄Profile配置">
               <Plus :size="13" /> 创建 Profile
             </Button>
-            <input type="file" ref="fileInput" @change="handleImport" accept=".json" class="hidden-input" />
+            <input type="file" ref="fileInput" @change="handleImport" accept=".json" class="hidden" />
           </div>
         </CardHeader>
         <CardContent>
-          <div v-if="store.config.profiles.length === 0" class="text-center text-xs text-muted-foreground py-8 border border-dashed border-border rounded-md">
-            暂无 Profile，点击上方按钮创建
-          </div>
+          <EmptyState
+            v-if="store.config.profiles.length === 0"
+            title="暂无 Profile"
+            description="创建 Profile 后，可以绑定游戏进程和脚本，便于不同自动化场景快速切换。"
+          />
 
           <div v-else class="space-y-1.5">
             <div v-for="profile in store.config.profiles" :key="profile.id" class="flex items-center gap-3 p-3 bg-muted/30 border border-border rounded-lg hover:-translate-y-0.5 hover:border-muted-foreground/50 hover:shadow-md transition-all">
@@ -694,5 +700,5 @@ function importBackup(event: Event) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  </div>
+  </PageShell>
 </template>

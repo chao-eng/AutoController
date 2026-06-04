@@ -9,6 +9,9 @@ import { Plus, AlertTriangle, CheckCircle, AlertCircle, Activity } from '@lucide
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import PageShell from '@/components/layout/PageShell.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import StatusBanner from '@/components/layout/StatusBanner.vue'
 
 const store = useControllerStore()
 const uiStore = useUIStore()
@@ -307,35 +310,41 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-full flex-col gap-4 overflow-y-auto p-4 lg:p-6">
-    <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold">设备监控</h2>
+  <PageShell>
+    <PageHeader
+      title="设备监控"
+      description="管理虚拟手柄实例，查看驱动状态，并实时操作当前选中的控制器。"
+    >
+      <template #actions>
       <Button variant="default" size="sm" @click="addDevice">
         <Plus :size="16" />
         <span>添加设备</span>
       </Button>
-    </div>
+      </template>
+    </PageHeader>
 
-    <div v-if="store.vigemStatus" :class="[
-      'flex items-center justify-between gap-2 rounded-md px-4 py-2 text-xs',
-      store.vigemStatus.connected
-        ? 'border border-green-500/20 bg-green-500/10 text-green-600 dark:text-green-400'
-        : 'border border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400'
-    ]">
-      <div class="flex items-center gap-2">
+    <StatusBanner
+      v-if="store.vigemStatus"
+      :tone="store.vigemStatus.connected ? 'success' : 'warning'"
+    >
+      <template #icon>
         <CheckCircle v-if="store.vigemStatus.connected" :size="14" />
         <AlertTriangle v-else :size="14" />
-        <span>{{ store.vigemStatus.message }}</span>
-      </div>
-      <Button v-if="!store.vigemStatus.connected" variant="outline" size="xs" :disabled="reconnecting" @click="handleReconnect">
-        {{ reconnecting ? '正在连接...' : '🔄 尝试热重连并激活驱动' }}
-      </Button>
-    </div>
+      </template>
+      <span>{{ store.vigemStatus.message }}</span>
+      <template v-if="!store.vigemStatus.connected" #actions>
+        <Button variant="outline" size="xs" :disabled="reconnecting" @click="handleReconnect">
+          {{ reconnecting ? '正在连接...' : '尝试热重连并激活驱动' }}
+        </Button>
+      </template>
+    </StatusBanner>
 
-    <div v-if="vigemSuggestion" class="flex items-center gap-2 rounded-md border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-xs text-blue-600 dark:text-blue-400">
-      <AlertCircle :size="14" />
+    <StatusBanner v-if="vigemSuggestion" tone="info">
+      <template #icon>
+        <AlertCircle :size="14" />
+      </template>
       <span>{{ vigemSuggestion }}</span>
-    </div>
+    </StatusBanner>
 
     <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr))">
       <DeviceCard
@@ -797,5 +806,5 @@ watch(
         </CardContent>
       </Card>
     </div>
-  </div>
+  </PageShell>
 </template>

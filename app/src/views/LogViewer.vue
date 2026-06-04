@@ -3,6 +3,9 @@ import { useLogStore } from '../stores/log'
 import { Trash2 } from '@lucide/vue'
 import { ref } from 'vue'
 import { Button } from '@/components/ui/button'
+import PageShell from '@/components/layout/PageShell.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import EmptyState from '@/components/layout/EmptyState.vue'
 
 const store = useLogStore()
 const levelFilter = ref<string>('')
@@ -25,10 +28,12 @@ function getLevelColor(level: string): string {
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto p-6 flex flex-col">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold">日志查看</h2>
-      <div class="flex items-center gap-2">
+  <PageShell :scroll="false">
+    <PageHeader
+      title="日志查看"
+      description="查看最近运行日志，并按级别快速筛选问题线索。"
+    >
+      <template #actions>
         <div class="flex gap-0.5 bg-muted rounded-md p-0.5">
           <button
             v-for="level in ['', 'Error', 'Warn', 'Info', 'Debug']"
@@ -43,13 +48,16 @@ function getLevelColor(level: string): string {
         <Button variant="ghost" size="icon" class="size-7" @click="store.clearEntries()" title="清空">
           <Trash2 :size="14" />
         </Button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <div class="flex-1 overflow-y-auto bg-card border border-border rounded-xl p-2 font-mono text-[11px]">
-      <div v-if="store.filteredEntries().length === 0" class="text-center text-muted-foreground py-12 text-sm">
-        暂无日志记录
-      </div>
+      <EmptyState
+        v-if="store.filteredEntries().length === 0"
+        title="暂无日志记录"
+        description="运行脚本、调度任务或设备操作后，最新日志会显示在这里。"
+        class="min-h-[240px] font-sans"
+      />
       <div
         v-for="entry in store.filteredEntries().slice(-500).reverse()"
         :key="entry.id"
@@ -61,5 +69,5 @@ function getLevelColor(level: string): string {
         <span class="text-muted-foreground flex-1">{{ entry.message }}</span>
       </div>
     </div>
-  </div>
+  </PageShell>
 </template>

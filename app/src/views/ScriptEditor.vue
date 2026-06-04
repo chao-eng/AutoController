@@ -8,6 +8,8 @@ import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link, BookOpen, Chevro
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import CodeEditor from '../components/script/CodeEditor.vue'
+import PageShell from '@/components/layout/PageShell.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
 
 const store = useScriptStore()
 const macroStore = useMacroStore()
@@ -317,10 +319,12 @@ function saveScriptOrder(orderedScripts: any[]) {
 </script>
 
 <template>
-  <div :class="['flex h-full flex-col p-6', macroStore.isRecording ? 'is-recording' : '']">
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-lg font-semibold">脚本编辑器</h2>
-      <div class="flex items-center gap-2">
+  <PageShell :scroll="false" :class="macroStore.isRecording ? 'is-recording' : ''">
+    <PageHeader
+      title="脚本编辑器"
+      description="编写、录制、运行和管理 Rhai 自动化脚本。"
+    >
+      <template #actions>
         <Button
           v-if="!macroStore.isRecording"
           variant="destructive"
@@ -376,8 +380,8 @@ function saveScriptOrder(orderedScripts: any[]) {
           ></span>
           <span class="max-w-[240px] truncate whitespace-nowrap">{{ store.executionMessage }}</span>
         </div>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <div class="flex min-h-0 flex-1 gap-4">
       <div class="flex w-[260px] min-w-[260px] flex-col gap-2 overflow-hidden rounded-lg border border-border bg-surface p-2">
@@ -599,7 +603,7 @@ function saveScriptOrder(orderedScripts: any[]) {
         :style="{ left: tooltipX + 'px', top: tooltipY + 'px' }"
       >{{ tooltipText }}</div>
     </teleport>
-  </div>
+  </PageShell>
 </template>
 
 <style scoped>

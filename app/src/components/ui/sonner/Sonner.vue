@@ -13,6 +13,7 @@ import { Toaster as Sonner } from 'vue-sonner'
 import { cn } from '@/lib/utils'
 
 const props = withDefaults(defineProps<ToasterProps>(), {
+  closeButtonPosition: 'top-right',
   toastOptions: () => ({
     classes: {
       toast: 'rounded-2xl border border-normal-border bg-normal-bg text-normal-text',

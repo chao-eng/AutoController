@@ -64,6 +64,21 @@
     --tx-xdim: oklch(0.70 0 0);
     --tx-lo: oklch(0.55 0 0);
     --ac: oklch(0.20 0 0);
+    --status-neutral-bg: oklch(0.96 0 0 / 0.70);
+    --status-neutral-border: oklch(0.84 0 0);
+    --status-neutral-text: oklch(0.37 0 0);
+    --status-info-bg: oklch(0.96 0.035 250 / 0.72);
+    --status-info-border: oklch(0.72 0.105 250 / 0.36);
+    --status-info-text: oklch(0.39 0.125 250);
+    --status-success-bg: oklch(0.96 0.045 155 / 0.74);
+    --status-success-border: oklch(0.68 0.15 155 / 0.36);
+    --status-success-text: oklch(0.38 0.14 155);
+    --status-warning-bg: oklch(0.96 0.055 82 / 0.78);
+    --status-warning-border: oklch(0.72 0.13 82 / 0.42);
+    --status-warning-text: oklch(0.44 0.125 67);
+    --status-danger-bg: oklch(0.96 0.05 25 / 0.76);
+    --status-danger-border: oklch(0.68 0.18 25 / 0.38);
+    --status-danger-text: oklch(0.45 0.17 25);
 
     /* Legacy color aliases for backward compatibility */
     --color-surface: var(--card);
@@ -127,6 +142,21 @@
     --tx-xdim: oklch(0.55 0 0);
     --tx-lo: oklch(0.43 0 0);
     --ac: oklch(0.90 0 0);
+    --status-neutral-bg: oklch(1 0 0 / 6%);
+    --status-neutral-border: oklch(1 0 0 / 12%);
+    --status-neutral-text: oklch(0.80 0 0);
+    --status-info-bg: oklch(0.30 0.10 250 / 0.24);
+    --status-info-border: oklch(0.68 0.12 250 / 0.28);
+    --status-info-text: oklch(0.78 0.12 250);
+    --status-success-bg: oklch(0.32 0.11 155 / 0.22);
+    --status-success-border: oklch(0.72 0.14 155 / 0.28);
+    --status-success-text: oklch(0.80 0.14 155);
+    --status-warning-bg: oklch(0.34 0.12 78 / 0.22);
+    --status-warning-border: oklch(0.78 0.14 78 / 0.30);
+    --status-warning-text: oklch(0.84 0.13 78);
+    --status-danger-bg: oklch(0.35 0.13 25 / 0.24);
+    --status-danger-border: oklch(0.72 0.17 25 / 0.30);
+    --status-danger-text: oklch(0.80 0.15 25);
  
     /* Legacy color aliases for backward compatibility */
     --color-surface: var(--card);

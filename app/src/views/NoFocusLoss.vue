@@ -16,6 +16,9 @@ import {
   XCircle
 } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
+import PageShell from '@/components/layout/PageShell.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import StatusBanner from '@/components/layout/StatusBanner.vue'
 
 interface ProcessInfo {
   pid: number
@@ -131,10 +134,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col overflow-y-auto bg-background p-6">
-    <div class="mb-4 flex shrink-0 items-center justify-between">
-      <h2 class="text-lg font-semibold text-foreground">防止游戏/窗口失去焦点 (No Focus Loss)</h2>
-      <div class="flex items-center gap-2">
+  <PageShell>
+    <PageHeader
+      title="防止游戏/窗口失去焦点"
+      description="对目标进程注入轻量 Hook，让窗口切到后台后仍保持渲染、声音与挂机运行。"
+    >
+      <template #actions>
         <Button variant="outline" size="sm" @click="showFeatureGuide = !showFeatureGuide">
           <Info :size="14" class="mr-1" />
           <span>功能使用说明</span>
@@ -147,57 +152,69 @@ onMounted(() => {
           <RefreshCw :size="14" :class="{ 'animate-spin': loading }" class="mr-1" />
           <span>刷新进程</span>
         </Button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <div v-if="!isAdmin" class="mb-4 flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50/50 p-4 text-amber-700">
-      <div class="flex items-center gap-2">
+    <StatusBanner v-if="!isAdmin" tone="warning">
+      <template #icon>
         <ShieldAlert :size="16" class="shrink-0" />
+      </template>
+      <div class="flex items-center gap-2">
         <span class="text-sm font-medium">推荐以管理员权限运行 (Administrator Privileges Recommended)</span>
-        <span v-if="isAdminTipCollapsed" class="text-xs text-amber-500">：未以管理员权限启动，注入高权限游戏可能会失败。</span>
-        <button class="ml-auto text-xs font-medium text-amber-600 hover:text-amber-800" @click="isAdminTipCollapsed = !isAdminTipCollapsed">
+        <span v-if="isAdminTipCollapsed" class="text-xs opacity-75">：未以管理员权限启动，注入高权限游戏可能会失败。</span>
+      </div>
+      <template #actions>
+        <button class="text-xs font-medium opacity-80 hover:opacity-100" @click="isAdminTipCollapsed = !isAdminTipCollapsed">
           {{ isAdminTipCollapsed ? '展开详情' : '收起' }}
         </button>
-      </div>
+      </template>
       <Transition name="slide">
-        <div v-if="!isAdminTipCollapsed" class="text-xs leading-relaxed text-amber-600">
+        <div v-if="!isAdminTipCollapsed" class="text-xs leading-relaxed opacity-90">
           当前软件<strong>未以管理员身份运行</strong>。由于"防止窗口失焦"功能需要对目标游戏/程序进行跨进程注入，若目标游戏或软件是以管理员权限启动的（例如大部分大型3D游戏或Steam/Wegame平台下的游戏），普通权限的 AutoController 将会因系统权限不足（注入错误代码 102 或卸载错误代码 123）导致操作失败。<strong>强烈建议您右键本程序，选择「以管理员身份运行」重新启动。</strong>
         </div>
       </Transition>
-    </div>
-    <div v-else class="mb-4 flex flex-col gap-2 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 text-emerald-700">
-      <div class="flex items-center gap-2">
+    </StatusBanner>
+    <StatusBanner v-else tone="success">
+      <template #icon>
         <ShieldCheck :size="16" class="shrink-0" />
+      </template>
+      <div class="flex items-center gap-2">
         <span class="text-sm font-medium">已以管理员权限运行 (Running with Administrator Privileges)</span>
-        <span v-if="isAdminTipCollapsed" class="text-xs text-emerald-500">：已具备完整的系统高权限，可顺利附加注入。</span>
-        <button class="ml-auto text-xs font-medium text-emerald-600 hover:text-emerald-800" @click="isAdminTipCollapsed = !isAdminTipCollapsed">
+        <span v-if="isAdminTipCollapsed" class="text-xs opacity-75">：已具备完整的系统高权限，可顺利附加注入。</span>
+      </div>
+      <template #actions>
+        <button class="text-xs font-medium opacity-80 hover:opacity-100" @click="isAdminTipCollapsed = !isAdminTipCollapsed">
           {{ isAdminTipCollapsed ? '展开详情' : '收起' }}
         </button>
-      </div>
+      </template>
       <Transition name="slide">
-        <div v-if="!isAdminTipCollapsed" class="text-xs leading-relaxed text-emerald-600">
+        <div v-if="!isAdminTipCollapsed" class="text-xs leading-relaxed opacity-90">
           当前软件<strong>已成功以管理员身份运行</strong>。程序已具备完整的系统权限，可以完美支持对高权限游戏及各类窗口程序附加防止失焦 Hook 拦截。
         </div>
       </Transition>
-    </div>
+    </StatusBanner>
 
-    <div class="mb-4 flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50/50 p-4 text-red-700">
-      <div class="flex items-center gap-2">
+    <StatusBanner tone="danger">
+      <template #icon>
         <AlertTriangle :size="16" class="shrink-0" />
+      </template>
+      <div class="flex items-center gap-2">
         <span class="text-sm font-medium">高危安全警告与免责声明 (Ban Risk Warning)</span>
-        <span v-if="isWarningCollapsed" class="text-xs text-red-500">：跨进程注入在多人网游中有封号风险，严禁在网游中使用！</span>
-        <button class="ml-auto text-xs font-medium text-red-600 hover:text-red-800" @click="isWarningCollapsed = !isWarningCollapsed">
+        <span v-if="isWarningCollapsed" class="text-xs opacity-75">：跨进程注入在多人网游中有封号风险，严禁在网游中使用！</span>
+      </div>
+      <template #actions>
+        <button class="text-xs font-medium opacity-80 hover:opacity-100" @click="isWarningCollapsed = !isWarningCollapsed">
           {{ isWarningCollapsed ? '展开详情' : '收起' }}
         </button>
-      </div>
+      </template>
       <Transition name="slide">
-        <div v-if="!isWarningCollapsed" class="text-xs leading-relaxed text-red-600">
+        <div v-if="!isWarningCollapsed" class="text-xs leading-relaxed opacity-90">
           <p>1. <strong>封号风险警告</strong>：本功能基于跨进程注入技术（DLL Injection）拦截窗口失活消息。这会被反作弊系统（如 EAC、BattlEye、Vanguard 等）视为外挂注入，<strong>在多人网络游戏或带有反作弊保护的游戏中开启此功能有极高封号风险！</strong></p>
           <p>2. <strong>网络游戏禁用</strong>：<strong>严禁在网络联机游戏中使用此功能</strong>。仅推荐在单机游戏（例如单机挂机、防止切屏暂停/静音、双显屏辅助等）中使用。</p>
           <p>3. <strong>免责说明</strong>：本工具为开源辅助软件，因违反规则或在网游中误用导致的任何损失（包括但不限于账号被封禁、处罚）均由使用者本人承担。</p>
         </div>
       </Transition>
-    </div>
+    </StatusBanner>
 
     <div v-if="errorMessage" class="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
       <XCircle :size="14" class="shrink-0" />
@@ -352,5 +369,5 @@ onMounted(() => {
         </div>
       </div>
     </div>
-  </div>
+  </PageShell>
 </template>

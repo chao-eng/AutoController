@@ -7,6 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import PageShell from '@/components/layout/PageShell.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import StatusBanner from '@/components/layout/StatusBanner.vue'
+import EmptyState from '@/components/layout/EmptyState.vue'
 
 interface XInputStatus {
   available: boolean
@@ -67,23 +71,25 @@ function formatDuration(ms: number): string {
 </script>
 
 <template>
-  <div class="p-6 h-full overflow-y-auto">
-    <div class="mb-4">
-      <h2 class="text-lg font-semibold text-foreground">宏控制</h2>
-    </div>
+  <PageShell>
+    <PageHeader
+      title="宏控制"
+      description="录制物理手柄动作，并按指定速度与循环次数回放。"
+    />
 
     <!-- 物理手柄自诊断栏 -->
-    <div
+    <StatusBanner
       v-if="xinputStatus"
-      class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mb-4 border"
-      :class="xinputStatus.available && xinputStatus.connected_devices.length > 0
-        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+      :tone="xinputStatus.available && xinputStatus.connected_devices.length > 0
+        ? 'success'
         : xinputStatus.available && xinputStatus.connected_devices.length === 0
-          ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-          : 'bg-destructive/10 text-destructive border-destructive/20'"
+          ? 'warning'
+          : 'danger'"
     >
-      <CheckCircle v-if="xinputStatus.available && xinputStatus.connected_devices.length > 0" :size="14" />
-      <AlertTriangle v-else :size="14" />
+      <template #icon>
+        <CheckCircle v-if="xinputStatus.available && xinputStatus.connected_devices.length > 0" :size="14" />
+        <AlertTriangle v-else :size="14" />
+      </template>
       <span v-if="!xinputStatus.available">
         XInput 驱动加载失败：{{ xinputStatus.error }}
       </span>
@@ -93,7 +99,7 @@ function formatDuration(ms: number): string {
       <span v-else>
         物理手柄监听中（通道：{{ xinputStatus.connected_devices.map(i => i + 1).join(', ') }}）
       </span>
-    </div>
+    </StatusBanner>
 
     <Card class="mb-4">
       <CardContent class="p-4">
@@ -143,9 +149,11 @@ function formatDuration(ms: number): string {
     </Card>
 
     <div class="flex flex-col gap-2">
-      <div v-if="store.macros.length === 0" class="text-center text-muted-foreground py-12 text-xs">
-        暂无宏，点击"开始录制"创建
-      </div>
+      <EmptyState
+        v-if="store.macros.length === 0"
+        title="暂无宏"
+        description="输入宏名称后开始录制，完成后可在这里回放或删除。"
+      />
       <div
         v-for="macro in store.macros"
         :key="macro.id"
@@ -165,5 +173,5 @@ function formatDuration(ms: number): string {
         </div>
       </div>
     </div>
-  </div>
+  </PageShell>
 </template>

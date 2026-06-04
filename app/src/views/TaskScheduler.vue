@@ -13,6 +13,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import PageShell from '@/components/layout/PageShell.vue'
+import PageHeader from '@/components/layout/PageHeader.vue'
+import EmptyState from '@/components/layout/EmptyState.vue'
 
 const store = useSchedulerStore()
 const scriptStore = useScriptStore()
@@ -328,14 +331,18 @@ async function stopSequence(taskId: string) {
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto p-6">
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-lg font-semibold">任务调度与序列控制</h2>
+  <PageShell>
+    <PageHeader
+      title="任务调度与序列控制"
+      description="编排多脚本执行顺序、循环次数和触发方式，集中管理自动化任务。"
+    >
+      <template #actions>
       <Button variant="default" size="sm" @click="openEditor" :disabled="store.executingSequence">
         <Plus :size="14" />
         <span>新建任务序列</span>
       </Button>
-    </div>
+      </template>
+    </PageHeader>
 
     <div v-if="store.executingSequence && store.sequenceProgress" class="bg-gradient-to-br from-green-500/10 via-transparent to-green-900/5 border border-green-500/25 rounded-xl p-4 mb-6 shadow-lg animate-in slide-in-from-top-2 duration-300">
       <div class="flex items-center justify-between mb-3">
@@ -376,9 +383,11 @@ async function stopSequence(taskId: string) {
     </div>
 
     <div class="flex flex-col gap-2">
-      <div v-if="store.tasks.length === 0" class="text-center text-muted-foreground py-12 text-sm">
-        暂无串联任务，点击右上角"新建任务序列"开始设计编排吧
-      </div>
+      <EmptyState
+        v-if="store.tasks.length === 0"
+        title="暂无串联任务"
+        description="新建任务序列后，可以把多个脚本按顺序串联，并设置手动、定时或周期触发。"
+      />
 
       <div v-for="task in store.tasks" :key="task.id"
         class="flex items-center gap-4 bg-card border border-border rounded-xl p-4 transition-all hover:border-primary/50 hover:shadow-md"
@@ -623,5 +632,5 @@ async function stopSequence(taskId: string) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  </div>
+  </PageShell>
 </template>
