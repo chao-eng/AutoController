@@ -35,6 +35,7 @@ pub struct OcrRegionResult {
 #[cfg(target_os = "windows")]
 mod win_impl {
     use super::{OcrRegionResult, OcrTextBlock, OcrTextPoint};
+    use ort::session::builder::{GraphOptimizationLevel, SessionBuilder};
     use paddle_ocr_rs::ocr_lite::OcrLite;
     use parking_lot::Mutex;
     use std::cell::RefCell;
@@ -54,6 +55,8 @@ mod win_impl {
     static OCR_INIT_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     static WINRT_OCR_ENGINE: OnceLock<OcrEngine> = OnceLock::new();
     static WINRT_OCR_INIT_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    const ORT_INTRA_THREADS: usize = 2;
+    const ORT_INTER_THREADS: usize = 1;
 
     #[derive(Clone, Copy)]
     struct OcrRuntimeProfile {
@@ -296,6 +299,33 @@ mod win_impl {
         static CAPTURE_CONTEXT: RefCell<Option<CaptureContext>> = RefCell::new(None);
     }
 
+    fn configure_ort_cpu_budget() {
+        // Some ONNX Runtime builds use OpenMP internally; keep those pools bounded too.
+        unsafe {
+            if std::env::var_os("OMP_NUM_THREADS").is_none() {
+                std::env::set_var("OMP_NUM_THREADS", ORT_INTRA_THREADS.to_string());
+            }
+            if std::env::var_os("OMP_WAIT_POLICY").is_none() {
+                std::env::set_var("OMP_WAIT_POLICY", "PASSIVE");
+            }
+            if std::env::var_os("MKL_NUM_THREADS").is_none() {
+                std::env::set_var("MKL_NUM_THREADS", ORT_INTRA_THREADS.to_string());
+            }
+        }
+    }
+
+    fn configure_ocr_session_builder(
+        builder: SessionBuilder,
+    ) -> Result<SessionBuilder, ort::Error> {
+        builder
+            .with_optimization_level(GraphOptimizationLevel::Level2)?
+            .with_parallel_execution(false)?
+            .with_inter_threads(ORT_INTER_THREADS)?
+            .with_intra_threads(ORT_INTRA_THREADS)?
+            .with_inter_op_spinning(false)?
+            .with_intra_op_spinning(false)
+    }
+
     fn strip_unc_prefix(path: std::path::PathBuf) -> std::path::PathBuf {
         use std::path::{Component, Prefix};
 
@@ -333,6 +363,7 @@ mod win_impl {
 
         use tauri::path::BaseDirectory;
         use tauri::Manager;
+        configure_ort_cpu_budget();
 
         // ★ 关键步骤：在首次初始化前设置 ORT_DYLIB_PATH 环境变量，
         // 使 ort crate 的 load-dynamic 特性能在运行时找到 onnxruntime.dll，
@@ -346,7 +377,9 @@ mod win_impl {
                 let dll_path = strip_unc_prefix(dll_path);
                 if dll_path.exists() {
                     tracing::info!("设置 ORT_DYLIB_PATH = {:?}", dll_path);
-                    std::env::set_var("ORT_DYLIB_PATH", &dll_path);
+                    unsafe {
+                        std::env::set_var("ORT_DYLIB_PATH", &dll_path);
+                    }
                 }
             }
             // 开发模式回退：直接使用项目 resources 目录中的 DLL
@@ -357,7 +390,9 @@ mod win_impl {
                     .join("onnxruntime.dll");
                 if dev_dll.exists() {
                     tracing::info!("(开发模式) 设置 ORT_DYLIB_PATH = {:?}", dev_dll);
-                    std::env::set_var("ORT_DYLIB_PATH", &dev_dll);
+                    unsafe {
+                        std::env::set_var("ORT_DYLIB_PATH", &dev_dll);
+                    }
                 }
             }
         }
@@ -406,13 +441,21 @@ mod win_impl {
         }
 
         let mut ocr = OcrLite::new();
-        ocr.init_models(
+        ocr.init_models_custom(
             &det_path.to_string_lossy(),
             &cls_path.to_string_lossy(),
             &rec_path.to_string_lossy(),
-            4, // 限制内部并行线程数为 4，杜绝多核 CPU 线程暴涨卡顿
+            configure_ocr_session_builder,
         )
         .map_err(|e| format!("初始化 PaddleOCR 模型失败: {:?}", e))?;
+        tracing::info!(
+            target: "ocr",
+            intra_threads = ORT_INTRA_THREADS,
+            inter_threads = ORT_INTER_THREADS,
+            spinning = false,
+            parallel_execution = false,
+            "PaddleOCR ONNX Runtime CPU budget applied",
+        );
 
         let _ = OCR_ENGINE.set(Mutex::new(ocr));
 
