@@ -1,5 +1,24 @@
 # AutoController 更新日志
 
+## v0.7.2 — 2026-06-05
+
+### 🆕 新功能与脚本 API
+
+- **全新全局实时遥测脚本 API (`get_telemetry`)**：新增 `get_telemetry()` Rhai 脚本绑定，使用户能在脚本运行时随时获取当前车辆的全局内存实时遥测数据。返回的 Map 对象包含 `car_name` (车辆名)、`speed_kmh` (千米/小时速度)、`current_engine_rpm` (当前转速)、`gear` (挡位)、`is_race_on` (是否在比赛中) 等 16 项关键数据。
+- **Monaco 智能联想与 API 快速手册同步**：在脚本编辑器中，为 `get_telemetry()` 注册了专属的 IntelliSense 自动补齐建议和精美 Markdown Hover 悬浮气泡文档；同步在脚本编辑器右侧 API 参考面板中新增「FH6 游戏遥测数据」常用字段速查块。
+
+### 🚀 优化与增强
+
+- **Rhai 脚本 `log` 支持打印复杂结构**：优化了脚本中 `log(...)` 方法的传参逻辑。当传入 Dynamic 类型的 Map 或 Array 时，Rust 后端会自动将其反序列化并格式化为标准 JSON 字符串输出，不再受限于只能打印纯字符串，同时在 Rust 后端依赖中开启了 `rhai` 的 `serde` 特性支持。
+- **日志查看面板 UI 体验调优**：拓宽日志 Module 列至 `160px` 以减少常见模块名称的截断，溢出时支持 ellipsis 截断并提供 hover `title` 完整展示；对日志 Message 消息列应用了 `break-all` 和 `whitespace-pre-wrap` 换行样式，避免长文本和带换行符的调试日志撑破布局。
+
+### 🐛 Bug 修复
+
+- **修复脚本编辑器 Monaco 联想、查找、折叠失效 bug**：修复了在特定场景下 Monaco 编辑器搜索查找（Find）、代码折叠（Folding）、括号匹配（Bracket Matching）以及智能联想（IntelliSense Suggest）/ Hover 气泡不生效的 bug。
+- **修复 HMR 内存泄漏与重复气泡**：在 `CodeEditor.vue` 销毁及重载时，增加了对 completion 和 hover 注册器 disposable 的主动销毁逻辑，杜绝了前端热更新（HMR）开发时因重复注册导致的联想项/悬浮提示框多重堆叠与内存占用。
+
+---
+
 ## v0.7.1 — 2026-06-04
 
 ### 🚀 优化与增强
