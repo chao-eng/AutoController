@@ -2,6 +2,9 @@
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js'
 
+// 导入 Monaco 编辑器的基本样式与 codicon 图标字体
+import 'monaco-editor/min/vs/editor/editor.main.css'
+
 // 精准导入需要的特定编辑器扩展，避免增大打包体积
 import 'monaco-editor/esm/vs/editor/contrib/find/browser/findController.js'
 import 'monaco-editor/esm/vs/editor/contrib/folding/browser/folding.js'
@@ -428,5 +431,12 @@ watch(
 .active-execution-line-margin {
   background: rgba(34, 197, 94, 0.2) !important;
   font-weight: bold;
+}
+
+
+/* 当鼠标悬浮在查询框内部时，直接隐藏悬浮提示框（Tips），避免其在顶部展示或造成遮挡 */
+body:has(.find-widget:hover) .monaco-hover,
+body:has(.find-widget:hover) .monaco-editor-hover {
+  display: none !important;
 }
 </style>
