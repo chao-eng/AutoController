@@ -8,5 +8,7 @@ pub mod ocr_bindings;
 pub mod execution;
 pub mod sequence;
 
+pub mod telemetry_bindings;
+
 pub use runtime::ScriptRuntime;
 pub use types::*;

@@ -98,6 +98,11 @@ impl ScriptRuntime {
                 sid.clone(),
             );
 
+            // Register Telemetry bindings
+            super::telemetry_bindings::register_telemetry_bindings(
+                &mut engine,
+            );
+
             let token_progress = token_thread.clone();
             engine.on_progress(move |_ops| {
                 if token_progress.is_cancelled() {

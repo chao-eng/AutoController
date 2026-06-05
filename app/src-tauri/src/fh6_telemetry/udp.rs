@@ -72,6 +72,9 @@ pub async fn run(state: Arc<AppState>, port: u16, tx: broadcast::Sender<ServerEv
             Err(_) => continue,
         };
 
+        // 更新全局遥测变量内存状态
+        super::update_last_telemetry(&pkt);
+
         // Always emit live data regardless of session recording state.
         let _ = tx.send(ServerEvent::Tick(pkt.clone()));
 

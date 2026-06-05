@@ -2,6 +2,11 @@
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js'
 
+// 精准导入需要的特定编辑器扩展，避免增大打包体积
+import 'monaco-editor/esm/vs/editor/contrib/find/browser/findController.js'
+import 'monaco-editor/esm/vs/editor/contrib/folding/browser/folding.js'
+import 'monaco-editor/esm/vs/editor/contrib/bracketMatching/browser/bracketMatching.js'
+
 // Rhai only needs the core editor worker; avoid bundling TS/JSON/CSS/HTML workers.
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 
@@ -158,6 +163,17 @@ function setupMonacoRhai() {
               value: '**内置 OCR 本地文本识别**\n\n**三种使用方式：**\n1. `ocr()` - 识别默认识别区 #1 文本内容。\n2. `ocr(1)` - 识别指定标定区 #1 的文本内容。\n3. `ocr(100, 200, 300, 150)` - 识别屏幕指定坐标区域 `(x, y, w, h)` 内的文本。\n\n**参数介绍：**\n- `index`: 标定区序号\n- `x, y, w, h`: 矩形区域坐标'
             },
             range
+          },
+          {
+            label: 'get_telemetry',
+            kind: monaco.languages.CompletionItemKind.Function,
+            insertText: 'get_telemetry()',
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            detail: 'get_telemetry()',
+            documentation: {
+              value: '**获取全局实时遥测变量**\n\n**说明：**\n获取当前车辆的实时数据（需开启遥测），返回一个包含各种参数的 Map 对象。\n\n**返回对象字段：**\n- `car_name`: 车辆名称 (字符串)\n- `speed`: 速度 (米/秒，浮点数)\n- `speed_kmh`: 速度 (千米/小时，浮点数)\n- `is_race_on`: 是否处于比赛中 (布尔值)\n- `car_ordinal`: 车辆 ID (整数)\n- `engine_max_rpm`: 引擎最大转速 (浮点数)\n- `current_engine_rpm`: 当前引擎转速 (浮点数)\n- `gear`: 当前挡位 (整数)\n- `throttle`: 油门深度 `[0-255]` (整数)\n- `brake`: 刹车深度 `[0-255]` (整数)\n- `clutch`: 离合器深度 `[0-255]` (整数)\n- `handbrake`: 手刹深度 `[0-255]` (整数)\n- `current_lap`: 当前圈时间 (秒，浮点数)\n- `current_race_time`: 当前比赛时间 (秒，浮点数)\n- `lap_number`: 当前圈数 (整数)\n- `race_position`: 比赛排名 (整数)'
+            },
+            range
           }
         ]
         return { suggestions }
@@ -221,6 +237,35 @@ function setupMonacoRhai() {
 - \`ocr(x, y, w, h)\`: 精准识别屏幕任意矩形区域的文字
 
 **返回值**：返回识别出来的文本字符串，识别失败时返回空字符串。`
+        } else if (name === 'get_telemetry') {
+          markdownValue = `**get_telemetry()** \\
+\\
+**获取当前车辆的全局实时遥测数据**
+
+**返回 Map 对象属性：**
+- \`car_name\`: 车辆名称 (String)
+- \`speed\`: 速度 (m/s) (Float)
+- \`speed_kmh\`: 速度 (km/h) (Float)
+- \`is_race_on\`: 是否在比赛中 (Boolean)
+- \`car_ordinal\`: 车辆 Ordinal ID (Int)
+- \`current_engine_rpm\`: 当前转速 (Float)
+- \`gear\`: 当前挡位 (Int, 0=倒挡/空挡, 1-8=前进挡)
+- \`throttle\`: 油门深度 \`[0, 255]\` (Int)
+- \`brake\`: 刹车深度 \`[0, 255]\` (Int)
+- \`clutch\`: 离合器深度 \`[0, 255]\` (Int)
+- \`handbrake\`: 手刹深度 \`[0, 255]\` (Int)
+- \`current_lap\`: 当前单圈用时 (Float)
+- \`current_race_time\`: 比赛总用时 (Float)
+- \`lap_number\`: 圈数 (Int)
+- \`race_position\`: 排名位置 (Int)
+
+**示例**：
+\`\`\`javascript
+let info = get_telemetry();
+if info.is_race_on {
+    log("正在驾驶: " + info.car_name + ", 速度: " + info.speed_kmh + " km/h");
+}
+\`\`\``
         } else if (name === 'sleep') {
           markdownValue = `**sleep(ms)** \\
 \\
