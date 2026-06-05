@@ -61,12 +61,12 @@ function getLevelColor(level: string): string {
       <div
         v-for="entry in store.filteredEntries().slice(-500).reverse()"
         :key="entry.id"
-        class="flex gap-2 px-2 py-0.5 rounded-sm hover:bg-muted/50"
+        class="flex gap-3 px-2 py-0.5 rounded-sm hover:bg-muted/50"
       >
-        <span class="text-muted-foreground min-w-[72px]">{{ new Date(entry.timestamp).toLocaleTimeString() }}</span>
-        <span class="min-w-[40px] font-semibold" :class="getLevelColor(entry.level)">{{ entry.level }}</span>
-        <span class="text-blue-500 min-w-[80px]">{{ entry.module }}</span>
-        <span class="text-muted-foreground flex-1">{{ entry.message }}</span>
+        <span class="text-muted-foreground min-w-[72px] shrink-0">{{ new Date(entry.timestamp).toLocaleTimeString() }}</span>
+        <span class="min-w-[40px] shrink-0 font-semibold" :class="getLevelColor(entry.level)">{{ entry.level }}</span>
+        <span class="text-blue-500 min-w-[160px] shrink-0 truncate" :title="entry.module">{{ entry.module }}</span>
+        <span class="text-muted-foreground flex-1 min-w-0 break-all whitespace-pre-wrap">{{ entry.message }}</span>
       </div>
     </div>
   </PageShell>

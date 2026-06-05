@@ -40,7 +40,7 @@ dirs = "5"
 toml = "0.8"
 bitflags = "2"
 libloading = "0.8"
-rhai = { version = "1", features = ["sync", "internals", "metadata"] }
+rhai = { version = "1", features = ["sync", "internals", "metadata", "serde"] }
 cron = "0.12"
 reqwest = { version = "0.12", features = ["json", "blocking", "multipart"] }
 image = "0.25"

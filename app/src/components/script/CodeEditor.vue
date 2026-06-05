@@ -9,6 +9,10 @@ import 'monaco-editor/min/vs/editor/editor.main.css'
 import 'monaco-editor/esm/vs/editor/contrib/find/browser/findController.js'
 import 'monaco-editor/esm/vs/editor/contrib/folding/browser/folding.js'
 import 'monaco-editor/esm/vs/editor/contrib/bracketMatching/browser/bracketMatching.js'
+import 'monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestController.js'
+import 'monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestInlineCompletions.js'
+import 'monaco-editor/esm/vs/editor/contrib/hover/browser/hoverContribution.js'
+import 'monaco-editor/esm/vs/editor/contrib/snippet/browser/snippetController2.js'
 
 // Rhai only needs the core editor worker; avoid bundling TS/JSON/CSS/HTML workers.
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
@@ -36,6 +40,9 @@ const containerRef = ref<HTMLElement | null>(null)
 let editor: monaco.editor.IStandaloneCodeEditor | null = null
 let activeLineDecoration: string[] = []
 let isUpdating = false // Guard to prevent infinite reactive updates
+
+let completionDisposable: monaco.IDisposable | null = null
+let hoverDisposable: monaco.IDisposable | null = null
 
 // Register Custom Rhai Language and Theme
 function setupMonacoRhai() {
@@ -66,9 +73,18 @@ function setupMonacoRhai() {
         ]
       }
     })
+  }
 
-    // Auto-completions (IntelliSense)
-    monaco.languages.registerCompletionItemProvider(langId, {
+  // Always dispose previous providers to prevent HMR memory leaks and duplicate triggers
+  if (completionDisposable) {
+    completionDisposable.dispose()
+  }
+  if (hoverDisposable) {
+    hoverDisposable.dispose()
+  }
+
+  // Auto-completions (IntelliSense)
+  completionDisposable = monaco.languages.registerCompletionItemProvider(langId, {
       provideCompletionItems: (model, position) => {
         const word = model.getWordUntilPosition(position)
         const range = {
@@ -183,8 +199,8 @@ function setupMonacoRhai() {
       }
     })
 
-    // Hover details (Hover Tooltips with rich markdown)
-    monaco.languages.registerHoverProvider(langId, {
+  // Hover details (Hover Tooltips with rich markdown)
+  hoverDisposable = monaco.languages.registerHoverProvider(langId, {
       provideHover: (model, position) => {
         const word = model.getWordAtPosition(position)
         if (!word) return null
@@ -291,7 +307,6 @@ if info.is_race_on {
         return null
       }
     })
-  }
 
   // Custom Feishu Light Theme
   monaco.editor.defineTheme('forza-light', {
@@ -374,6 +389,11 @@ onUnmounted(() => {
   editor?.dispose()
   editor = null
   activeLineDecoration = []
+
+  completionDisposable?.dispose()
+  completionDisposable = null
+  hoverDisposable?.dispose()
+  hoverDisposable = null
 })
 
 // Sync value from parent

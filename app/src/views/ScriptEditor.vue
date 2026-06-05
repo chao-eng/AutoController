@@ -628,6 +628,15 @@ function saveScriptOrder(orderedScripts: any[]) {
             <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">log("message");</code>
           </div>
           <div class="mb-4">
+            <h5 class="mb-1 text-[11px] text-primary">FH6 游戏遥测数据</h5>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">let tel = get_telemetry();</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">tel.speed_kmh // 速度 (km/h)</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">tel.is_race_on // 处于比赛中 (布尔)</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">tel.gear // 挡位 (0=R/N, 1-8=前)</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">tel.current_engine_rpm // 当前转速</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">tel.car_name // 车辆名称 (字符串)</code>
+          </div>
+          <div class="mb-4">
             <h5 class="mb-1 text-[11px] text-primary">变量与运算</h5>
             <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">let x = 10;</code>
             <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">let name = "hello";</code>

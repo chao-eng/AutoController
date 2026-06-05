@@ -149,7 +149,7 @@ impl ScriptRuntime {
             let handle_log = app_handle.clone();
             let eid_log = eid.clone();
             let sid_log = sid.clone();
-            engine.register_fn("log", move |context: rhai::NativeCallContext, msg: &str| {
+            engine.register_fn("log", move |context: rhai::NativeCallContext, msg: rhai::Dynamic| {
                 {
                     let handle_guard = handle_log.lock();
                     if let Some(ref handle) = *handle_guard {
@@ -165,7 +165,14 @@ impl ScriptRuntime {
                         }
                     }
                 }
-                tracing::info!(target: "script", "[脚本] {}", msg);
+                let msg_str = if msg.is_string() {
+                    msg.clone().into_string().unwrap_or_else(|_| msg.to_string())
+                } else if msg.is_map() || msg.is_array() {
+                    serde_json::to_string(&msg).unwrap_or_else(|_| msg.to_string())
+                } else {
+                    msg.to_string()
+                };
+                tracing::info!(target: "script", "[脚本] {}", msg_str);
             });
 
             let wrapped_code = Self::wrap_script(&code);
