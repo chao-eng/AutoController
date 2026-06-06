@@ -1,9 +1,8 @@
 /**
-* 注意： 
-* 1. 当前脚本需开启  PaddleOCR 功能 ，部署教程可参考项目主页
-* 2. 使用前需要将蓝图添加为收藏
-*/
-
+ * 注意： 
+ * 1. 当前脚本需开启 PaddleOCR 功能 和 遥测功能
+ * 2. 使用前需要将蓝图添加为收藏
+ */
 
 /**
  * 辅助函数：封装按键点击，减少冗余代码
@@ -27,59 +26,32 @@ fn contains_all_keywords(text_str, keywords) {
     return true;
 }
 
-// ==================== 页面判断逻辑优化 ====================
+// ==================== 页面判断核心逻辑 ====================
 
-fn is_main_menu_page(ocr_text) {
-    return contains_all_keywords(ocr_text, ["剧情", "车辆", "地平线", "在线", "创意中心", "商店" , "世界地图"]);
-}
-
-fn is_competition_page(ocr_text) {
-    return contains_all_keywords(ocr_text, ["精选", "热门", "本月最佳", "赛事"]);
-}
-
-fn is_running_page(ocr_text) {
-    return ocr_text.index_of("安娜") >= 0;
-}
-
-fn is_home_page(ocr_text) {
-    return contains_all_keywords(ocr_text, ["剧情", "购买与出售", "车辆", "可自定义车库"]);
-}
-
-fn is_garage_page(ocr_text) {
-    return contains_all_keywords(ocr_text, ["我的车辆", "前往制造商"]);
-}
-
-fn is_start_running_page(ocr_text) {
-    return contains_all_keywords(ocr_text, ["开始竞赛赛事", "难度与设置", "退出比赛"]);
-}
-
-fn is_select_running_page(ocr_text) {
-    return contains_all_keywords(ocr_text, ["单人", "合作", "玩家对战"]);
-}
-
-fn is_finish_running_page(ocr_text) {
-    return contains_all_keywords(ocr_text, ["继续", "重新开始", "观看回放影片"]);
+fn check_page_match(page_type, ocr_text) {
+    if page_type == "main_menu"    { return contains_all_keywords(ocr_text, ["剧情", "车辆", "地平线", "在线", "创意中心", "商店" , "世界地图"]); }
+    if page_type == "competition"  { return contains_all_keywords(ocr_text, ["精选", "热门", "本月最佳", "赛事"]); }
+    if page_type == "running"      { return ocr_text.index_of("安娜") >= 0; }
+    if page_type == "home"         { return contains_all_keywords(ocr_text, ["剧情", "购买与出售", "车辆", "可自定义车库"]); }
+    if page_type == "garage"       { return contains_all_keywords(ocr_text, ["我的车辆", "前往制造商"]); }
+    if page_type == "start_run"    { return contains_all_keywords(ocr_text, ["开始","赛事", "难度与设置", "退出比赛"]); }
+    if page_type == "select_run"   { return contains_all_keywords(ocr_text, ["单人", "合作", "玩家对战"]); }
+    if page_type == "is_finish_run"{ return contains_all_keywords(ocr_text, ["继续", "重新开始", "观看回放影片"]); }
+    return false;
 }
 
 /**
- * 动态等待页面加载
- * @param page_type_fn 页面判断的函数名
+ * 动态等待页面加载（带超时机制）
+ * @param page_type 页面类型字符串
  * @param timeout_sec 最大等待秒数
  */
-fn wait_for_page(page_type_fn, timeout_sec) {
+fn wait_for_page(page_type, timeout_sec) {
     for i in 0..timeout_sec {
         let current_text = ocr(1);
-        let is_target = false;
-        if page_type_fn == "competition" { is_target = is_competition_page(current_text); }
-        if page_type_fn == "garage"      { is_target = is_garage_page(current_text); }
-        if page_type_fn == "start_run"   { is_target = is_start_running_page(current_text); }
-        if page_type_fn == "select_run"  { is_target = is_select_running_page(current_text); }
-        if page_type_fn == "is_finish_run" { is_target = is_finish_running_page(current_text); }
-
-        if is_target {
+        if check_page_match(page_type, current_text) {
             return true;
         }
-        sleep(1000); // 每秒检测一次
+        sleep(1000); // 每秒检测一次，降低CPU与OCR服务器压力
     }
     return false;
 }
@@ -94,167 +66,147 @@ fn set_throttle(value, duration) {
 
 /**
  * 从 OCR 文本中精准提取“XX技术点数可用”中的数字
- * @param ocr_text 全量屏幕文本
- * @return 返回提取到的整数，若未匹配到则返回 -1
  */
 fn extract_skill_points(ocr_text) {
     let text_str = `${ocr_text}`;
-    
-    // 1. 定位游戏里绝对唯一的汉字锚点
     let anchor = "技术点数可用";
     let anchor_idx = text_str.index_of(anchor);
     
     if anchor_idx < 0 {
-        return -1; // 没找到锚点，说明不在此页面
+        return -1; // 未捕获到目标锚点
     }
     
-    // 2. 初始化逆向扫描指针：从“技术点数可用”的第一个字（即“技”）往左边开始数
     let walk_idx = anchor_idx - 1;
     let digits = "0123456789";
-    
     let result_str = "";
     let found_digits = false;
     
-    // 3. 最多向左倒退查找 15 个字符，抓取最邻近的数字
+    // 向左最多回溯 15 个字符
     for step in 0..15 {
-        if walk_idx < 0 {
-            break;
-        }
+        if walk_idx < 0 { break; }
         
-        // 每次雷打不动只截取 1 个字符（完美规避 sub_string 的参数含义争议）
         let char_item = text_str.sub_string(walk_idx, 1);
         
         if digits.index_of(char_item) >= 0 {
-            // 如果遇到了数字，拼接到结果的最前面（因为是倒着找的）
             result_str = char_item + result_str;
             found_digits = true;
         } else {
-            // 如果已经连续找到了数字，突然遇到了非数字（比如空格、或者汉字“箱”），说明数字截取完整了，直接退出
-            if found_digits {
-                break;
-            }
+            // 如果已经切出数字，一旦遇到非数字阻断（如空格），立刻收网，防止把前面的其他数字误吸进来
+            if found_digits { break; }
         }
-        
-        // 指针继续向左移动
         walk_idx = walk_idx - 1;
     }
     
-    // 4. 将提取出的字符串安全转换为整数
     if result_str.len > 0 {
-        return result_str.to_int(); // 100% 精准返回 74
+        return result_str.to_int();
     }
-    
     return 0;
 }
 
 // ==================== 主程序 ====================
 
 fn main() {
-    log("Forza OCR 挂机自动化脚本启动中...");
+    log("Forza OCR 挂机自动化脚本 2.0 启动...");
     set_default_device(0);
 
-    // 1. 状态初始化：确保退回到主菜单
+    // 1. 状态初始化：退回到主菜单
+    let init_retry = 0;
     while true {
         let text_str = ocr(1);
-        log("当前ocr识别内容 : " + text_str);
+        log("当前OCR识别内容: " + text_str);
         
-        if is_main_menu_page(text_str) {
+        if check_page_match("main_menu", text_str) {
             break;
         }
         
-        log("当前页面非主菜单页，正在尝试切换...");
-        if is_running_page(text_str) {
-            click_key("START", 83, 2000);
+        log("当前非主菜单页，正在尝试按键返回...");
+        if check_page_match("running", text_str) {
+            click_key("START", 83, 2500); // 增加转场等待，防连打
         } else {
             click_key("B", 83, 2000);
         }
+        
+        init_retry = init_retry + 1;
+        if init_retry > 10 {
+            throw "【错误】初始化异常：无法自动退回到主菜单，请手动处理后重新运行脚本。";
+        }
     }
 
-    log("成功检测到主菜单页！准备开始挂机逻辑...");
+    log("成功进入主菜单！准备计算挂机圈数...");
     
-    // 2. 进入车辆页面
-    log("开始执行：查询当前熟练点...");
-    click_key("RB", 100, 400);
+    // 2. 查看车辆并精准提取点数
+    click_key("RB", 100, 500);
     let current_text = ocr(1);
     let skill = extract_skill_points(current_text);
-    log("开始执行：当前熟练点为"+skill);
-    // ─── 动态计算循环圈数 ───
-    let LOOP_COUNT = 0;
+    log("提取到当前技术点数为: " + skill);
+    
+    // 动态计算循环圈数 (防止上限溢出)
+    let LOOP_COUNT = 100; // 默认兜底圈数
     if skill >= 0 {
         LOOP_COUNT = (999 - skill) / 10;
-        // 规避极端情况下计算出负数或0圈的情况，至少跑1圈
-        if LOOP_COUNT <= 0 {
-            LOOP_COUNT = 1;
-        }
-        log("设置循环圈数为 " + LOOP_COUNT);
+        if LOOP_COUNT <= 0 { LOOP_COUNT = 1; }
     } else {
-        log("【警告】未能成功提取到熟练点数，默认设置循环圈数为 100");
-        LOOP_COUNT = 100; 
+        log("【警告】未能成功提取到技术点，采用默认兜底圈数：" + LOOP_COUNT);
     }
+    log("🎯 最终判定挂机总轮数设置为: " + LOOP_COUNT);
 
-    //切换到创意中心
+    // 切换到“创意中心”标签页 (从车辆页往右切3次)
     for i in 0..3 {
-        click_key("RB", 100, 400);
+        click_key("RB", 100, 500);
     }
 
-    // 3. 进入赛事页
+    // 3. 进入赛事蓝图页
     sleep(1500);
     click_key("A", 83, 2000);
     click_key("A", 117, 1000);
 
-    // 动态等待赛事页加载（最多等 8 秒）
-    if !wait_for_page("competition", 8) {
-        log("进入赛事页失败");
-        throw "进入赛事页失败";
+    if !wait_for_page("competition", 10) {
+        throw "进入赛事页失败，脚本终止";
     }
     log("成功进入赛事页");
 
-    // 4. 进入我的收藏
-    log("开始执行：连续点击 RB 7次 进入我的收藏页面");
+    // 4. 前往【我的收藏】
+    log("正在连切 7 次 RB 移动到我的收藏...");
     for i in 0..7 {
-        click_key("RB", 100, 400);
+        click_key("RB", 100, 450);
     }
     sleep(2000);
 
-    // 5. 进入蓝图
-    click_key("A", 83, 5000);
+    // 5. 选择蓝图并确认比赛类型
+    click_key("A", 83, 3000);
     if !wait_for_page("select_run", 15) {
-        log("进入选择比赛类型页失败");
-        throw "进入选择比赛类型页失败"; 
+        throw "进入[选择比赛类型]页超时"; 
     }
     click_key("A", 83, 1000);
 
-    // 6. 动态等待选择车辆页（最多等 8 秒）
-    if !wait_for_page("garage", 8) {
-        log("进入选择车辆页失败");
-        throw "进入选择车辆页失败"; 
+    // 6. 动态等待选择车辆页
+    if !wait_for_page("garage", 10) {
+        throw "进入[选择车辆]页超时"; 
     }
-    log("成功进入选择车辆页");
+    log("成功进入车辆选择界面");
 
-    // 7. 进入起跑准备界面（仅在第一轮需要手动推进）
-    click_key("A", 83, 1000);
-
+    // 7. 锁定车辆，首次进入起跑页面
+    click_key("A", 83, 1500);
 
     // ==================== 核心刷图循环段 ====================
-    log("开始执行核心刷图循环，总计圈数/轮数：" + LOOP_COUNT);
+    log("🚀 开始执行核心挂机循环...");
 
     for current_loop in 1..=LOOP_COUNT {
-        log("--------------------------------────────");
-        log("当前正在执行第 " + current_loop + " / " + LOOP_COUNT + " 轮挂机...");
-        log("--------------------------------────────");
+        log("========================================");
+        log("进度提示：当前正在执行第 " + current_loop + " / " + LOOP_COUNT + " 轮");
+        log("========================================");
 
-        // 动态等待起跑准备页 (第一轮是刚进图，后续轮数是重新开始后的加载完成)
-        // 游戏重新开始加载通常较慢，将最大等待超时提升到 30 秒，防止断连或掉帧卡住
-        if !wait_for_page("start_run", 30) {
-             log("【错误】等待进入起跑准备页超时，退出脚本。");
-             throw "进入起跑准备页失败"; 
+        // 等待起跑准备页加载完成（将黑屏加载时间放宽到35秒，防大作加载卡顿）
+        if !wait_for_page("start_run", 35) {
+             click_key("START", 83, 1000); // 尝试按菜单键拯救一下
+             throw "【严重错误】进入起跑准备页超时，脚本安全退出。"; 
         }
-        log("成功进入起跑准备页，开始赛事...");
+        log("赛事加载完毕，启动赛事！");
       
-        // 8. 开始赛事
+        // 8. 开启比赛
         click_key("A", 83, 4500);
         
-        // 9. 线性油门初始化（起步防打滑）
+        // 9. 线性防滑起步
         set_throttle(0.0471, 16);
         set_throttle(0.2314, 16);
         set_throttle(0.4039, 17);
@@ -262,64 +214,57 @@ fn main() {
         set_throttle(0.7961, 16);
         set_throttle(0.8471, 67);
         
-        // 直道全油门挂机阶段
-        log("开始直道挂机，尝试底层锁死油门机制...");
-        let safety_counter = 0;   // 安全计数器
-        let max_drive_time = 20;  // 20次 * 3秒 = 60秒（根据你蓝图的实际跑完时间调整，比如40秒能跑完，就设为15）
+        // 10. 全油门死锁挂机阶段
+        log("油门已锁死，车辆全速冲刺中...");
+        let safety_counter = 0;   
+        let max_drive_time = 25;  // 25次 * 2秒 = 50秒安全卡口（可根据具体蓝图耗时微调）
 
         while true {
-            // 1. 无需调用包含 sleep 的 set_throttle，直接用长按形式将扳机状态强行锁死在 1.0
-            set_trigger("Right", 1.0000); 
-            
-            // 2. 让它在跑道上先跑 3 秒
-            sleep(3000); 
+            set_trigger("Right", 1.0000); // 底层强制锁死满油门
+            sleep(2000); // 每2秒做一次物理及遥测状态检查
             
             safety_counter = safety_counter + 1;
-            //检测冲线
-            let current_text = ocr(1);
-            
-            if !is_running_page(current_text) {
-                log("检测到冲线！");
+
+            // 检查遥测：若游戏原生判断比赛已结束，直接跳出
+            let tel = get_telemetry();
+            if !tel.is_race_on {
+                log("【遥测通知】检测到赛事已结束（已冲线）。");
                 break; 
             }
 
             if safety_counter >= max_drive_time {
-                log("【安全保护】检测到单轮行驶时间异常过长，强行触发收油逻辑，防止冲出赛道！");
+                log("【安全保护】单轮行驶时长触发熔断阈值，强行收油，避免死循环！");
                 break;
             }
         }
         
-        // 减速/收油
+        // 冲线后松开油门/减速刹车
         set_throttle(0.4353, 17);
         set_throttle(0.0941, 16);
-        set_throttle(0.0000, 0);
+        set_throttle(0.0000, 100);
         
-        // 动态等待比赛结束结算页面
-        if !wait_for_page("is_finish_run", 15) {
-             log("【错误】未检测到比赛结算结束页，退出脚本。");
-             //退出比赛
-             click_key("START", 83, 1000);
-             
-             throw "进入比赛结束页失败"; 
+        // 11. 动态检测结算页面
+        if !wait_for_page("is_finish_run", 20) {
+             log("【警告】未在规定时间内匹配到结算页面，尝试按START键唤出菜单保护。");
+             click_key("START", 83, 1500);
+             throw "异常：丢失比赛结算页"; 
         }
-        log("检测到已进入比赛结束页。");
+        log("已安全抵达比赛结算页。");
 
-        // 判断是否是最后一轮，如果是最后一轮，则不点重新开始，直接退出
+        // 最后一圈判断：完工退出
         if current_loop == LOOP_COUNT {
-            log("🎉 已达到设定的最大循环次数，挂机任务完美结束！");
+            log("🎉 恭喜！已完成预设的所有挂机轮数，任务完美结束！");
             break;
         }
 
-        // 点击重新开始赛事
-        log("正在为您自动点击【重新开始】赛事...");
-        click_key("X", 83, 1200); // 按下X提示重新开始
-        click_key("A", 83, 2000); // 点击A确认重新开始
-
-        log("第 " + current_loop + " 轮跑图结束，正在等待黑屏加载下一轮...");
+        // 12. 自动点击【重新开始】
+        log("正在执行：自动选择【重新开始】...");
+        click_key("X", 83, 1500); // 呼出重新开始提示
+        click_key("A", 83, 2500); // 确认重新开始并等待黑屏
     }
 
-    //返回道路页
+    // 退出整个循环后，退回到自由驾驶大地图界面
     click_key("A", 83, 2000);
     click_key("A", 83, 2000);
-    log("所有自动化脚本内容执行完毕！");
+    log("所有自动化挂机流程已安全执行完毕，感谢使用！");
 }
