@@ -13,6 +13,7 @@ import { open } from '@tauri-apps/plugin-shell'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { preferenceKeys, readPreference, writePreference } from '@/lib/preferences'
 
 const route = useRoute()
 const isMapWindow = computed(() => route.path === '/forza-map')
@@ -29,6 +30,12 @@ const cpuUsage = ref('0%')
 const memUsage = ref('0 MB')
 const appVersion = __APP_VERSION__   // 由 Vite define 在构建时从 package.json 自动注入
 let unlistenResources: UnlistenFn | null = null
+
+interface GitHubRelease {
+  tag_name?: string
+  body?: string
+  html_url?: string
+}
 
 // 比较语义化版本号，若 latest > current 则返回 true
 function isNewerVersion(current: string, latest: string): boolean {
@@ -50,16 +57,23 @@ async function checkForUpdates() {
   try {
     const response = await fetch('https://api.github.com/repos/chao-eng/AutoController/releases/latest')
     if (!response.ok) return
-    const data = await response.json()
+    const data = await response.json() as GitHubRelease
     if (!data || !data.tag_name) return
 
     if (isNewerVersion(appVersion, data.tag_name)) {
+      const dismissedVersion = readPreference(preferenceKeys.updatesDismissedVersion, '')
+      const snoozeUntil = readPreference(preferenceKeys.updatesSnoozeUntil, 0)
+      if (dismissedVersion === data.tag_name || Date.now() < snoozeUntil) return
+
       const confirmed = await uiStore.showConfirm(
-        '发现新版本 🎉',
-        `发现新版本 ${data.tag_name} (当前版本 v${appVersion})。\n\n更新内容:\n${data.body || '暂无详细描述'}\n\n是否立即前往 GitHub 下载更新？`
+        '发现新版本',
+        `发现新版本 ${data.tag_name} (当前版本 v${appVersion})。\n\n更新内容:\n${data.body || '暂无详细描述'}\n\n确定将打开 GitHub 下载页，并不再提示此版本；取消则 24 小时内不再提醒。`
       )
       if (confirmed) {
         await open(data.html_url || 'https://github.com/chao-eng/AutoController/releases/latest')
+        writePreference(preferenceKeys.updatesDismissedVersion, data.tag_name)
+      } else {
+        writePreference(preferenceKeys.updatesSnoozeUntil, Date.now() + 24 * 60 * 60 * 1000)
       }
     }
   } catch (e) {

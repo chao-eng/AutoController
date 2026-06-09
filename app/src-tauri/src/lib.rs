@@ -144,6 +144,7 @@ pub fn run() {
             macro_cmd::macro_delete,
             macro_cmd::macro_xinput_status,
             script_cmd::script_create,
+            script_cmd::script_validate_code,
             script_cmd::script_execute,
             script_cmd::script_debug_execute,
             script_cmd::script_debug_resume,

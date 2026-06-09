@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, onMounted, onUnmounted } from 'vue'
+import { preferenceKeys, readPreference, writePreference } from '@/lib/preferences'
 
 const props = defineProps<{
   id: string
@@ -66,14 +67,12 @@ function clampPosition() {
 }
 
 onMounted(() => {
-  const saved = localStorage.getItem(props.id)
+  const preferenceKey = preferenceKeys.floatingPanel(props.id)
+  const saved = readPreference<{ x?: number; y?: number; w?: number } | null>(preferenceKey, null, [props.id])
   if (saved) {
-    try {
-      const s = JSON.parse(saved)
-      x.value = finiteNumber(s.x) ? s.x : 0
-      y.value = finiteNumber(s.y) ? s.y : 0
-      w.value = finiteNumber(s.w) ? s.w : (props.defaultWidth ?? 200)
-    } catch { /* fall through */ }
+    x.value = finiteNumber(saved.x) ? saved.x : 0
+    y.value = finiteNumber(saved.y) ? saved.y : 0
+    w.value = finiteNumber(saved.w) ? saved.w : (props.defaultWidth ?? 200)
   }
   if (!saved) {
     w.value = props.defaultWidth ?? 200
@@ -91,7 +90,7 @@ onMounted(() => {
 })
 
 function persist() {
-  localStorage.setItem(props.id, JSON.stringify({ x: x.value, y: y.value, w: w.value }))
+  writePreference(preferenceKeys.floatingPanel(props.id), { x: x.value, y: y.value, w: w.value })
 }
 
 const dragging = ref(false)

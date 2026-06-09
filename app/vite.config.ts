@@ -36,6 +36,9 @@ export default defineConfig(async () => ({
           const normalizedId = id.replace(/\\/g, "/");
 
           if (normalizedId.includes("/node_modules/monaco-editor/")) {
+            if (normalizedId.includes("editor.worker")) {
+              return "vendor-monaco-worker";
+            }
             return "vendor-monaco";
           }
 

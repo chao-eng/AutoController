@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { ScriptMeta, Script } from '../types/script'
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { preferenceKeys, readPreference, writePreference } from '@/lib/preferences'
 
 interface ScriptExecutionEvent {
   execution_id: string
@@ -17,6 +18,27 @@ interface ScriptDebugEvent {
   status: 'started' | 'paused' | 'running' | 'stepping' | 'completed' | 'stopped' | 'error'
   line: number
   message: string | null
+}
+
+interface ScriptValidationResult {
+  valid: boolean
+  line: number
+  column: number
+  message: string | null
+}
+
+interface ScriptDebugWatchEvent {
+  execution_id: string
+  script_id: string
+  name: string
+  value: string
+  line: number
+}
+
+interface ScriptDebugWatch {
+  name: string
+  value: string
+  line: number
 }
 
 export const useScriptStore = defineStore('script', () => {
@@ -35,25 +57,24 @@ export const useScriptStore = defineStore('script', () => {
   const debugStatus = ref<'idle' | 'running' | 'paused' | 'stepping'>('idle')
   const debugLine = ref<number>(0)
   const debugMessage = ref('')
+  const debugWatches = ref<ScriptDebugWatch[]>([])
   let unlisten: UnlistenFn | null = null
   let lineUnlisten: UnlistenFn | null = null
   let debugUnlisten: UnlistenFn | null = null
+  let debugWatchUnlisten: UnlistenFn | null = null
 
   async function fetchScripts() {
     loading.value = true
     try {
       const fetched = await invoke<ScriptMeta[]>('script_list')
-      const savedOrder = localStorage.getItem('script_order')
-      if (savedOrder) {
-        const orderedIds: string[] = JSON.parse(savedOrder)
-        fetched.sort((a, b) => {
-          let idxA = orderedIds.indexOf(a.id)
-          let idxB = orderedIds.indexOf(b.id)
-          if (idxA === -1) idxA = 99999
-          if (idxB === -1) idxB = 99999
-          return idxA - idxB
-        })
-      }
+      const orderedIds = readPreference<string[]>(preferenceKeys.scriptOrder, [])
+      fetched.sort((a, b) => {
+        let idxA = orderedIds.indexOf(a.id)
+        let idxB = orderedIds.indexOf(b.id)
+        if (idxA === -1) idxA = 99999
+        if (idxB === -1) idxB = 99999
+        return idxA - idxB
+      })
       scripts.value = fetched
     } catch (e) {
       error.value = String(e)
@@ -94,6 +115,19 @@ export const useScriptStore = defineStore('script', () => {
     }
   }
 
+  async function validateCode(code: string) {
+    try {
+      return await invoke<ScriptValidationResult>('script_validate_code', { code })
+    } catch (e) {
+      error.value = String(e)
+      throw e
+    }
+  }
+
+  function persistScriptOrder(orderedScripts: ScriptMeta[]) {
+    writePreference(preferenceKeys.scriptOrder, orderedScripts.map((script) => script.id))
+  }
+
   async function renameScript(scriptId: string, newName: string) {
     try {
       const script = await invoke<Script>('script_rename', { scriptId, newName })
@@ -114,6 +148,8 @@ export const useScriptStore = defineStore('script', () => {
       executing.value = true
       executionStatus.value = 'running'
       executionMessage.value = '正在启动脚本...'
+      activeLine.value = 0
+      debugWatches.value = []
       
       const eid = await invoke<string>('script_execute', { scriptId })
       executionId.value = eid
@@ -136,6 +172,8 @@ export const useScriptStore = defineStore('script', () => {
       debugStatus.value = 'running'
       debugLine.value = 0
       debugMessage.value = '调试会话启动中'
+      activeLine.value = 0
+      debugWatches.value = []
 
       const eid = await invoke<string>('script_debug_execute', { scriptId, breakpoints })
       executionId.value = eid
@@ -184,6 +222,7 @@ export const useScriptStore = defineStore('script', () => {
       debugLine.value = 0
       debugMessage.value = ''
       activeLine.value = 0
+      debugWatches.value = []
       executionStatus.value = 'idle'
       executionMessage.value = ''
     } catch (e) {
@@ -202,6 +241,8 @@ export const useScriptStore = defineStore('script', () => {
       debugMessage.value = ''
       executionStatus.value = 'idle'
       executionMessage.value = ''
+      activeLine.value = 0
+      debugWatches.value = []
     } catch (e) {
       error.value = String(e)
     }
@@ -239,6 +280,7 @@ export const useScriptStore = defineStore('script', () => {
           debugStatus.value = 'idle'
           debugLine.value = 0
           debugMessage.value = ''
+          debugWatches.value = []
           executionStatus.value = 'success'
           executionMessage.value = message || '脚本执行完成'
           activeLine.value = 0
@@ -249,6 +291,7 @@ export const useScriptStore = defineStore('script', () => {
           debugStatus.value = 'idle'
           debugLine.value = 0
           debugMessage.value = ''
+          debugWatches.value = []
           executionStatus.value = 'error'
           executionMessage.value = message || '脚本执行出错'
           activeLine.value = 0
@@ -283,12 +326,23 @@ export const useScriptStore = defineStore('script', () => {
           debugStatus.value = 'idle'
           debugLine.value = 0
           debugMessage.value = ''
+          debugWatches.value = []
         } else if (status === 'error') {
           debugExecutionId.value = null
           debugStatus.value = 'idle'
           debugLine.value = 0
           debugMessage.value = message || '调试执行出错'
         }
+      })
+
+      debugWatchUnlisten = await listen<ScriptDebugWatchEvent>('script-debug-watch', (event) => {
+        const { execution_id, script_id, name, value, line } = event.payload
+        if (currentScript.value?.id && currentScript.value.id !== script_id) return
+        if (executionId.value && execution_id !== executionId.value) return
+
+        const next = debugWatches.value.filter((item) => item.name !== name)
+        next.unshift({ name, value, line })
+        debugWatches.value = next.slice(0, 12)
       })
     } catch (e) {
       console.warn('监听 script-execution/line-change 事件失败:', e)
@@ -302,11 +356,14 @@ export const useScriptStore = defineStore('script', () => {
     lineUnlisten = null
     debugUnlisten?.()
     debugUnlisten = null
+    debugWatchUnlisten?.()
+    debugWatchUnlisten = null
     activeLine.value = 0
     debugExecutionId.value = null
     debugStatus.value = 'idle'
     debugLine.value = 0
     debugMessage.value = ''
+    debugWatches.value = []
   }
 
   return {
@@ -323,10 +380,13 @@ export const useScriptStore = defineStore('script', () => {
     debugStatus,
     debugLine,
     debugMessage,
+    debugWatches,
     fetchScripts,
     createScript,
     getScript,
     updateScript,
+    validateCode,
+    persistScriptOrder,
     renameScript,
     executeScript,
     debugScript,

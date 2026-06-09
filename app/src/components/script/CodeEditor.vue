@@ -1,30 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js'
+import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api.js'
 
 // 导入 Monaco 编辑器的基本样式与 codicon 图标字体
 import 'monaco-editor/min/vs/editor/editor.main.css'
-
-// 精准导入需要的特定编辑器扩展，避免增大打包体积
-import 'monaco-editor/esm/vs/editor/contrib/find/browser/findController.js'
-import 'monaco-editor/esm/vs/editor/contrib/folding/browser/folding.js'
-import 'monaco-editor/esm/vs/editor/contrib/bracketMatching/browser/bracketMatching.js'
-import 'monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestController.js'
-import 'monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestInlineCompletions.js'
-import 'monaco-editor/esm/vs/editor/contrib/hover/browser/hoverContribution.js'
-import 'monaco-editor/esm/vs/editor/contrib/snippet/browser/snippetController2.js'
-
-// Rhai only needs the core editor worker; avoid bundling TS/JSON/CSS/HTML workers.
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-
-// Initialize Monaco Environment for Web Workers loading
-if (!globalThis.MonacoEnvironment) {
-  globalThis.MonacoEnvironment = {
-    getWorker() {
-      return new EditorWorker()
-    }
-  }
-}
 
 const props = defineProps<{
   modelValue: string
@@ -39,21 +18,55 @@ const emit = defineEmits<{
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
-let editor: monaco.editor.IStandaloneCodeEditor | null = null
+let monaco: typeof Monaco | null = null
+let editor: Monaco.editor.IStandaloneCodeEditor | null = null
 let activeLineDecoration: string[] = []
 let breakpointDecorations: string[] = []
 let isUpdating = false // Guard to prevent infinite reactive updates
 
-let completionDisposable: monaco.IDisposable | null = null
-let hoverDisposable: monaco.IDisposable | null = null
+let completionDisposable: Monaco.IDisposable | null = null
+let hoverDisposable: Monaco.IDisposable | null = null
+
+async function loadMonaco() {
+  if (monaco) return monaco
+
+  const [monacoModule, workerModule] = await Promise.all([
+    import('monaco-editor/esm/vs/editor/editor.api.js'),
+    import('monaco-editor/esm/vs/editor/editor.worker?worker'),
+  ])
+
+  // 精准加载 Rhai 编辑体验需要的扩展，避免跟随组件模块静态进入首屏。
+  await Promise.all([
+    import('monaco-editor/esm/vs/editor/contrib/find/browser/findController.js'),
+    import('monaco-editor/esm/vs/editor/contrib/folding/browser/folding.js'),
+    import('monaco-editor/esm/vs/editor/contrib/bracketMatching/browser/bracketMatching.js'),
+    import('monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestController.js'),
+    import('monaco-editor/esm/vs/editor/contrib/suggest/browser/suggestInlineCompletions.js'),
+    import('monaco-editor/esm/vs/editor/contrib/hover/browser/hoverContribution.js'),
+    import('monaco-editor/esm/vs/editor/contrib/snippet/browser/snippetController2.js'),
+  ])
+
+  const EditorWorker = workerModule.default
+  if (!globalThis.MonacoEnvironment) {
+    globalThis.MonacoEnvironment = {
+      getWorker() {
+        return new EditorWorker()
+      }
+    }
+  }
+
+  monaco = monacoModule
+  return monaco
+}
 
 function updateBreakpointDecorations(lines: number[]) {
-  if (!editor) return
+  if (!editor || !monaco) return
+  const monacoApi = monaco
 
   const decorations = lines
     .filter((line) => line > 0)
     .map((line) => ({
-      range: new monaco.Range(line, 1, line, 1),
+      range: new monacoApi.Range(line, 1, line, 1),
       options: {
         isWholeLine: false,
         glyphMarginClassName: 'debug-breakpoint-glyph',
@@ -65,16 +78,16 @@ function updateBreakpointDecorations(lines: number[]) {
 }
 
 // Register Custom Rhai Language and Theme
-function setupMonacoRhai() {
+function setupMonacoRhai(monacoApi: typeof Monaco) {
   const langId = 'rhai'
 
   // Register custom language only if not registered yet
-  const registeredLanguages = monaco.languages.getLanguages()
+  const registeredLanguages = monacoApi.languages.getLanguages()
   if (!registeredLanguages.some((l) => l.id === langId)) {
-    monaco.languages.register({ id: langId })
+    monacoApi.languages.register({ id: langId })
 
     // Tokenizer / Syntax Highlighting
-    monaco.languages.setMonarchTokensProvider(langId, {
+    monacoApi.languages.setMonarchTokensProvider(langId, {
       keywords: [
         'let', 'const', 'fn', 'return', 'if', 'else', 'while', 'for', 'in', 'loop', 'break', 'continue', 'true', 'false'
       ],
@@ -104,7 +117,7 @@ function setupMonacoRhai() {
   }
 
   // Auto-completions (IntelliSense)
-  completionDisposable = monaco.languages.registerCompletionItemProvider(langId, {
+  completionDisposable = monacoApi.languages.registerCompletionItemProvider(langId, {
       provideCompletionItems: (model, position) => {
         const word = model.getWordUntilPosition(position)
         const range = {
@@ -114,12 +127,12 @@ function setupMonacoRhai() {
           endColumn: word.endColumn
         }
 
-        const suggestions: monaco.languages.CompletionItem[] = [
+        const suggestions: Monaco.languages.CompletionItem[] = [
           {
             label: 'set_default_device',
-            kind: monaco.languages.CompletionItemKind.Function,
+            kind: monacoApi.languages.CompletionItemKind.Function,
             insertText: 'set_default_device(${1:0});',
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoApi.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             detail: 'set_default_device(deviceId)',
             documentation: {
               value: '**设置全局默认操控的虚拟手柄编号**\n\n**参数介绍：**\n- `deviceId`: 默认设备编号（数字 `0`, `1`... 或手柄 UUID 字符串）\n\n**应用场景：**\n如果在脚本开头指定了默认手柄，后续调用 `press`、`release`、`set_thumb` 和 `set_trigger` 时均**无需手动输入手柄编号**，系统会自动控制该手柄！'
@@ -128,9 +141,9 @@ function setupMonacoRhai() {
           },
           {
             label: 'press',
-            kind: monaco.languages.CompletionItemKind.Function,
+            kind: monacoApi.languages.CompletionItemKind.Function,
             insertText: 'press("${1:A}");',
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoApi.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             detail: 'press(button) 或 press(deviceId, button)',
             documentation: {
               value: '**按下指定虚拟手柄的按键**\n\n**两种使用方式：**\n1. `press("A")` - 直接操控全局默认手柄按下按键。\n2. `press(0, "A")` - 控制指定设备编号（如 0 号）的手柄按下按键。\n\n**参数介绍：**\n- `deviceId` (可选): 设备编号\n- `button`: 按键名称，支持：\n  - 常用键：`"A"`, `"B"`, `"X"`, `"Y"`\n  - 肩键与触发键：`"LB"`, `"RB"`, `"LT"`, `"RT"`\n  - 导航键：`"Back"`, `"Start"`, `"Guide"`\n  - 摇杆按键：`"LS"`, `"RS"`\n  - 方向键：`"Up"`, `"Down"`, `"Left"`, `"Right"`'
@@ -139,9 +152,9 @@ function setupMonacoRhai() {
           },
           {
             label: 'release',
-            kind: monaco.languages.CompletionItemKind.Function,
+            kind: monacoApi.languages.CompletionItemKind.Function,
             insertText: 'release("${1:A}");',
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoApi.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             detail: 'release(button) 或 release(deviceId, button)',
             documentation: {
               value: '**释放指定虚拟手柄的按键**\n\n**两种使用方式：**\n1. `release("A")` - 释放全局默认手柄按键。\n2. `release(0, "A")` - 释放指定设备编号（如 0 号）的手柄按键。\n\n**参数介绍：**\n- `deviceId` (可选): 设备编号\n- `button`: 按键名称'
@@ -150,9 +163,9 @@ function setupMonacoRhai() {
           },
           {
             label: 'set_thumb',
-            kind: monaco.languages.CompletionItemKind.Function,
+            kind: monacoApi.languages.CompletionItemKind.Function,
             insertText: 'set_thumb("${1:LeftX}", ${2:0.0});',
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoApi.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             detail: 'set_thumb(axis, value) 或 set_thumb(deviceId, axis, value)',
             documentation: {
               value: '**设置摇杆偏转倾斜度**\n\n**两种使用方式：**\n1. `set_thumb("LeftX", 1.0)` - 调整默认手柄摇杆偏转。\n2. `set_thumb(0, "LeftX", 1.0)` - 调整指定手柄的摇杆偏转。\n\n**参数介绍：**\n- `deviceId` (可选): 设备编号\n- `axis`: 摇杆轴向，支持：\n  - 左摇杆：`"LeftX"` (水平轴), `"LeftY"` (垂直轴)\n  - 右摇杆：`"RightX"` (水平轴), `"RightY"` (垂直轴)\n- `value`: 倾斜度数值，范围在 `[-1.0, 1.0]` 区间内，`0.0` 代表中位悬停。'
@@ -161,9 +174,9 @@ function setupMonacoRhai() {
           },
           {
             label: 'set_trigger',
-            kind: monaco.languages.CompletionItemKind.Function,
+            kind: monacoApi.languages.CompletionItemKind.Function,
             insertText: 'set_trigger("${1:Left}", ${2:0.0});',
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoApi.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             detail: 'set_trigger(side, value) 或 set_trigger(deviceId, side, value)',
             documentation: {
               value: '**设置扳机键深度压力值**\n\n**两种使用方式：**\n1. `set_trigger("Left", 0.5)` - 调整默认手柄的左扳机压力值。\n2. `set_trigger(0, "Left", 0.5)` - 调整指定手柄的左扳机压力值。\n\n**参数介绍：**\n- `deviceId` (可选): 设备编号\n- `side`: 扳机侧向，支持 `"Left"` 或 `"Right"`\n- `value`: 压力幅度数值，范围在 `[0.0, 1.0]` 区间内，`0.0` 代表未按下，`1.0` 代表按满。'
@@ -172,9 +185,9 @@ function setupMonacoRhai() {
           },
           {
             label: 'sleep',
-            kind: monaco.languages.CompletionItemKind.Function,
+            kind: monacoApi.languages.CompletionItemKind.Function,
             insertText: 'sleep(${1:1000});',
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoApi.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             detail: 'sleep(ms)',
             documentation: {
               value: '**延时等待休眠**\n\n**参数介绍：**\n- `ms`: 阻断休眠的时长，单位为毫秒（1秒 = 1000毫秒）。'
@@ -183,9 +196,9 @@ function setupMonacoRhai() {
           },
           {
             label: 'log',
-            kind: monaco.languages.CompletionItemKind.Function,
+            kind: monacoApi.languages.CompletionItemKind.Function,
             insertText: 'log("${1:message}");',
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoApi.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             detail: 'log(message)',
             documentation: {
               value: '**输出调试日志**\n\n**参数介绍：**\n- `message`: 日志文本，信息将实时分发显示在下方的系统运行日志与控制台面板中。'
@@ -193,10 +206,21 @@ function setupMonacoRhai() {
             range
           },
           {
+            label: 'watch',
+            kind: monacoApi.languages.CompletionItemKind.Function,
+            insertText: 'watch("${1:name}", ${2:value});',
+            insertTextRules: monacoApi.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            detail: 'watch(name, value)',
+            documentation: {
+              value: '**记录调试观察值**\n\n**参数介绍：**\n- `name`: 观察项名称\n- `value`: 任意 Rhai 值，会显示在脚本页调试器的观察值列表中。'
+            },
+            range
+          },
+          {
             label: 'ocr',
-            kind: monaco.languages.CompletionItemKind.Function,
+            kind: monacoApi.languages.CompletionItemKind.Function,
             insertText: 'ocr();',
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoApi.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             detail: 'ocr() / ocr(index) / ocr(x, y, w, h)',
             documentation: {
               value: '**内置 OCR 本地文本识别**\n\n**三种使用方式：**\n1. `ocr()` - 识别默认识别区 #1 文本内容。\n2. `ocr(1)` - 识别指定标定区 #1 的文本内容。\n3. `ocr(100, 200, 300, 150)` - 识别屏幕指定坐标区域 `(x, y, w, h)` 内的文本。\n\n**参数介绍：**\n- `index`: 标定区序号\n- `x, y, w, h`: 矩形区域坐标'
@@ -205,9 +229,9 @@ function setupMonacoRhai() {
           },
           {
             label: 'get_telemetry',
-            kind: monaco.languages.CompletionItemKind.Function,
+            kind: monacoApi.languages.CompletionItemKind.Function,
             insertText: 'get_telemetry()',
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            insertTextRules: monacoApi.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             detail: 'get_telemetry()',
             documentation: {
               value: '**获取全局实时遥测变量**\n\n**说明：**\n获取当前车辆的实时数据（需开启遥测），返回一个包含各种参数的 Map 对象。\n\n**返回对象字段：**\n- `car_name`: 车辆名称 (字符串)\n- `speed`: 速度 (米/秒，浮点数)\n- `speed_kmh`: 速度 (千米/小时，浮点数)\n- `is_race_on`: 是否处于比赛中 (布尔值)\n- `car_ordinal`: 车辆 ID (整数)\n- `engine_max_rpm`: 引擎最大转速 (浮点数)\n- `current_engine_rpm`: 当前引擎转速 (浮点数)\n- `gear`: 当前挡位 (整数)\n- `throttle`: 油门深度 `[0-255]` (整数)\n- `brake`: 刹车深度 `[0-255]` (整数)\n- `clutch`: 离合器深度 `[0-255]` (整数)\n- `handbrake`: 手刹深度 `[0-255]` (整数)\n- `current_lap`: 当前圈时间 (秒，浮点数)\n- `current_race_time`: 当前比赛时间 (秒，浮点数)\n- `lap_number`: 当前圈数 (整数)\n- `race_position`: 比赛排名 (整数)'
@@ -220,7 +244,7 @@ function setupMonacoRhai() {
     })
 
   // Hover details (Hover Tooltips with rich markdown)
-  hoverDisposable = monaco.languages.registerHoverProvider(langId, {
+  hoverDisposable = monacoApi.languages.registerHoverProvider(langId, {
       provideHover: (model, position) => {
         const word = model.getWordAtPosition(position)
         if (!word) return null
@@ -315,6 +339,12 @@ if info.is_race_on {
 \\
 **在系统运行日志中输出调试信息**
 - \`message\`: 日志字符串，会实时输出至下方控制台面板。`
+        } else if (name === 'watch') {
+          markdownValue = `**watch(name, value)** \\
+\\
+**记录调试观察值**
+- \`name\`: 观察项名称
+- \`value\`: 任意 Rhai 值，会显示在右侧调试器的观察值列表中。`
         }
 
         if (markdownValue) {
@@ -329,7 +359,7 @@ if info.is_race_on {
     })
 
   // Custom Feishu Light Theme
-  monaco.editor.defineTheme('forza-light', {
+  monacoApi.editor.defineTheme('forza-light', {
     base: 'vs',
     inherit: true,
     rules: [
@@ -356,13 +386,14 @@ if info.is_race_on {
 let resizeObserver: ResizeObserver | null = null
 
 onMounted(async () => {
-  setupMonacoRhai()
+  const monacoApi = await loadMonaco()
+  setupMonacoRhai(monacoApi)
 
   // Make sure DOM is fully loaded and structured
   await nextTick()
 
   if (containerRef.value) {
-    editor = monaco.editor.create(containerRef.value, {
+    editor = monacoApi.editor.create(containerRef.value, {
       value: props.modelValue,
       language: 'rhai',
       theme: 'forza-light',
@@ -381,8 +412,8 @@ onMounted(async () => {
 
     editor.onMouseDown((event) => {
       if (
-        event.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
-        event.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS
+        event.target.type === monacoApi.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
+        event.target.type === monacoApi.editor.MouseTargetType.GUTTER_LINE_NUMBERS
       ) {
         const line = event.target.position?.lineNumber
         if (line && line > 0) {
@@ -406,7 +437,7 @@ onMounted(async () => {
     })
 
     // Bind Ctrl+S command to save
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+    editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS, () => {
       emit('save')
     })
 
@@ -457,12 +488,13 @@ watch(
 watch(
   () => props.activeLine,
   (newVal) => {
-    if (editor) {
+    if (editor && monaco) {
+      const monacoApi = monaco
       const line = newVal || 0
-      const decorations: monaco.editor.IModelDeltaDecoration[] = []
+      const decorations: Monaco.editor.IModelDeltaDecoration[] = []
       if (line > 0) {
         decorations.push({
-          range: new monaco.Range(line, 1, line, 1),
+          range: new monacoApi.Range(line, 1, line, 1),
           options: {
             isWholeLine: true,
             className: 'active-execution-line',

@@ -1,4 +1,4 @@
-use crate::script_engine::{Script, ScriptMeta, ScriptRuntime};
+use crate::script_engine::{Script, ScriptMeta, ScriptRuntime, ScriptValidationResult};
 
 #[tauri::command]
 pub fn script_create(
@@ -15,6 +15,14 @@ pub fn script_execute(
     script_id: String,
 ) -> Result<String, String> {
     runtime.execute_script(&script_id)
+}
+
+#[tauri::command]
+pub fn script_validate_code(
+    runtime: tauri::State<'_, ScriptRuntime>,
+    code: String,
+) -> ScriptValidationResult {
+    runtime.validate_script_code(&code)
 }
 
 #[tauri::command]

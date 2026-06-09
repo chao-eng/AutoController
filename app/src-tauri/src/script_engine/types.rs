@@ -42,3 +42,10 @@ pub struct ScriptLineChangeEvent {
     pub line: usize,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ScriptValidationResult {
+    pub valid: bool,
+    pub line: usize,
+    pub column: usize,
+    pub message: Option<String>,
+}

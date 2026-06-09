@@ -17,6 +17,15 @@ pub struct ScriptDebugEvent {
     pub message: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct ScriptDebugWatchEvent {
+    pub execution_id: String,
+    pub script_id: String,
+    pub name: String,
+    pub value: String,
+    pub line: usize,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DebugMode {
     Running,
@@ -50,7 +59,7 @@ impl DebugControl {
             state: Arc::new((
                 Mutex::new(DebugState {
                     breakpoints: breakpoint_set,
-                    mode: DebugMode::Step,
+                    mode: DebugMode::Running,
                     paused: false,
                     stop_requested: false,
                     current_line: 0,
@@ -160,6 +169,29 @@ pub(super) fn emit_debug(
     }
 }
 
+pub(super) fn emit_debug_watch(
+    app_handle: &Arc<Mutex<Option<AppHandle>>>,
+    execution_id: &str,
+    script_id: &str,
+    name: String,
+    value: String,
+    line: usize,
+) {
+    let handle_guard = app_handle.lock();
+    if let Some(ref handle) = *handle_guard {
+        let _ = handle.emit(
+            "script-debug-watch",
+            ScriptDebugWatchEvent {
+                execution_id: execution_id.to_string(),
+                script_id: script_id.to_string(),
+                name,
+                value,
+                line,
+            },
+        );
+    }
+}
+
 fn emit_line(
     app_handle: &Arc<Mutex<Option<AppHandle>>>,
     execution_id: &str,
@@ -212,7 +244,17 @@ fn should_instrument(trimmed: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::instrument_script;
+    use super::{instrument_script, DebugControl, DebugMode};
+
+    #[test]
+    fn debug_control_starts_by_running_to_breakpoint() {
+        let control = DebugControl::new(vec![5]);
+        let (lock, _) = &*control.state;
+        let state = lock.lock();
+
+        assert_eq!(state.mode, DebugMode::Running);
+        assert!(state.breakpoints.contains(&5));
+    }
 
     #[test]
     fn instruments_executable_lines_without_breaking_else_chains() {

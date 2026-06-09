@@ -1,14 +1,14 @@
+use parking_lot::Mutex;
 use std::sync::Arc;
 use std::time::Duration;
-use parking_lot::Mutex;
 use tauri::Emitter;
 
 use rhai::Engine;
 
-use super::runtime::ScriptRuntime;
 use super::cancellation::CancellationToken;
-use super::debugger::{emit_debug, instrument_script, DebugControl};
-use super::types::{ScriptExecutionEvent, ScriptLineChangeEvent};
+use super::debugger::{emit_debug, emit_debug_watch, instrument_script, DebugControl};
+use super::runtime::ScriptRuntime;
+use super::types::{ScriptExecutionEvent, ScriptLineChangeEvent, ScriptValidationResult};
 
 pub(super) struct Execution {
     pub(super) script_id: String,
@@ -150,9 +150,7 @@ impl ScriptRuntime {
             );
 
             // Register Telemetry bindings
-            super::telemetry_bindings::register_telemetry_bindings(
-                &mut engine,
-            );
+            super::telemetry_bindings::register_telemetry_bindings(&mut engine);
 
             let token_progress = token_thread.clone();
             engine.on_progress(move |_ops| {
@@ -200,31 +198,55 @@ impl ScriptRuntime {
             let handle_log = app_handle.clone();
             let eid_log = eid.clone();
             let sid_log = sid.clone();
-            engine.register_fn("log", move |context: rhai::NativeCallContext, msg: rhai::Dynamic| {
-                {
-                    let handle_guard = handle_log.lock();
-                    if let Some(ref handle) = *handle_guard {
-                        if let Some(line) = context.call_position().line() {
-                            let _ = handle.emit(
-                                "script-line-change",
-                                ScriptLineChangeEvent {
-                                    execution_id: eid_log.clone(),
-                                    script_id: sid_log.clone(),
-                                    line,
-                                },
-                            );
+            engine.register_fn(
+                "log",
+                move |context: rhai::NativeCallContext, msg: rhai::Dynamic| {
+                    {
+                        let handle_guard = handle_log.lock();
+                        if let Some(ref handle) = *handle_guard {
+                            if let Some(line) = context.call_position().line() {
+                                let _ = handle.emit(
+                                    "script-line-change",
+                                    ScriptLineChangeEvent {
+                                        execution_id: eid_log.clone(),
+                                        script_id: sid_log.clone(),
+                                        line,
+                                    },
+                                );
+                            }
                         }
                     }
-                }
-                let msg_str = if msg.is_string() {
-                    msg.clone().into_string().unwrap_or_else(|_| msg.to_string())
-                } else if msg.is_map() || msg.is_array() {
-                    serde_json::to_string(&msg).unwrap_or_else(|_| msg.to_string())
-                } else {
-                    msg.to_string()
-                };
-                tracing::info!(target: "script", "[脚本] {}", msg_str);
-            });
+                    let msg_str = if msg.is_string() {
+                        msg.clone()
+                            .into_string()
+                            .unwrap_or_else(|_| msg.to_string())
+                    } else if msg.is_map() || msg.is_array() {
+                        serde_json::to_string(&msg).unwrap_or_else(|_| msg.to_string())
+                    } else {
+                        msg.to_string()
+                    };
+                    tracing::info!(target: "script", "[脚本] {}", msg_str);
+                },
+            );
+
+            let handle_watch = app_handle.clone();
+            let eid_watch = eid.clone();
+            let sid_watch = sid.clone();
+            engine.register_fn(
+                "watch",
+                move |context: rhai::NativeCallContext, name: &str, value: rhai::Dynamic| {
+                    let value_str = format_dynamic_value(&value);
+                    let line = context.call_position().line().unwrap_or(0);
+                    emit_debug_watch(
+                        &handle_watch,
+                        &eid_watch,
+                        &sid_watch,
+                        name.to_string(),
+                        value_str,
+                        line,
+                    );
+                },
+            );
 
             let wrapped_code = Self::wrap_script(&code);
             let executable_code = if debug_enabled {
@@ -427,5 +449,39 @@ impl ScriptRuntime {
         } else {
             code.to_string()
         }
+    }
+
+    pub fn validate_script_code(&self, code: &str) -> ScriptValidationResult {
+        let engine = Engine::new();
+        match engine.compile(Self::wrap_script(code)) {
+            Ok(_) => ScriptValidationResult {
+                valid: true,
+                line: 0,
+                column: 0,
+                message: None,
+            },
+            Err(e) => {
+                let position = e.position();
+                ScriptValidationResult {
+                    valid: false,
+                    line: position.line().unwrap_or(0),
+                    column: position.position().unwrap_or(0),
+                    message: Some(e.to_string()),
+                }
+            }
+        }
+    }
+}
+
+fn format_dynamic_value(value: &rhai::Dynamic) -> String {
+    if value.is_string() {
+        value
+            .clone()
+            .into_string()
+            .unwrap_or_else(|_| value.to_string())
+    } else if value.is_map() || value.is_array() {
+        serde_json::to_string(value).unwrap_or_else(|_| value.to_string())
+    } else {
+        value.to_string()
     }
 }

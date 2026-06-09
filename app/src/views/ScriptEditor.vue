@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import PageShell from '@/components/layout/PageShell.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
 import { SCRIPT_TEMPLATES, TEMPLATE_CATEGORIES, type ScriptTemplate } from '@/lib/scriptTemplates'
+import { preferenceKeys, readPreference, writePreference } from '@/lib/preferences'
 
 const CodeEditor = defineAsyncComponent(() => import('../components/script/CodeEditor.vue'))
 
@@ -19,7 +20,7 @@ const uiStore = useUIStore()
 const configStore = useConfigStore()
 
 const newScriptName = ref('')
-const DEFAULT_TEMPLATE = '// 在此编写脚本\n//\n// 指定默认手柄 (首选):\n//   set_default_device(0);\n//\n// 按键操作:\n//   press("A");         - 按下按键\n//   release("A");       - 释放按键\n//\n// 摇杆与扳机:\n//   set_thumb("LeftX", 0.5);    - 设置摇杆 (-1.0 ~ 1.0)\n//   set_trigger("Left", 0.8);   - 设置扳机 (0.0 ~ 1.0)\n//\n// 延时与日志:\n//   sleep(1000);         - 等待毫秒\n//   log("hello");        - 输出日志\n'
+const DEFAULT_TEMPLATE = '// 在此编写脚本\n//\n// 指定默认手柄 (首选):\n//   set_default_device(0);\n//\n// 按键操作:\n//   press("A");         - 按下按键\n//   release("A");       - 释放按键\n//\n// 摇杆与扳机:\n//   set_thumb("LeftX", 0.5);    - 设置摇杆 (-1.0 ~ 1.0)\n//   set_trigger("Left", 0.8);   - 设置扳机 (0.0 ~ 1.0)\n//\n// 延时、日志与调试:\n//   sleep(1000);         - 等待毫秒\n//   log("hello");        - 输出日志\n//   watch("step", 1);    - 在调试面板显示观察值\n'
 const editorCode = ref(DEFAULT_TEMPLATE)
 
 let statusTimer: ReturnType<typeof setTimeout> | null = null
@@ -75,24 +76,13 @@ const visibleStatusMessage = computed(() => {
 })
 
 function loadBreakpointMap(): Record<string, number[]> {
-  try {
-    const raw = localStorage.getItem('script_breakpoints')
-    if (!raw) return {}
-    const parsed = JSON.parse(raw)
-    if (!parsed || typeof parsed !== 'object') return {}
-    return parsed
-  } catch (e) {
-    console.warn('Unable to load script breakpoints:', e)
-    return {}
-  }
+  const parsed = readPreference<Record<string, number[]>>(preferenceKeys.scriptBreakpoints, {})
+  if (!parsed || typeof parsed !== 'object') return {}
+  return parsed
 }
 
 function persistBreakpoints() {
-  try {
-    localStorage.setItem('script_breakpoints', JSON.stringify(breakpointMap.value))
-  } catch (e) {
-    console.warn('Unable to save script breakpoints:', e)
-  }
+  writePreference(preferenceKeys.scriptBreakpoints, breakpointMap.value)
 }
 
 function toggleBreakpoint(line: number) {
@@ -130,29 +120,12 @@ const tooltipX = ref(0)
 const tooltipY = ref(0)
 
 // API参考栏折叠状态
-let collapsedDefault = false
-try {
-  collapsedDefault = localStorage.getItem('api_panel_collapsed') === 'true'
-} catch (e) {
-  console.warn('Unable to access localStorage:', e)
-}
-const apiPanelCollapsed = ref(collapsedDefault)
-
-let scriptListCollapsedDefault = false
-try {
-  scriptListCollapsedDefault = localStorage.getItem('script_list_collapsed') === 'true'
-} catch (e) {
-  console.warn('Unable to access localStorage:', e)
-}
-const scriptListCollapsed = ref(scriptListCollapsedDefault)
+const apiPanelCollapsed = ref(readPreference(preferenceKeys.scriptApiPanelCollapsed, false))
+const scriptListCollapsed = ref(readPreference(preferenceKeys.scriptListCollapsed, false))
 
 function toggleScriptList() {
   scriptListCollapsed.value = !scriptListCollapsed.value
-  try {
-    localStorage.setItem('script_list_collapsed', String(scriptListCollapsed.value))
-  } catch (e) {
-    console.warn('Unable to write to localStorage:', e)
-  }
+  writePreference(preferenceKeys.scriptListCollapsed, scriptListCollapsed.value)
 }
 
 function handleScriptListClick() {
@@ -163,11 +136,7 @@ function handleScriptListClick() {
 
 function toggleApiPanel() {
   apiPanelCollapsed.value = !apiPanelCollapsed.value
-  try {
-    localStorage.setItem('api_panel_collapsed', String(apiPanelCollapsed.value))
-  } catch (e) {
-    console.warn('Unable to write to localStorage:', e)
-  }
+  writePreference(preferenceKeys.scriptApiPanelCollapsed, apiPanelCollapsed.value)
 }
 
 function handleApiPanelClick() {
@@ -289,14 +258,38 @@ async function selectScript(id: string) {
   }
 }
 
-async function saveScript() {
+async function saveScript(notify = true) {
   if (store.currentScript) {
     try {
       await store.updateScript(store.currentScript.id, editorCode.value)
-      uiStore.showToast('脚本保存成功', 'success')
+      if (notify) uiStore.showToast('脚本保存成功', 'success')
+      return true
     } catch (e) {
       uiStore.showAlert('保存失败', `保存脚本失败: ${e}`)
+      return false
     }
+  }
+  return false
+}
+
+async function validateBeforeExecution() {
+  try {
+    const result = await store.validateCode(editorCode.value)
+    if (result.valid) return true
+
+    const lineLabel = result.line > 0 ? `第 ${result.line} 行` : '未知位置'
+    const columnLabel = result.column > 0 ? `，第 ${result.column} 列` : ''
+    store.executionStatus = 'error'
+    store.executionMessage = `脚本语法错误: ${lineLabel}${columnLabel}`
+    store.activeLine = result.line || 0
+    uiStore.showToast(result.message || store.executionMessage, 'error')
+    clearStatusAfterDelay()
+    return false
+  } catch (e) {
+    store.executionStatus = 'error'
+    store.executionMessage = `脚本校验失败: ${e}`
+    clearStatusAfterDelay()
+    return false
   }
 }
 
@@ -307,6 +300,8 @@ async function runScript() {
       return
     }
     try {
+      if (!(await validateBeforeExecution())) return
+      if (!(await saveScript(false))) return
       await store.executeScript(store.currentScript.id)
     } catch (e) {
       clearStatusAfterDelay()
@@ -323,6 +318,8 @@ async function runDebug() {
   }
 
   try {
+    if (!(await validateBeforeExecution())) return
+    if (!(await saveScript(false))) return
     await store.debugScript(store.currentScript.id, currentBreakpoints.value)
   } catch (e) {
     clearStatusAfterDelay()
@@ -449,8 +446,7 @@ async function handleDrop(targetIndex: number) {
 
 
 function saveScriptOrder(orderedScripts: any[]) {
-  const ids = orderedScripts.map(s => s.id)
-  localStorage.setItem('script_order', JSON.stringify(ids))
+  store.persistScriptOrder(orderedScripts)
 }
 
 </script>
@@ -720,6 +716,22 @@ function saveScriptOrder(orderedScripts: any[]) {
               <span v-else>点击编辑器行号添加断点</span>
             </div>
 
+            <div v-if="store.debugWatches.length > 0" class="mb-2 max-h-28 overflow-y-auto rounded border border-border bg-surface/80">
+              <div class="flex items-center justify-between border-b border-border px-2 py-1 text-[10px] font-semibold text-muted-foreground">
+                <span>观察值</span>
+                <span>{{ store.debugWatches.length }}</span>
+              </div>
+              <div
+                v-for="item in store.debugWatches"
+                :key="item.name"
+                class="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-2 border-b border-border/60 px-2 py-1 last:border-b-0"
+                :title="`第 ${item.line || '-'} 行: ${item.name} = ${item.value}`"
+              >
+                <span class="truncate font-mono text-[10px] text-text">{{ item.name }}</span>
+                <span class="truncate font-mono text-[10px] text-muted-foreground">{{ item.value }}</span>
+              </div>
+            </div>
+
             <div class="flex flex-wrap gap-1">
               <Button
                 variant="outline"
@@ -857,6 +869,7 @@ function saveScriptOrder(orderedScripts: any[]) {
             <h5 class="mb-1 text-[11px] text-primary">延时与日志</h5>
             <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">sleep(ms);</code>
             <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">log("message");</code>
+            <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">watch("name", value);</code>
           </div>
           <div class="mb-4">
             <h5 class="mb-1 text-[11px] text-primary">FH6 游戏遥测数据</h5>
