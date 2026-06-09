@@ -4,11 +4,12 @@ import { useScriptStore } from '../stores/script'
 import { useMacroStore } from '../stores/macro'
 import { useUIStore } from '../stores/ui'
 import { useConfigStore } from '../stores/config'
-import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link, BookOpen, ChevronLeft, ChevronRight, List, PanelLeftClose, PanelLeftOpen } from '@lucide/vue'
+import { Play, Plus, Trash2, Save, Circle, Square, Edit2, Link, BookOpen, ChevronLeft, ChevronRight, List, PanelLeftClose, PanelLeftOpen, Bug, StepForward, FastForward, Eraser } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import PageShell from '@/components/layout/PageShell.vue'
 import PageHeader from '@/components/layout/PageHeader.vue'
+import { SCRIPT_TEMPLATES, TEMPLATE_CATEGORIES, type ScriptTemplate } from '@/lib/scriptTemplates'
 
 const CodeEditor = defineAsyncComponent(() => import('../components/script/CodeEditor.vue'))
 
@@ -22,6 +23,9 @@ const DEFAULT_TEMPLATE = '// 在此编写脚本\n//\n// 指定默认手柄 (首�
 const editorCode = ref(DEFAULT_TEMPLATE)
 
 let statusTimer: ReturnType<typeof setTimeout> | null = null
+const breakpointMap = ref<Record<string, number[]>>(loadBreakpointMap())
+const selectedTemplateCategory = ref<string>('全部')
+const templateCategories = TEMPLATE_CATEGORIES
 
 // profile filter
 const profileFilter = ref<string>('') // '' = 全部
@@ -48,6 +52,76 @@ const filteredScripts = computed(() => {
   if (!profile) return store.scripts
   return store.scripts.filter(s => profile.scripts.includes(s.id))
 })
+
+const currentBreakpoints = computed(() => {
+  const scriptId = store.currentScript?.id
+  if (!scriptId) return []
+  return [...(breakpointMap.value[scriptId] || [])].sort((a, b) => a - b)
+})
+
+const filteredTemplates = computed(() => {
+  if (selectedTemplateCategory.value === '全部') return SCRIPT_TEMPLATES
+  return SCRIPT_TEMPLATES.filter((template) => template.category === selectedTemplateCategory.value)
+})
+
+const visibleStatusMessage = computed(() => {
+  if (store.debugStatus === 'paused') {
+    return store.debugMessage || `暂停在第 ${store.debugLine} 行`
+  }
+  if (store.debugStatus === 'running' || store.debugStatus === 'stepping') {
+    return store.debugMessage || '调试运行中'
+  }
+  return store.executionMessage
+})
+
+function loadBreakpointMap(): Record<string, number[]> {
+  try {
+    const raw = localStorage.getItem('script_breakpoints')
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return {}
+    return parsed
+  } catch (e) {
+    console.warn('Unable to load script breakpoints:', e)
+    return {}
+  }
+}
+
+function persistBreakpoints() {
+  try {
+    localStorage.setItem('script_breakpoints', JSON.stringify(breakpointMap.value))
+  } catch (e) {
+    console.warn('Unable to save script breakpoints:', e)
+  }
+}
+
+function toggleBreakpoint(line: number) {
+  const scriptId = store.currentScript?.id
+  if (!scriptId || line <= 0) return
+
+  const current = new Set(breakpointMap.value[scriptId] || [])
+  if (current.has(line)) {
+    current.delete(line)
+  } else {
+    current.add(line)
+  }
+
+  breakpointMap.value = {
+    ...breakpointMap.value,
+    [scriptId]: [...current].sort((a, b) => a - b),
+  }
+  persistBreakpoints()
+}
+
+function clearBreakpoints() {
+  const scriptId = store.currentScript?.id
+  if (!scriptId) return
+  breakpointMap.value = {
+    ...breakpointMap.value,
+    [scriptId]: [],
+  }
+  persistBreakpoints()
+}
 
 // 浮动 Tooltip 状态
 const tooltipVisible = ref(false)
@@ -240,6 +314,45 @@ async function runScript() {
   }
 }
 
+async function runDebug() {
+  if (!store.currentScript) return
+
+  if (store.debugExecutionId) {
+    await store.stopDebug()
+    return
+  }
+
+  try {
+    await store.debugScript(store.currentScript.id, currentBreakpoints.value)
+  } catch (e) {
+    clearStatusAfterDelay()
+  }
+}
+
+async function resumeDebug() {
+  await store.resumeDebug()
+}
+
+async function stepDebug() {
+  await store.stepDebug()
+}
+
+async function createFromTemplate(template: ScriptTemplate) {
+  try {
+    const script = await store.createScript(template.name, template.code)
+    await selectScript(script.id)
+    uiStore.showToast('已从模板新建脚本', 'success')
+  } catch (e) {
+    uiStore.showAlert('创建失败', `模板新建脚本失败: ${e}`)
+  }
+}
+
+function insertTemplate(template: ScriptTemplate) {
+  const base = editorCode.value.trimEnd()
+  editorCode.value = `${base}${base ? '\n\n' : ''}${template.code}`
+  uiStore.showToast('模板已插入当前脚本', 'success')
+}
+
 async function deleteScript(id: string) {
   const confirmed = await uiStore.showConfirm('确认删除', '确定要删除这个脚本吗？')
   if (!confirmed) return
@@ -385,11 +498,21 @@ function saveScriptOrder(orderedScripts: any[]) {
           <Play :size="14" />
           <span>{{ store.executing ? '停止' : '运行' }}</span>
         </Button>
+        <Button
+          :variant="store.debugExecutionId ? 'destructive' : 'outline'"
+          size="sm"
+          @click="runDebug"
+          :disabled="!store.currentScript || macroStore.isRecording || (store.executing && !store.debugExecutionId)"
+        >
+          <Bug :size="14" />
+          <span>{{ store.debugExecutionId ? '停止调试' : '调试' }}</span>
+        </Button>
         <div
           v-if="store.executionStatus !== 'idle'"
           :class="[
             'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium animate-fadeIn shrink-0',
-            store.executionStatus === 'running' ? 'bg-blue-500/12 text-blue-400' : '',
+            store.debugStatus === 'paused' ? 'bg-amber-500/12 text-amber-400' : '',
+            store.executionStatus === 'running' && store.debugStatus !== 'paused' ? 'bg-blue-500/12 text-blue-400' : '',
             store.executionStatus === 'success' ? 'bg-green-500/12 text-green-400' : '',
             store.executionStatus === 'error' ? 'bg-red-500/12 text-red-400' : '',
           ]"
@@ -397,12 +520,13 @@ function saveScriptOrder(orderedScripts: any[]) {
           <span
             :class="[
               'h-1.5 w-1.5 shrink-0 rounded-full',
-              store.executionStatus === 'running' ? 'bg-blue-400 animate-pulse' : '',
+              store.debugStatus === 'paused' ? 'bg-amber-400' : '',
+              store.executionStatus === 'running' && store.debugStatus !== 'paused' ? 'bg-blue-400 animate-pulse' : '',
               store.executionStatus === 'success' ? 'bg-green-400' : '',
               store.executionStatus === 'error' ? 'bg-red-400' : '',
             ]"
           ></span>
-          <span class="max-w-[240px] truncate whitespace-nowrap">{{ store.executionMessage }}</span>
+          <span class="max-w-[240px] truncate whitespace-nowrap">{{ visibleStatusMessage }}</span>
         </div>
       </template>
     </PageHeader>
@@ -548,7 +672,13 @@ function saveScriptOrder(orderedScripts: any[]) {
       </div>
 
       <div class="min-w-0 flex-1">
-        <CodeEditor v-model="editorCode" :activeLine="store.activeLine" @save="saveScript" />
+        <CodeEditor
+          v-model="editorCode"
+          :activeLine="store.activeLine"
+          :breakpoints="currentBreakpoints"
+          @save="saveScript"
+          @toggleBreakpoint="toggleBreakpoint"
+        />
       </div>
 
       <div
@@ -574,6 +704,107 @@ function saveScriptOrder(orderedScripts: any[]) {
           </button>
         </div>
         <div v-show="!apiPanelCollapsed" class="flex flex-1 flex-col overflow-y-auto">
+          <div class="mb-4 rounded-lg border border-border bg-muted/20 p-3">
+            <div class="mb-2 flex items-center justify-between gap-2">
+              <div class="flex min-w-0 items-center gap-1.5">
+                <Bug :size="14" class="text-primary" />
+                <h5 class="m-0 truncate text-[11px] font-semibold text-text">调试器</h5>
+              </div>
+              <span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{{ currentBreakpoints.length }} 断点</span>
+            </div>
+
+            <div class="mb-2 min-h-5 text-[11px] leading-relaxed text-muted-foreground">
+              <span v-if="store.debugStatus === 'paused'" class="text-amber-400">{{ store.debugMessage }}</span>
+              <span v-else-if="store.debugStatus === 'running' || store.debugStatus === 'stepping'">{{ store.debugMessage || '调试运行中' }}</span>
+              <span v-else-if="currentBreakpoints.length > 0">行 {{ currentBreakpoints.join(', ') }}</span>
+              <span v-else>点击编辑器行号添加断点</span>
+            </div>
+
+            <div class="flex flex-wrap gap-1">
+              <Button
+                variant="outline"
+                size="xs"
+                :disabled="store.debugStatus !== 'paused'"
+                @click="resumeDebug"
+              >
+                <FastForward :size="12" />
+                <span>继续</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                :disabled="store.debugStatus !== 'paused'"
+                @click="stepDebug"
+              >
+                <StepForward :size="12" />
+                <span>单步</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
+                :disabled="currentBreakpoints.length === 0 || !!store.debugExecutionId"
+                @click="clearBreakpoints"
+              >
+                <Eraser :size="12" />
+                <span>清空</span>
+              </Button>
+            </div>
+          </div>
+
+          <div class="mb-4 rounded-lg border border-border bg-muted/20 p-3">
+            <div class="mb-2 flex items-center justify-between gap-2">
+              <div class="flex min-w-0 items-center gap-1.5">
+                <BookOpen :size="14" class="text-primary" />
+                <h5 class="m-0 truncate text-[11px] font-semibold text-text">模板库</h5>
+              </div>
+              <span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{{ filteredTemplates.length }}</span>
+            </div>
+
+            <div class="mb-2 flex flex-wrap gap-1">
+              <button
+                v-for="category in templateCategories"
+                :key="category"
+                class="filter-pill"
+                :class="{ active: selectedTemplateCategory === category }"
+                @click="selectedTemplateCategory = category"
+              >{{ category }}</button>
+            </div>
+
+            <div class="flex max-h-[220px] flex-col gap-2 overflow-y-auto pr-1">
+              <div
+                v-for="template in filteredTemplates"
+                :key="template.id"
+                class="rounded-md border border-border bg-surface-elevated p-2"
+              >
+                <div class="mb-1 flex items-center justify-between gap-2">
+                  <span class="truncate text-[11px] font-semibold text-text">{{ template.name }}</span>
+                  <span class="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{{ template.category }}</span>
+                </div>
+                <p class="mb-2 line-clamp-2 text-[10px] leading-relaxed text-muted-foreground">{{ template.summary }}</p>
+                <div class="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    :disabled="macroStore.isRecording"
+                    @click="createFromTemplate(template)"
+                  >
+                    <Plus :size="12" />
+                    <span>新建</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    :disabled="macroStore.isRecording"
+                    @click="insertTemplate(template)"
+                  >
+                    <Save :size="12" />
+                    <span>插入</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="mb-4">
             <h5 class="mb-1 text-[11px] text-primary">指定默认手柄 (首选)</h5>
             <code class="block py-0.5 font-mono text-[11px] text-muted-foreground">set_default_device(0);</code>
@@ -750,6 +981,13 @@ function saveScriptOrder(orderedScripts: any[]) {
   border-color: var(--primary);
   background: rgba(99, 102, 241, 0.15);
   color: var(--primary);
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .is-recording .min-w-0.flex-1:first-of-type,

@@ -29,20 +29,40 @@ if (!globalThis.MonacoEnvironment) {
 const props = defineProps<{
   modelValue: string
   activeLine?: number
+  breakpoints?: number[]
 }>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'save'): void
+  (e: 'toggleBreakpoint', line: number): void
 }>()
 
 const containerRef = ref<HTMLElement | null>(null)
 let editor: monaco.editor.IStandaloneCodeEditor | null = null
 let activeLineDecoration: string[] = []
+let breakpointDecorations: string[] = []
 let isUpdating = false // Guard to prevent infinite reactive updates
 
 let completionDisposable: monaco.IDisposable | null = null
 let hoverDisposable: monaco.IDisposable | null = null
+
+function updateBreakpointDecorations(lines: number[]) {
+  if (!editor) return
+
+  const decorations = lines
+    .filter((line) => line > 0)
+    .map((line) => ({
+      range: new monaco.Range(line, 1, line, 1),
+      options: {
+        isWholeLine: false,
+        glyphMarginClassName: 'debug-breakpoint-glyph',
+        glyphMarginHoverMessage: { value: `断点: 第 ${line} 行` },
+      },
+    }))
+
+  breakpointDecorations = editor.deltaDecorations(breakpointDecorations, decorations)
+}
 
 // Register Custom Rhai Language and Theme
 function setupMonacoRhai() {
@@ -350,6 +370,7 @@ onMounted(async () => {
       fontFamily: 'Fira Code, monospace',
       fontSize: 13,
       lineHeight: 20,
+      glyphMargin: true,
       minimap: { enabled: false },
       tabSize: 2,
       cursorBlinking: 'smooth',
@@ -357,6 +378,20 @@ onMounted(async () => {
       padding: { top: 12, bottom: 12 },
       hover: { enabled: true }
     })
+
+    editor.onMouseDown((event) => {
+      if (
+        event.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
+        event.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS
+      ) {
+        const line = event.target.position?.lineNumber
+        if (line && line > 0) {
+          emit('toggleBreakpoint', line)
+        }
+      }
+    })
+
+    updateBreakpointDecorations(props.breakpoints || [])
 
     // Listen to changes to emit update to parent
     editor.onDidChangeModelContent(() => {
@@ -389,6 +424,7 @@ onUnmounted(() => {
   editor?.dispose()
   editor = null
   activeLineDecoration = []
+  breakpointDecorations = []
 
   completionDisposable?.dispose()
   completionDisposable = null
@@ -407,6 +443,14 @@ watch(
       }
     }
   }
+)
+
+watch(
+  () => props.breakpoints || [],
+  (lines) => {
+    updateBreakpointDecorations(lines)
+  },
+  { immediate: true }
 )
 
 // Highlight active execution line from parent
@@ -451,6 +495,22 @@ watch(
 .active-execution-line-margin {
   background: rgba(34, 197, 94, 0.2) !important;
   font-weight: bold;
+}
+
+.debug-breakpoint-glyph {
+  position: relative;
+}
+
+.debug-breakpoint-glyph::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18);
 }
 
 

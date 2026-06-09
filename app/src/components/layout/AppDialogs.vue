@@ -62,8 +62,8 @@ function renderDialogMessage(message: string): string {
 
 <template>
   <Dialog :open="!!uiStore.activeDialog" @update:open="(v) => { if (!v) handleCancel() }">
-    <DialogContent class="sm:max-w-[420px]">
-      <DialogHeader v-if="uiStore.activeDialog">
+    <DialogContent class="flex max-h-[82vh] flex-col overflow-hidden sm:max-w-[520px]">
+      <DialogHeader v-if="uiStore.activeDialog" class="shrink-0 pr-8">
         <div class="flex items-center gap-2">
           <span
             class="flex size-7 items-center justify-center rounded-full"
@@ -75,8 +75,14 @@ function renderDialogMessage(message: string): string {
           <DialogTitle>{{ uiStore.activeDialog.title }}</DialogTitle>
         </div>
       </DialogHeader>
-      <div v-if="uiStore.activeDialog" class="px-6">
-        <DialogDescription class="text-sm leading-relaxed" v-html="renderDialogMessage(uiStore.activeDialog.message)" />
+      <div
+        v-if="uiStore.activeDialog"
+        class="-mx-4 min-h-0 overflow-y-auto px-6 pb-1 pr-5"
+      >
+        <DialogDescription
+          class="text-sm leading-relaxed"
+          v-html="renderDialogMessage(uiStore.activeDialog.message)"
+        />
         <div v-if="uiStore.activeDialog.type === 'prompt'" class="mt-3">
           <Input
             ref="inputElement"
@@ -87,7 +93,7 @@ function renderDialogMessage(message: string): string {
           />
         </div>
       </div>
-      <DialogFooter>
+      <DialogFooter class="shrink-0">
         <Button v-if="uiStore.activeDialog?.type !== 'alert'" variant="outline" @click="handleCancel">
           取消
         </Button>

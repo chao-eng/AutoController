@@ -18,6 +18,39 @@ pub fn script_execute(
 }
 
 #[tauri::command]
+pub fn script_debug_execute(
+    runtime: tauri::State<'_, ScriptRuntime>,
+    script_id: String,
+    breakpoints: Vec<usize>,
+) -> Result<String, String> {
+    runtime.debug_script(&script_id, breakpoints)
+}
+
+#[tauri::command]
+pub fn script_debug_resume(
+    runtime: tauri::State<'_, ScriptRuntime>,
+    execution_id: String,
+) -> Result<(), String> {
+    runtime.debug_resume(&execution_id)
+}
+
+#[tauri::command]
+pub fn script_debug_step(
+    runtime: tauri::State<'_, ScriptRuntime>,
+    execution_id: String,
+) -> Result<(), String> {
+    runtime.debug_step(&execution_id)
+}
+
+#[tauri::command]
+pub fn script_debug_stop(
+    runtime: tauri::State<'_, ScriptRuntime>,
+    execution_id: String,
+) -> Result<(), String> {
+    runtime.stop_execution(&execution_id)
+}
+
+#[tauri::command]
 pub fn script_stop(
     runtime: tauri::State<'_, ScriptRuntime>,
     execution_id: String,

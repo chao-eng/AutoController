@@ -7,17 +7,33 @@ use rhai::Engine;
 
 use super::runtime::ScriptRuntime;
 use super::cancellation::CancellationToken;
+use super::debugger::{emit_debug, instrument_script, DebugControl};
 use super::types::{ScriptExecutionEvent, ScriptLineChangeEvent};
 
 pub(super) struct Execution {
+    pub(super) script_id: String,
     pub(super) running: bool,
     pub(super) success: bool,
     pub(super) error: Option<String>,
     pub(super) token: CancellationToken,
+    pub(super) debug_control: Option<DebugControl>,
 }
 
 impl ScriptRuntime {
     pub fn execute_script(&self, script_id: &str) -> Result<String, String> {
+        self.execute_script_inner(script_id, false, Vec::new())
+    }
+
+    pub fn debug_script(&self, script_id: &str, breakpoints: Vec<usize>) -> Result<String, String> {
+        self.execute_script_inner(script_id, true, breakpoints)
+    }
+
+    fn execute_script_inner(
+        &self,
+        script_id: &str,
+        debug_enabled: bool,
+        breakpoints: Vec<usize>,
+    ) -> Result<String, String> {
         let (code, name) = {
             let scripts = self.scripts.lock();
             let script = scripts
@@ -31,16 +47,23 @@ impl ScriptRuntime {
         let sid = script_id.to_string();
 
         let token = CancellationToken::new();
+        let debug_control = if debug_enabled {
+            Some(DebugControl::new(breakpoints))
+        } else {
+            None
+        };
 
         {
             let mut executions = self.executions.lock();
             executions.insert(
                 execution_id.clone(),
                 Execution {
+                    script_id: script_id.to_string(),
                     running: true,
                     success: false,
                     error: None,
                     token: token.clone(),
+                    debug_control: debug_control.clone(),
                 },
             );
         }
@@ -49,6 +72,7 @@ impl ScriptRuntime {
         let executions = self.executions.clone();
         let app_handle = self.app_handle.clone();
         let token_thread = token.clone();
+        let debug_control_thread = debug_control.clone();
 
         {
             let app_handle_guard = app_handle.lock();
@@ -65,6 +89,17 @@ impl ScriptRuntime {
             }
         }
 
+        if debug_enabled {
+            emit_debug(
+                &app_handle,
+                &execution_id,
+                script_id,
+                "started",
+                0,
+                Some(format!("调试会话 '{}' 已启动", name)),
+            );
+        }
+
         std::thread::spawn(move || {
             tracing::info!(execution_id = %eid, script_id = %sid, name = %name, "脚本开始执行");
 
@@ -77,6 +112,22 @@ impl ScriptRuntime {
             engine.register_fn("to_int", move |s: &str| -> i64 {
                 s.trim().parse::<i64>().unwrap_or(0)
             });
+
+            if let Some(debug_control) = debug_control_thread.clone() {
+                let token_debug = token_thread.clone();
+                let handle_debug = app_handle.clone();
+                let eid_debug = eid.clone();
+                let sid_debug = sid.clone();
+                engine.register_fn("__debug_hit", move |line: i64| {
+                    debug_control.hit(
+                        line.max(0) as usize,
+                        &token_debug,
+                        &handle_debug,
+                        &eid_debug,
+                        &sid_debug,
+                    );
+                });
+            }
 
             let default_device = Arc::new(Mutex::new("0".to_string()));
 
@@ -176,8 +227,13 @@ impl ScriptRuntime {
             });
 
             let wrapped_code = Self::wrap_script(&code);
+            let executable_code = if debug_enabled {
+                instrument_script(&wrapped_code)
+            } else {
+                wrapped_code
+            };
 
-            let (success, err_msg) = match engine.eval::<()>(&wrapped_code) {
+            let (success, err_msg) = match engine.eval::<()>(&executable_code) {
                 Ok(()) => {
                     tracing::info!(execution_id = %eid, script_id = %sid, "脚本执行完成");
                     {
@@ -194,6 +250,16 @@ impl ScriptRuntime {
                             );
                         }
                     }
+                    if debug_enabled {
+                        emit_debug(
+                            &app_handle,
+                            &eid,
+                            &sid,
+                            "completed",
+                            0,
+                            Some("调试会话已完成".to_string()),
+                        );
+                    }
                     (true, None)
                 }
                 Err(e) => {
@@ -206,6 +272,16 @@ impl ScriptRuntime {
 
                     if is_terminated {
                         tracing::info!(execution_id = %eid, script_id = %sid, "脚本执行被用户手动停止");
+                        if debug_enabled {
+                            emit_debug(
+                                &app_handle,
+                                &eid,
+                                &sid,
+                                "stopped",
+                                0,
+                                Some("调试会话已停止".to_string()),
+                            );
+                        }
                         (true, None)
                     } else {
                         tracing::error!(execution_id = %eid, script_id = %sid, error = %e, "脚本执行出错");
@@ -222,6 +298,16 @@ impl ScriptRuntime {
                                     },
                                 );
                             }
+                        }
+                        if debug_enabled {
+                            emit_debug(
+                                &app_handle,
+                                &eid,
+                                &sid,
+                                "error",
+                                0,
+                                Some(format!("调试执行出错: {}", e)),
+                            );
                         }
                         (false, Some(e.to_string()))
                     }
@@ -260,6 +346,9 @@ impl ScriptRuntime {
         let mut executions = self.executions.lock();
         if let Some(exec) = executions.get_mut(execution_id) {
             exec.token.cancel();
+            if let Some(debug_control) = &exec.debug_control {
+                debug_control.stop();
+            }
         }
         if executions.remove(execution_id).is_some() {
             tracing::info!(execution_id = %execution_id, "脚本执行已停止");
@@ -267,6 +356,56 @@ impl ScriptRuntime {
         } else {
             Err(format!("执行不存在: {}", execution_id))
         }
+    }
+
+    pub fn debug_resume(&self, execution_id: &str) -> Result<(), String> {
+        let (script_id, debug_control) = {
+            let executions = self.executions.lock();
+            let exec = executions
+                .get(execution_id)
+                .ok_or_else(|| format!("执行不存在: {}", execution_id))?;
+            let debug_control = exec
+                .debug_control
+                .clone()
+                .ok_or_else(|| "当前执行不是调试会话".to_string())?;
+            (exec.script_id.clone(), debug_control)
+        };
+
+        debug_control.resume();
+        emit_debug(
+            &self.app_handle,
+            execution_id,
+            &script_id,
+            "running",
+            debug_control.current_line(),
+            Some("调试继续运行".to_string()),
+        );
+        Ok(())
+    }
+
+    pub fn debug_step(&self, execution_id: &str) -> Result<(), String> {
+        let (script_id, debug_control) = {
+            let executions = self.executions.lock();
+            let exec = executions
+                .get(execution_id)
+                .ok_or_else(|| format!("执行不存在: {}", execution_id))?;
+            let debug_control = exec
+                .debug_control
+                .clone()
+                .ok_or_else(|| "当前执行不是调试会话".to_string())?;
+            (exec.script_id.clone(), debug_control)
+        };
+
+        debug_control.step();
+        emit_debug(
+            &self.app_handle,
+            execution_id,
+            &script_id,
+            "stepping",
+            debug_control.current_line(),
+            Some("调试单步执行".to_string()),
+        );
+        Ok(())
     }
 
     pub fn is_executing(&self, execution_id: &str) -> bool {

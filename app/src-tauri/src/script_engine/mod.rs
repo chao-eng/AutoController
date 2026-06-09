@@ -7,6 +7,7 @@ pub mod controller_bindings;
 pub mod ocr_bindings;
 pub mod execution;
 pub mod sequence;
+pub mod debugger;
 
 pub mod telemetry_bindings;
 

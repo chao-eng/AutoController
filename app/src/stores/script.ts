@@ -11,6 +11,14 @@ interface ScriptExecutionEvent {
   message: string | null
 }
 
+interface ScriptDebugEvent {
+  execution_id: string
+  script_id: string
+  status: 'started' | 'paused' | 'running' | 'stepping' | 'completed' | 'stopped' | 'error'
+  line: number
+  message: string | null
+}
+
 export const useScriptStore = defineStore('script', () => {
   const scripts = ref<ScriptMeta[]>([])
   const currentScript = ref<Script | null>(null)
@@ -23,8 +31,13 @@ export const useScriptStore = defineStore('script', () => {
   const executionStatus = ref<'idle' | 'running' | 'success' | 'error'>('idle')
   const executionMessage = ref('')
   const activeLine = ref<number>(0)
+  const debugExecutionId = ref<string | null>(null)
+  const debugStatus = ref<'idle' | 'running' | 'paused' | 'stepping'>('idle')
+  const debugLine = ref<number>(0)
+  const debugMessage = ref('')
   let unlisten: UnlistenFn | null = null
   let lineUnlisten: UnlistenFn | null = null
+  let debugUnlisten: UnlistenFn | null = null
 
   async function fetchScripts() {
     loading.value = true
@@ -115,11 +128,78 @@ export const useScriptStore = defineStore('script', () => {
     }
   }
 
+  async function debugScript(scriptId: string, breakpoints: number[]) {
+    try {
+      executing.value = true
+      executionStatus.value = 'running'
+      executionMessage.value = '正在启动调试...'
+      debugStatus.value = 'running'
+      debugLine.value = 0
+      debugMessage.value = '调试会话启动中'
+
+      const eid = await invoke<string>('script_debug_execute', { scriptId, breakpoints })
+      executionId.value = eid
+      debugExecutionId.value = eid
+      return eid
+    } catch (e) {
+      error.value = String(e)
+      executing.value = false
+      executionId.value = null
+      debugExecutionId.value = null
+      debugStatus.value = 'idle'
+      executionStatus.value = 'error'
+      executionMessage.value = `调试启动失败: ${e}`
+      throw e
+    }
+  }
+
+  async function resumeDebug() {
+    if (!debugExecutionId.value) return
+    try {
+      await invoke('script_debug_resume', { executionId: debugExecutionId.value })
+      debugStatus.value = 'running'
+    } catch (e) {
+      error.value = String(e)
+    }
+  }
+
+  async function stepDebug() {
+    if (!debugExecutionId.value) return
+    try {
+      await invoke('script_debug_step', { executionId: debugExecutionId.value })
+      debugStatus.value = 'stepping'
+    } catch (e) {
+      error.value = String(e)
+    }
+  }
+
+  async function stopDebug() {
+    if (!debugExecutionId.value) return
+    try {
+      await invoke('script_debug_stop', { executionId: debugExecutionId.value })
+      executing.value = false
+      executionId.value = null
+      debugExecutionId.value = null
+      debugStatus.value = 'idle'
+      debugLine.value = 0
+      debugMessage.value = ''
+      activeLine.value = 0
+      executionStatus.value = 'idle'
+      executionMessage.value = ''
+    } catch (e) {
+      error.value = String(e)
+    }
+  }
+
   async function stopExecution(eid: string) {
     try {
       await invoke('script_stop', { executionId: eid })
       executing.value = false
       executionId.value = null
+      debugExecutionId.value = null
+      debugStatus.value = 'idle'
+      debugLine.value = 0
+      debugMessage.value = ''
       executionStatus.value = 'idle'
       executionMessage.value = ''
     } catch (e) {
@@ -155,12 +235,20 @@ export const useScriptStore = defineStore('script', () => {
         } else if (status === 'completed') {
           executing.value = false
           executionId.value = null
+          debugExecutionId.value = null
+          debugStatus.value = 'idle'
+          debugLine.value = 0
+          debugMessage.value = ''
           executionStatus.value = 'success'
           executionMessage.value = message || '脚本执行完成'
           activeLine.value = 0
         } else if (status === 'error') {
           executing.value = false
           executionId.value = null
+          debugExecutionId.value = null
+          debugStatus.value = 'idle'
+          debugLine.value = 0
+          debugMessage.value = ''
           executionStatus.value = 'error'
           executionMessage.value = message || '脚本执行出错'
           activeLine.value = 0
@@ -173,6 +261,35 @@ export const useScriptStore = defineStore('script', () => {
           activeLine.value = line
         }
       })
+
+      debugUnlisten = await listen<ScriptDebugEvent>('script-debug', (event) => {
+        const { execution_id, script_id, status, line, message } = event.payload
+        if (currentScript.value?.id && currentScript.value.id !== script_id) return
+        if (debugExecutionId.value && execution_id !== debugExecutionId.value) return
+
+        debugExecutionId.value = execution_id
+        debugLine.value = line
+        debugMessage.value = message || ''
+
+        if (status === 'started' || status === 'running') {
+          debugStatus.value = 'running'
+        } else if (status === 'paused') {
+          debugStatus.value = 'paused'
+          activeLine.value = line
+        } else if (status === 'stepping') {
+          debugStatus.value = 'stepping'
+        } else if (status === 'completed' || status === 'stopped') {
+          debugExecutionId.value = null
+          debugStatus.value = 'idle'
+          debugLine.value = 0
+          debugMessage.value = ''
+        } else if (status === 'error') {
+          debugExecutionId.value = null
+          debugStatus.value = 'idle'
+          debugLine.value = 0
+          debugMessage.value = message || '调试执行出错'
+        }
+      })
     } catch (e) {
       console.warn('监听 script-execution/line-change 事件失败:', e)
     }
@@ -183,7 +300,13 @@ export const useScriptStore = defineStore('script', () => {
     unlisten = null
     lineUnlisten?.()
     lineUnlisten = null
+    debugUnlisten?.()
+    debugUnlisten = null
     activeLine.value = 0
+    debugExecutionId.value = null
+    debugStatus.value = 'idle'
+    debugLine.value = 0
+    debugMessage.value = ''
   }
 
   return {
@@ -196,12 +319,20 @@ export const useScriptStore = defineStore('script', () => {
     executionStatus,
     executionMessage,
     activeLine,
+    debugExecutionId,
+    debugStatus,
+    debugLine,
+    debugMessage,
     fetchScripts,
     createScript,
     getScript,
     updateScript,
     renameScript,
     executeScript,
+    debugScript,
+    resumeDebug,
+    stepDebug,
+    stopDebug,
     stopExecution,
     deleteScript,
     startListening,
