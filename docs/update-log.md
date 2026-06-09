@@ -7,7 +7,6 @@
 - **Rhai 脚本断点调试与单步控制**：新增 Rhai 脚本调试运行时。在调试模式下执行脚本时，后端会自动为可执行行进行安全代码插桩 (`__debug_hit`)。当脚本执行到前端指定的断点行时，使用 Rust `parking_lot::Condvar` 实现高效的线程级暂停与等待，保证处于断点挂起状态下 CPU 零消耗。
 - **调试控制操作接口**：支持在调试过程中进行「继续执行 (`debug_resume`)」、「单步步过 (`debug_step`)」以及「终止调试 (`stop_execution`)」等细粒度调试指令控制。
 - **Monaco 编辑器断点及轨迹交互**：在脚本编辑器中，利用 Monaco Editor 的 Glyph Margin 实现了断点红点标记的一键切换与状态持久化；运行时，编辑器将同步高亮高亮指示当前正在执行的代码行，实现直观的单步调试视觉反馈。
-- **变量观察器 (`watch`) 接口**：新增脚本中 `watch("变量名", 变量值)` 绑定方法，支持在脚本调试或运行期间将关键变量实时推送至前端 UI 观察器面板，极大地提升了自动化逻辑的调试排障效率。
 
 ### 🔧 技术细节
 
@@ -16,7 +15,7 @@
 
 #### 修改文件
 - `src-tauri/src/script_engine/execution.rs` — 支持 `debug_script` 调试运行时及调试控制命令绑定
-- `src-tauri/src/script_engine/runtime.rs` — 注册 `__debug_hit` 与 `watch` 脚本 API 绑定
+- `src-tauri/src/script_engine/runtime.rs` — 注册 `__debug_hit` 调试 API 绑定
 - `src/views/ScriptEditor.vue` — 添加前端断点列表管理与调试控制操作面板
 - `src/stores/script.ts` — 封装断点调试相关 Tauri API 状态管理
 - `src/components/script/CodeEditor.vue` — Monaco Editor 增加断点 Glyph 渲染与执行行高亮跟踪
