@@ -31,7 +31,8 @@
     "targets": "all",
     "resources": [
       "resources/ocr_models/**/*",
-      "resources/onnxruntime/**/*"
+      "resources/onnxruntime/**/*",
+      "resources/libs/*"
     ],
     "icon": [
       "icons/32x32.png",
@@ -42,7 +43,8 @@
     ],
     "windows": {
       "nsis": {
-        "installerHooks": "installer.nsh"
+        "installerHooks": "installer.nsh",
+        "installMode": "perMachine"
       }
     }
   },

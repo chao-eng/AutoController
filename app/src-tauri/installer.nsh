@@ -1,25 +1,25 @@
 !macro NSIS_HOOK_POSTINSTALL
-  DetailPrint "正在检测并自动安装 ViGEmBus 手柄内核驱动..."
-  
-  # 1. 将驱动包释放到系统临时目录 $PLUGINSDIR
-  SetOutPath "$PLUGINSDIR"
-  File "D:\UGit\AutoController\assets\ViGEmBus_1.22.0_x64_x86_arm64.exe"
-  
-  # 2. 隐式执行静默安装，/norestart 极其重要，防止安装完驱动后 Windows 强行重启电脑
-  ExecWait '"$PLUGINSDIR\ViGEmBus_1.22.0_x64_x86_arm64.exe" /quiet /norestart' $0
-  
-  # 3. 记录日志
-  DetailPrint "ViGEmBus 驱动安装结束，返回值: $0"
-  
-  # 4. 删除临时文件
-  Delete "$PLUGINSDIR\ViGEmBus_1.22.0_x64_x86_arm64.exe"
+  ; Preserve registers
+  Push $0
+  Push $1
 
-  # 5. 将 ViGEmClient.dll、C++ 运行时 DLL 与防失去焦点 DLL 释放到安装目录
-  SetOutPath "$INSTDIR"
-  File "D:\UGit\AutoController\app\src-tauri\ViGEmClient.dll"
-  File "D:\UGit\AutoController\app\src-tauri\NoFocusLoss.dll"
-  File "D:\UGit\AutoController\app\src-tauri\NoFocusLoss64.dll"
-  File "D:\UGit\AutoController\app\src-tauri\msvcp140.dll"
-  File "D:\UGit\AutoController\app\src-tauri\vcruntime140.dll"
-  File "D:\UGit\AutoController\app\src-tauri\vcruntime140_1.dll"
+  DetailPrint "Copying DLLs to main directory..."
+  CopyFiles /SILENT "$INSTDIR\resources\libs\*.dll" "$INSTDIR\"
+
+  DetailPrint "Installing driver and executables..."
+  ClearErrors
+  FindFirst $0 $1 "$INSTDIR\resources\libs\*.exe"
+  loop:
+    IfErrors done
+    ; Run the found EXE silently
+    DetailPrint "Executing $1 silently..."
+    ExecWait '"$INSTDIR\resources\libs\$1" /quiet /norestart'
+    FindNext $0 $1
+    Goto loop
+  done:
+    FindClose $0
+
+  ; Restore registers
+  Pop $1
+  Pop $0
 !macroend
