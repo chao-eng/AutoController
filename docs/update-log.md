@@ -1,5 +1,23 @@
 # AutoController 更新日志
 
+## v0.7.4 — 2026-06-13
+
+### 🔧 技术细节
+
+- **修复驱动没有随主程序安装的问题**：
+  * **NSIS 安装包最终阶段逻辑优化**：在自定义 `installer.nsh` 中实现了安装后处理。将已放置在 `libs` 目录下的所有 DLL 文件复制到主程序根目录 (`$INSTDIR`)，并自动静默安装 `libs` 目录下的所有 EXE 驱动程序（如 `ViGEmBus` 手柄驱动）。
+  * **管理员权限提升配置**：修改 `tauri.conf.json`，配置 `"installMode": "perMachine"`（单机模式），强制安装程序以管理员权限启动，确保其调用的驱动静默安装能够继承管理员权限。
+
+#### 新增文件
+- `src-tauri/installer.nsh` — 自定义安装后处理脚本
+
+#### 修改文件
+- `src-tauri/tauri.conf.json` — 开启 `installerHooks` 和 `perMachine` 管理员运行模式
+- `Cargo.toml` — 更新软件版本至 `0.7.4`
+- `package.json` — 更新前端版本至 `0.7.4`
+
+---
+
 ## v0.7.3 — 2026-06-09
 
 ### 🆕 新功能与调试系统
